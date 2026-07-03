@@ -1041,7 +1041,9 @@ function getHitLocationLabel(location) {
     "3B": "3B",
     SS: "SS",
     LF: "LF",
+    LCF: "LCF",
     CF: "CF",
+    RCF: "RCF",
     RF: "RF",
   };
 
@@ -1632,23 +1634,140 @@ function initGamesPage(games) {
   }
 
   function renderHitLocationSelector() {
+    const svgNamespace = "http://www.w3.org/2000/svg";
     const wrap = document.createElement("div");
     const title = document.createElement("h4");
-    const field = document.createElement("div");
+    const svg = document.createElementNS(svgNamespace, "svg");
+    const positions = [
+      { label: "LF", value: "LF", x: 76, y: 82 },
+      { label: "LCF", value: "LCF", x: 150, y: 50 },
+      { label: "CF", value: "CF", x: 240, y: 38 },
+      { label: "RCF", value: "RCF", x: 330, y: 50 },
+      { label: "RF", value: "RF", x: 404, y: 82 },
+      { label: "SS", value: "SS", x: 172, y: 188 },
+      { label: "2B", value: "2B", x: 240, y: 166 },
+      { label: "1B", value: "1B", x: 314, y: 226 },
+      { label: "3B", value: "3B", x: 166, y: 226 },
+      { label: "P", value: "P", x: 240, y: 250 },
+      { label: "C", value: "C", x: 240, y: 386 },
+    ];
+
+    function createSvgElement(name, attributes) {
+      const element = document.createElementNS(svgNamespace, name);
+      Object.entries(attributes || {}).forEach(([key, value]) => {
+        element.setAttribute(key, String(value));
+      });
+      return element;
+    }
+
+    function createBase(x, y) {
+      return createSvgElement("rect", {
+        class: "field-base",
+        x: x - 8,
+        y: y - 8,
+        width: 16,
+        height: 16,
+        transform: "rotate(45 " + x + " " + y + ")",
+      });
+    }
+
+    function selectHitLocation(group, value) {
+      svg.querySelectorAll(".field-location.is-selected").forEach((selected) => {
+        selected.classList.remove("is-selected");
+      });
+      group.classList.add("is-selected");
+      window.setTimeout(() => handleHitLocation(value), 120);
+    }
 
     wrap.className = "result-stack hit-location-wrap";
     title.textContent = "Hit Location";
-    field.className = "field-selector";
-    field.setAttribute("aria-label", "Hit location selector");
 
-    hitLocationOptions.forEach((option) => {
-      const button = createButton(option, handleHitLocation);
-      button.className = `field-position field-position-${option.value.toLowerCase()}`;
-      field.appendChild(button);
+    svg.classList.add("field-selector");
+    svg.setAttribute("viewBox", "0 0 480 420");
+    svg.setAttribute("role", "group");
+    svg.setAttribute("aria-label", "Hit location selector");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    svg.appendChild(createSvgElement("path", {
+      class: "field-outfield",
+      d: "M42 360 A198 198 0 0 1 438 360 L392 360 A152 152 0 0 0 88 360 Z",
+    }));
+    svg.appendChild(createSvgElement("circle", {
+      class: "field-infield-dirt",
+      cx: 240,
+      cy: 280,
+      r: 98,
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-foul-line",
+      d: "M240 386 L56 82",
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-foul-line",
+      d: "M240 386 L424 82",
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-diamond-line",
+      d: "M240 386 L314 300 L240 214 L166 300 Z",
+    }));
+    svg.appendChild(createSvgElement("circle", {
+      class: "field-pitcher-circle",
+      cx: 240,
+      cy: 280,
+      r: 34,
+    }));
+    svg.appendChild(createBase(240, 386));
+    svg.appendChild(createBase(314, 300));
+    svg.appendChild(createBase(240, 214));
+    svg.appendChild(createBase(166, 300));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-home-plate",
+      d: "M226 390 L254 390 L250 404 L240 412 L230 404 Z",
+    }));
+
+    positions.forEach((position) => {
+      const group = createSvgElement("g", {
+        class: "field-location",
+        "data-location": position.value,
+        role: "button",
+        tabindex: 0,
+        "aria-label": position.label,
+      });
+      const hitArea = createSvgElement("circle", {
+        class: "field-hit-area",
+        cx: position.x,
+        cy: position.y,
+        r: 24,
+      });
+      const marker = createSvgElement("circle", {
+        class: "field-marker",
+        cx: position.x,
+        cy: position.y,
+        r: 17,
+      });
+      const label = createSvgElement("text", {
+        class: "field-marker-label",
+        x: position.x,
+        y: position.y + 4,
+        "text-anchor": "middle",
+      });
+
+      label.textContent = position.label;
+      group.appendChild(hitArea);
+      group.appendChild(marker);
+      group.appendChild(label);
+      group.addEventListener("click", () => selectHitLocation(group, position.value));
+      group.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectHitLocation(group, position.value);
+        }
+      });
+      svg.appendChild(group);
     });
 
     wrap.appendChild(title);
-    wrap.appendChild(field);
+    wrap.appendChild(svg);
     return wrap;
   }
 

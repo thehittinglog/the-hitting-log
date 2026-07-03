@@ -1383,3 +1383,108 @@ body,
     border-radius: 12px;
   }
 }
+
+
+/* SVG hit location field */
+svg.field-selector {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  overflow: visible;
+  touch-action: manipulation;
+}
+
+.field-outfield {
+  fill: #ededed;
+  stroke: #111111;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.field-infield-dirt {
+  fill: #d8d8d8;
+  stroke: #111111;
+  stroke-width: 2.5;
+}
+
+.field-foul-line {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.field-diamond-line {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.field-pitcher-circle {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 2.5;
+}
+
+.field-base,
+.field-home-plate {
+  fill: #ffffff;
+  stroke: #111111;
+  stroke-width: 2;
+}
+
+.field-location {
+  cursor: pointer;
+  outline: none;
+}
+
+.field-hit-area {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+
+.field-marker {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: #111111;
+  stroke-width: 2;
+  transition: fill 140ms ease, stroke 140ms ease, transform 140ms ease;
+}
+
+.field-marker-label {
+  fill: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  pointer-events: none;
+  user-select: none;
+}
+
+.field-location:hover .field-marker,
+.field-location:focus-visible .field-marker,
+.field-location.is-selected .field-marker {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.field-location:hover .field-marker-label,
+.field-location:focus-visible .field-marker-label,
+.field-location.is-selected .field-marker-label {
+  fill: #ffffff;
+}
+
+@media (max-width: 520px) {
+  svg.field-selector {
+    max-width: 100%;
+  }
+
+  .field-marker-label {
+    font-size: 0.76rem;
+  }
+}
