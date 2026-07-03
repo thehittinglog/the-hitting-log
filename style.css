@@ -1190,3 +1190,79 @@ body,
     font-size: clamp(1.25rem, 6vw, 2rem);
   }
 }
+
+
+/* Match Advanced Stats mobile metric card rhythm on target pages */
+@media (max-width: 768px) {
+  body[data-page="dashboard"] .dashboard-stat-grid,
+  body[data-page="dashboard"] .snapshot-stat-grid,
+  body[data-page="dashboard"] .stats-grid,
+  body[data-page="dashboard"] .stat-grid,
+  body[data-page="games"] .season-stat-grid,
+  body[data-page="games"] .snapshot-stat-grid,
+  body[data-page="games"] .stats-grid,
+  body[data-page="games"] .stat-grid,
+  body[data-page="account"] .dashboard-stat-grid,
+  body[data-page="account"] .snapshot-stat-grid,
+  body[data-page="account"] .stats-grid,
+  body[data-page="account"] .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+  }
+
+  body[data-page="dashboard"] .dashboard-stat-card,
+  body[data-page="dashboard"] .snapshot-stat-card,
+  body[data-page="games"] .season-stat-card,
+  body[data-page="games"] .snapshot-stat-card,
+  body[data-page="account"] .dashboard-stat-card,
+  body[data-page="account"] .snapshot-stat-card {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: auto;
+    min-height: 118px;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  body[data-page="dashboard"] .dashboard-stat-card .stat-label,
+  body[data-page="dashboard"] .snapshot-stat-card .stat-label,
+  body[data-page="games"] .season-stat-card .stat-label,
+  body[data-page="games"] .snapshot-stat-card .stat-label,
+  body[data-page="account"] .dashboard-stat-card .stat-label,
+  body[data-page="account"] .snapshot-stat-card .stat-label {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    hyphens: none;
+    line-height: 1.25;
+    font-size: 0.95rem;
+  }
+
+  body[data-page="dashboard"] .dashboard-stat-card .stat-value,
+  body[data-page="dashboard"] .snapshot-stat-card .stat-value,
+  body[data-page="games"] .season-stat-card .stat-value,
+  body[data-page="games"] .snapshot-stat-card .stat-value,
+  body[data-page="account"] .dashboard-stat-card .stat-value,
+  body[data-page="account"] .snapshot-stat-card .stat-value {
+    white-space: nowrap;
+    font-size: clamp(2.25rem, 10vw, 3.5rem);
+    line-height: 1;
+  }
+
+  body[data-page="account"] .dashboard-stat-card .stat-value,
+  body[data-page="account"] .snapshot-stat-card .stat-value {
+    white-space: normal;
+    font-size: clamp(1.3rem, 6vw, 2rem);
+  }
+}
