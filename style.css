@@ -1134,3 +1134,59 @@ body,
     font-size: clamp(1.15rem, 6.5vw, 1.55rem);
   }
 }
+
+
+/* Dashboard, Games, and Account mobile card proportions */
+@media (max-width: 767px) {
+  body[data-page="dashboard"] .panel,
+  body[data-page="games"] #games-home-view > .panel,
+  body[data-page="account"] .panel {
+    padding: 20px 16px;
+    overflow: hidden;
+  }
+
+  body[data-page="dashboard"] .summary-grid,
+  body[data-page="games"] .games-season-snapshot-grid,
+  body[data-page="account"] .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid .stat-card,
+  body[data-page="games"] .games-season-snapshot-grid .stat-card,
+  body[data-page="account"] .dashboard-snapshot-grid .stat-card {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+    padding: 18px 14px;
+    border-radius: 18px;
+    text-align: center;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid .stat-label,
+  body[data-page="games"] .games-season-snapshot-grid .stat-label,
+  body[data-page="account"] .dashboard-snapshot-grid .stat-label {
+    font-size: clamp(0.85rem, 3.5vw, 1rem);
+    line-height: 1.25;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid .stat-card strong,
+  body[data-page="games"] .games-season-snapshot-grid .stat-card strong,
+  body[data-page="account"] .dashboard-snapshot-grid .stat-card strong {
+    font-size: clamp(2rem, 9vw, 3.25rem);
+    line-height: 1;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  body[data-page="account"] .dashboard-snapshot-grid .stat-card strong {
+    font-size: clamp(1.25rem, 6vw, 2rem);
+  }
+}
