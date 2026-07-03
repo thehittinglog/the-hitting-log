@@ -1266,3 +1266,58 @@ body,
     font-size: clamp(1.3rem, 6vw, 2rem);
   }
 }
+
+
+/* FINAL MOBILE STAT GRID OVERRIDES */
+@media (max-width: 768px) {
+  body[data-page="dashboard"] .dashboard-snapshot-grid,
+  body[data-page="games"] .games-season-snapshot-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    align-items: stretch !important;
+    grid-auto-flow: row !important;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid > .stat-card,
+  body[data-page="games"] .games-season-snapshot-grid > .stat-card {
+    grid-column: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 118px !important;
+    height: auto !important;
+    padding: 18px 12px !important;
+    display: flex !important;
+    flex: initial !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    overflow: hidden !important;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid > .stat-card .stat-label,
+  body[data-page="games"] .games-season-snapshot-grid > .stat-card .stat-label {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+    line-height: 1.25 !important;
+    font-size: 0.95rem !important;
+    max-width: 100% !important;
+  }
+
+  body[data-page="dashboard"] .dashboard-snapshot-grid > .stat-card .stat-value,
+  body[data-page="dashboard"] .dashboard-snapshot-grid > .stat-card > strong,
+  body[data-page="games"] .games-season-snapshot-grid > .stat-card .stat-value,
+  body[data-page="games"] .games-season-snapshot-grid > .stat-card > strong {
+    white-space: nowrap !important;
+    font-size: clamp(2.25rem, 10vw, 3.5rem) !important;
+    line-height: 1 !important;
+    max-width: 100% !important;
+  }
+}
