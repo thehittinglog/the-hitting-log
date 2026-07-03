@@ -176,6 +176,7 @@ function updateAuthUI() {
 
 function normalizePitchType(pitchType) {
   const normalized = String(pitchType || "unknown").trim().toLowerCase().replace(/\s+/g, "_");
+  const normalizedPitchType = normalized === "screw" ? "screwball" : normalized;
   const allowedPitchTypes = new Set([
     "fastball",
     "changeup",
@@ -184,11 +185,11 @@ function normalizePitchType(pitchType) {
     "rise",
     "slider",
     "cutter",
-    "screw",
+    "screwball",
     "unknown",
   ]);
 
-  return allowedPitchTypes.has(normalized) ? normalized : "unknown";
+  return allowedPitchTypes.has(normalizedPitchType) ? normalizedPitchType : "unknown";
 }
 
 function normalizePitch(pitch) {
@@ -204,15 +205,24 @@ function normalizePitch(pitch) {
           id: typeof pitch.locationId === "string" ? pitch.locationId : "",
           label: typeof pitch.locationLabel === "string" ? pitch.locationLabel : "",
         };
-  const result = typeof pitch.result === "string" ? pitch.result : "";
-  const pitchType = normalizePitchType(pitch.pitchType);
+  const result =
+    typeof pitch.result === "string"
+      ? pitch.result
+      : typeof pitch.pitch_result === "string"
+        ? pitch.pitch_result
+        : typeof pitch.swing_result === "string"
+          ? pitch.swing_result
+          : "";
+  const pitchType = normalizePitchType(pitch.pitchType || pitch.pitch_type);
   const strikeType = typeof pitch.strikeType === "string" ? pitch.strikeType : "";
   const battedBallOutcome =
     typeof pitch.battedBallOutcome === "string"
       ? normalizeSavedBattedBallOutcome(pitch.battedBallOutcome)
-      : typeof pitch.outcome === "string"
-        ? normalizeSavedBattedBallOutcome(pitch.outcome)
-        : "";
+      : typeof pitch.batted_ball_outcome === "string"
+        ? normalizeSavedBattedBallOutcome(pitch.batted_ball_outcome)
+        : typeof pitch.outcome === "string"
+          ? normalizeSavedBattedBallOutcome(pitch.outcome)
+          : "";
   const normalizedPitch = {
     location: {
       id: typeof location.id === "string" ? location.id : "",
@@ -221,7 +231,9 @@ function normalizePitch(pitch) {
     },
     locationId: typeof location.id === "string" ? location.id : "",
     locationLabel: typeof location.label === "string" ? location.label : "",
+    pitch_location: typeof location.id === "string" ? location.id : "",
     pitchType,
+    pitch_type: pitchType,
     result,
   };
 
@@ -229,12 +241,32 @@ function normalizePitch(pitch) {
     "primaryResult",
     "strikeDetail",
     "battedBallType",
+    "batted_ball_type",
+    "contact_type",
+    "pitch_result",
+    "swing_result",
+    "hitLocation",
+    "hit_location",
     "outcome",
   ].forEach((field) => {
     if (typeof pitch[field] === "string") {
       normalizedPitch[field] = pitch[field];
     }
   });
+
+  if (!normalizedPitch.battedBallType && typeof pitch.contact_type === "string" && pitch.contact_type) {
+    normalizedPitch.battedBallType = pitch.contact_type;
+  } else if (!normalizedPitch.battedBallType && typeof pitch.batted_ball_type === "string" && pitch.batted_ball_type) {
+    normalizedPitch.battedBallType = pitch.batted_ball_type;
+  }
+
+  if (typeof pitch.hitLocation === "string" && pitch.hitLocation) {
+    normalizedPitch.hitLocation = pitch.hitLocation;
+    normalizedPitch.hit_location = pitch.hitLocation;
+  } else if (typeof pitch.hit_location === "string" && pitch.hit_location) {
+    normalizedPitch.hitLocation = pitch.hit_location;
+    normalizedPitch.hit_location = pitch.hit_location;
+  }
 
   if (strikeType) {
     normalizedPitch.strikeType = strikeType;
@@ -983,7 +1015,7 @@ function getPitchTypeLabel(pitchType) {
     rise: "Rise",
     slider: "Slider",
     cutter: "Cutter",
-    screw: "Screw",
+    screwball: "Screwball",
     unknown: "Unknown",
   };
 
@@ -998,6 +1030,22 @@ function getBattedBallTypeLabel(type) {
   };
 
   return labelMap[type] || type;
+}
+
+function getHitLocationLabel(location) {
+  const labelMap = {
+    P: "P",
+    C: "C",
+    "1B": "1B",
+    "2B": "2B",
+    "3B": "3B",
+    SS: "SS",
+    LF: "LF",
+    CF: "CF",
+    RF: "RF",
+  };
+
+  return labelMap[location] || location;
 }
 
 function getFoulDirectionLabel(direction) {
@@ -1118,6 +1166,10 @@ function renderPitchSequence(sequenceElement, atBat) {
       details.push(getBattedBallTypeLabel(pitch.battedBallType));
     }
 
+    if (pitch.hitLocation || pitch.hit_location) {
+      details.push(getHitLocationLabel(pitch.hitLocation || pitch.hit_location));
+    }
+
     if (pitch.battedBallOutcome || pitch.outcome) {
       details.push(getOutcomeLabel(pitch.battedBallOutcome || pitch.outcome));
     }
@@ -1172,6 +1224,10 @@ function renderAtBatList(listElement, atBats) {
 
         if (pitch.battedBallType) {
           details.push(getBattedBallTypeLabel(pitch.battedBallType));
+        }
+
+        if (pitch.hitLocation || pitch.hit_location) {
+          details.push(getHitLocationLabel(pitch.hitLocation || pitch.hit_location));
         }
 
         if (pitch.battedBallOutcome || pitch.outcome) {
@@ -1315,7 +1371,7 @@ function initGamesPage(games) {
     { label: "Rise", value: "rise" },
     { label: "Slider", value: "slider" },
     { label: "Cutter", value: "cutter" },
-    { label: "Screw", value: "screw" },
+    { label: "Screwball", value: "screwball" },
     { label: "Unknown", value: "unknown" },
   ];
   const strikeOptions = [
@@ -1326,6 +1382,17 @@ function initGamesPage(games) {
     { label: "Ground Ball", value: "ground_ball" },
     { label: "Line Drive", value: "line_drive" },
     { label: "Fly Ball", value: "fly_ball" },
+  ];
+  const hitLocationOptions = [
+    { label: "P", value: "P" },
+    { label: "C", value: "C" },
+    { label: "1B", value: "1B" },
+    { label: "2B", value: "2B" },
+    { label: "3B", value: "3B" },
+    { label: "SS", value: "SS" },
+    { label: "LF", value: "LF" },
+    { label: "CF", value: "CF" },
+    { label: "RF", value: "RF" },
   ];
   const battedBallOutcomeOptions = [
     { label: "Single", value: "Single" },
@@ -1529,7 +1596,11 @@ function initGamesPage(games) {
         label: location.label,
         isZone: location.isZone,
       },
+      locationId: location.id,
+      locationLabel: location.label,
+      pitch_location: location.id,
       pitchType: "unknown",
+      pitch_type: "unknown",
       result,
     };
   }
@@ -1557,6 +1628,27 @@ function initGamesPage(games) {
     });
 
     wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function renderHitLocationSelector() {
+    const wrap = document.createElement("div");
+    const title = document.createElement("h4");
+    const field = document.createElement("div");
+
+    wrap.className = "result-stack hit-location-wrap";
+    title.textContent = "Hit Location";
+    field.className = "field-selector";
+    field.setAttribute("aria-label", "Hit location selector");
+
+    hitLocationOptions.forEach((option) => {
+      const button = createButton(option, handleHitLocation);
+      button.className = `field-position field-position-${option.value.toLowerCase()}`;
+      field.appendChild(button);
+    });
+
+    wrap.appendChild(title);
+    wrap.appendChild(field);
     return wrap;
   }
 
@@ -2045,6 +2137,8 @@ function initGamesPage(games) {
         ? "Enter pitcher details before logging pitches."
         : state.step === "pitch_type"
           ? "Choose the pitch type."
+        : state.step === "hit_location"
+          ? "Choose where the ball was hit."
         : state.step === "hard_hit_ball"
           ? "Answer the contact detail."
           : state.step === "productive_out"
@@ -2061,15 +2155,14 @@ function initGamesPage(games) {
     }
 
     if (
-      state.step !== "at_bat_details" &&
-      state.step !== "pitch_type" &&
-      state.step !== "hard_hit_ball" &&
-      state.step !== "productive_out" &&
-      state.step !== "end_at_bat"
+      state.step === "location"
     ) {
       const zone = document.createElement("div");
       zone.className = "location-grid";
       zone.setAttribute("aria-label", "Pitch location selector");
+      const helper = document.createElement("p");
+      helper.className = "pitch-location-helper";
+      helper.textContent = "This grid is from the catcher's perspective.";
       renderStrikeZoneLayout(zone, {
         interactive: true,
         onSelectLocation(location) {
@@ -2079,11 +2172,12 @@ function initGamesPage(games) {
         },
         selectedLocationId: state.activePitch ? state.activePitch.location.id : "",
       });
+      card.appendChild(helper);
       card.appendChild(zone);
     }
 
     if (state.step === "pitch_type") {
-      card.appendChild(renderPitchTypeModal());
+      card.appendChild(renderOptionGroup("Pitch Type", pitchTypeOptions, handlePitchType));
     }
 
     if (state.step === "pitch_result") {
@@ -2100,6 +2194,10 @@ function initGamesPage(games) {
 
     if (state.step === "batted_ball_type") {
       card.appendChild(renderOptionGroup("Batted Ball Type", battedBallTypeOptions, handleBattedBallType));
+    }
+
+    if (state.step === "hit_location") {
+      card.appendChild(renderHitLocationSelector());
     }
 
     if (state.step === "batted_ball_outcome") {
@@ -2172,6 +2270,7 @@ function initGamesPage(games) {
     }
 
     state.activePitch.pitchType = normalizePitchType(pitchType);
+    state.activePitch.pitch_type = state.activePitch.pitchType;
     state.step = "pitch_result";
     renderAtBats();
   }
@@ -2182,6 +2281,9 @@ function initGamesPage(games) {
     }
 
     state.activePitch.result = result;
+    state.activePitch.primaryResult = result;
+    state.activePitch.pitch_result = result;
+    state.activePitch.swing_result = result;
 
     if (result === "strike") {
       state.step = "strike_type";
@@ -2203,6 +2305,8 @@ function initGamesPage(games) {
 
     if (result === "hit_by_pitch") {
       state.activePitch.battedBallOutcome = "hit_by_pitch";
+      state.activePitch.batted_ball_outcome = "hit_by_pitch";
+      state.activePitch.outcome = "hit_by_pitch";
       state.activeAtBat.finalOutcome = "hit_by_pitch";
       completeCurrentPitch();
       state.step = "end_at_bat";
@@ -2225,6 +2329,8 @@ function initGamesPage(games) {
 
   function handleStrikeType(strikeType) {
     state.activePitch.strikeType = strikeType;
+    state.activePitch.pitch_result = strikeType;
+    state.activePitch.swing_result = strikeType;
     completeCurrentPitch();
     state.step = "pitch_actions";
     renderAtBats();
@@ -2232,12 +2338,26 @@ function initGamesPage(games) {
 
   function handleBattedBallType(battedBallType) {
     state.activePitch.battedBallType = battedBallType;
+    state.activePitch.batted_ball_type = battedBallType;
+    state.activePitch.contact_type = battedBallType;
+    state.step = "hit_location";
+    renderAtBats();
+  }
+
+  function handleHitLocation(hitLocation) {
+    if (!state.activePitch) {
+      return;
+    }
+
+    state.activePitch.hitLocation = hitLocation;
+    state.activePitch.hit_location = hitLocation;
     state.step = "batted_ball_outcome";
     renderAtBats();
   }
 
   function handleBattedBallOutcome(outcome) {
     state.activePitch.battedBallOutcome = outcome;
+    state.activePitch.batted_ball_outcome = outcome;
     state.activePitch.outcome = outcome;
     state.activePitch.chartResult = outcome;
     state.activeAtBat.finalOutcome = outcome;

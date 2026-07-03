@@ -1321,3 +1321,65 @@ body,
     max-width: 100% !important;
   }
 }
+
+
+/* Hit location field selector */
+.pitch-location-helper {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.field-selector {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(48px, 1fr));
+  gap: 8px;
+  width: min(100%, 460px);
+  margin: 0 auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, transparent 47%, rgba(12, 35, 64, 0.12) 48%, rgba(12, 35, 64, 0.12) 52%, transparent 53%),
+    linear-gradient(45deg, transparent 47%, rgba(12, 35, 64, 0.12) 48%, rgba(12, 35, 64, 0.12) 52%, transparent 53%),
+    rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.field-position {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  background: var(--panel-solid);
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+.field-position-p { grid-area: 3 / 3; }
+.field-position-c { grid-area: 5 / 3; }
+.field-position-1b { grid-area: 3 / 5; }
+.field-position-2b { grid-area: 2 / 4; }
+.field-position-3b { grid-area: 3 / 1; }
+.field-position-ss { grid-area: 2 / 2; }
+.field-position-lf { grid-area: 1 / 1; }
+.field-position-cf { grid-area: 1 / 3; }
+.field-position-rf { grid-area: 1 / 5; }
+
+@media (max-width: 420px) {
+  .field-selector {
+    grid-template-rows: repeat(5, minmax(44px, 1fr));
+    gap: 7px;
+    padding: 12px;
+  }
+
+  .field-position {
+    min-height: 44px;
+    border-radius: 12px;
+  }
+}
