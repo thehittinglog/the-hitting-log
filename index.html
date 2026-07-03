@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitting Log | Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="dashboard">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html">Hitting Log</a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link is-active" href="index.html">Dashboard</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="advanced-stats.html">Advanced Stats</a>
+        <a class="nav-link" href="charts.html">Charts</a>
+        <a class="nav-link" href="account.html">Account</a>
+        <button id="logout-button" class="nav-button" type="button" hidden>Logout</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <p class="eyebrow">Season Overview</p>
+      <h1>Track every game in one place.</h1>
+      <p class="hero-copy">
+        Keep your hitting log organized, check your totals, and see how your season is trending.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Dashboard Snapshot</h2>
+          <p class="section-copy">A quick look at your current totals and recent activity.</p>
+        </div>
+      </div>
+      <div class="summary-grid dashboard-snapshot-grid">
+        <article class="stat-card">
+          <span class="stat-label">Games</span>
+          <strong id="games-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">At-Bats</span>
+          <strong id="at-bats-total">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Hits</span>
+          <strong id="hits-total">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">BA</span>
+          <strong id="batting-average">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">OBP</span>
+          <strong id="on-base-percentage">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">SLG</span>
+          <strong id="slugging-percentage">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">OPS</span>
+          <strong id="ops-total">.000</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="two-column-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Recent Games</h2>
+            <p class="section-copy">Your latest logged games, sorted by date.</p>
+          </div>
+          <a class="text-link" href="games.html">Manage games</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Opponent</th>
+                <th>At-Bats</th>
+                <th>Hits</th>
+                <th>OPS</th>
+              </tr>
+            </thead>
+            <tbody id="recent-games-body"></tbody>
+          </table>
+        </div>
+        <p id="recent-games-empty" class="empty-state">No games logged yet.</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Quick Insights</h2>
+            <p class="section-copy">A few fast readouts from your saved game log.</p>
+          </div>
+        </div>
+        <div class="insight-stack">
+          <article class="mini-card">
+            <span class="stat-label">Best Game</span>
+            <strong id="best-game">No games yet</strong>
+          </article>
+          <article class="mini-card">
+            <span class="stat-label">Last Opponent</span>
+            <strong id="last-opponent">None</strong>
+          </article>
+          <article class="mini-card">
+            <span class="stat-label">BA Last 5</span>
+            <strong id="last-five-average">.000</strong>
+          </article>
+          <article class="mini-card">
+            <span class="stat-label">OPS Last 5</span>
+            <strong id="last-five-ops">.000</strong>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

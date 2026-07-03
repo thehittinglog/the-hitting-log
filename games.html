@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitting Log | Games</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="games">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html">Hitting Log</a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link is-active" href="games.html">Games</a>
+        <a class="nav-link" href="advanced-stats.html">Advanced Stats</a>
+        <a class="nav-link" href="charts.html">Charts</a>
+        <a class="nav-link" href="account.html">Account</a>
+        <button id="logout-button" class="nav-button" type="button" hidden>Logout</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero compact-hero">
+      <p class="eyebrow">Game Log</p>
+      <h1>Add and review games.</h1>
+      <p class="hero-copy">
+        Start a game, log at-bats pitch by pitch, and keep your season totals in one place.
+      </p>
+    </section>
+
+    <section id="games-home-view">
+      <div class="section-heading">
+        <div>
+          <h2>Games</h2>
+          <p class="section-copy">Create a new game entry when you are ready to log at-bats.</p>
+        </div>
+        <button id="add-game-button" type="button">Add Game</button>
+      </div>
+
+      <section class="panel">
+        <h2>Season Snapshot</h2>
+        <div class="summary-grid games-season-snapshot-grid">
+          <article class="stat-card">
+            <span class="stat-label">Games Played</span>
+            <strong id="games-count">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Plate Appearances</span>
+            <strong id="plate-appearances-total">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">At-Bats</span>
+            <strong id="at-bats-total">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Hits</span>
+            <strong id="hits-total">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Walks</span>
+            <strong id="walks-total">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Batting Average</span>
+            <strong id="batting-average">.000</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">OBP</span>
+            <strong id="on-base-percentage">.000</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel log-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Logged Games</h2>
+            <p class="section-copy">Saved games appear here after you add them.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Opponent</th>
+                  <th>At-Bats</th>
+                  <th>Hits</th>
+                  <th>BA</th>
+                  <th>OPS</th>
+                </tr>
+              </thead>
+              <tbody id="games-table-body"></tbody>
+          </table>
+        </div>
+        <p id="empty-state" class="empty-state">No games logged yet.</p>
+        <div class="builder-actions logged-games-actions">
+          <button id="review-games-button" type="button">Review / Edit Games</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="game-review-list-view" class="panel game-review-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>Review / Edit Games</h2>
+          <p class="section-copy">Choose a logged game to review or edit its at-bats.</p>
+        </div>
+        <button id="review-list-back-button" class="secondary-button" type="button">Back to Games</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Opponent</th>
+              <th>At-Bats</th>
+              <th>Hits</th>
+              <th>BA</th>
+              <th>OPS</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="review-games-table-body"></tbody>
+        </table>
+      </div>
+      <p id="review-games-empty" class="empty-state">No games logged yet.</p>
+    </section>
+
+    <section id="game-review-view" class="panel game-review-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2 id="review-game-title">Review Game</h2>
+          <p id="review-game-meta" class="section-copy"></p>
+        </div>
+        <button id="review-back-button" class="secondary-button" type="button">Back to Games</button>
+      </div>
+      <p id="review-message" class="form-message" aria-live="polite"></p>
+      <div id="review-at-bat-list" class="saved-at-bats"></div>
+    </section>
+
+    <section id="game-choice-view" class="panel game-choice-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>Add Game</h2>
+          <p class="section-copy">Choose how this game should be saved.</p>
+        </div>
+        <button id="choice-back-button" class="secondary-button" type="button">Back</button>
+      </div>
+      <div class="choice-card-grid">
+        <button id="single-game-button" class="choice-card-button" type="button">
+          <strong>Add Single Game</strong>
+          <span>Log one game without tournament details.</span>
+        </button>
+        <button id="start-tournament-button" class="choice-card-button" type="button">
+          <strong>Start Tournament</strong>
+          <span>Name a tournament and log the first game.</span>
+        </button>
+      </div>
+    </section>
+
+    <section id="tournament-name-view" class="panel tournament-name-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>Start Tournament</h2>
+          <p class="section-copy">Add the tournament name before logging the first game.</p>
+        </div>
+        <button id="tournament-back-button" class="secondary-button" type="button">Back</button>
+      </div>
+      <form id="tournament-name-form" class="game-form single-field-form">
+        <label>
+          <span>Tournament Name</span>
+          <input type="text" id="tournament-name" name="tournamentName" placeholder="Cowtown Classic" required>
+        </label>
+        <button id="continue-tournament-button" type="submit">Continue</button>
+      </form>
+      <p id="tournament-message" class="form-message" aria-live="polite"></p>
+    </section>
+
+    <section id="new-game-view" class="panel new-game-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2>New Game</h2>
+          <p id="tournament-context" class="tournament-context" hidden></p>
+        </div>
+        <button id="back-to-games-button" class="secondary-button" type="button">Back</button>
+      </div>
+
+      <form id="new-game-form" class="game-form">
+        <label>
+          <span>Date</span>
+          <input type="date" id="game-date" name="date" required>
+        </label>
+
+        <label>
+          <span>Opponent</span>
+          <input type="text" id="game-opponent" name="opponent" placeholder="Team name" required>
+        </label>
+      </form>
+
+      <div class="builder-actions game-entry-actions">
+        <button id="add-at-bat-button" type="button">Add At-Bat</button>
+      </div>
+      <p id="form-message" class="form-message" aria-live="polite"></p>
+
+      <div id="at-bat-list" class="saved-at-bats"></div>
+
+      <div id="game-completion-actions" class="builder-actions game-completion-actions" hidden style="display: none;">
+        <button id="save-game-button" type="button">Save Game</button>
+        <button id="finish-game-button" class="secondary-button" type="button">Finish Game</button>
+      </div>
+      <div id="tournament-game-actions" class="builder-actions tournament-game-actions" hidden style="display: none;">
+        <button id="add-tournament-game-button" type="button">Add Another Game to This Tournament</button>
+        <button id="finish-tournament-button" class="secondary-button" type="button">Finish Tournament</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="scripts/data-store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

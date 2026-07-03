@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitting Log | Charts</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="charts">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html">Hitting Log</a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="advanced-stats.html">Advanced Stats</a>
+        <a class="nav-link is-active" href="charts.html">Charts</a>
+        <a class="nav-link" href="account.html">Account</a>
+        <button id="logout-button" class="nav-button" type="button" hidden>Logout</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero compact-hero">
+      <p class="eyebrow">Visual Trends</p>
+      <h1>See where results happen in the zone.</h1>
+      <p class="hero-copy">
+        Filter your saved pitch and at-bat data to see how different results map across the strike zone.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Strike Zone Map</h2>
+          <p class="section-copy">The map uses your saved pitch locations from localStorage.</p>
+        </div>
+      </div>
+      <div class="chart-controls">
+        <label class="filter-label" for="chart-filter">
+          <span>Filter</span>
+          <select id="chart-filter">
+            <option value="Hot/Cold Zones">Hot/Cold Zones</option>
+            <option value="Called Strike">Called Strike</option>
+            <option value="Swinging Strike">Swinging Strike</option>
+            <option value="Foul Ball">Foul Ball</option>
+            <option value="Ground Ball">Ground Ball</option>
+            <option value="Line Drive">Line Drive</option>
+            <option value="Fly Ball">Fly Ball</option>
+            <option value="Single">Single</option>
+            <option value="Double">Double</option>
+            <option value="Triple">Triple</option>
+            <option value="Home Run">Home Run</option>
+            <option value="Out">Out</option>
+            <option value="Sac Fly">Sac Fly</option>
+            <option value="Strikeout">Strikeout</option>
+          </select>
+        </label>
+        <button id="generate-chart-button" type="button">Generate</button>
+      </div>
+
+      <div class="chart-overview">
+        <article class="mini-card">
+          <span class="stat-label">Total Matching Results</span>
+          <strong id="chart-filter-total">0</strong>
+        </article>
+      </div>
+
+      <div class="zone-map-wrap">
+        <div class="section-heading">
+          <div>
+            <h3 id="chart-zone-title">Zone View</h3>
+          </div>
+        </div>
+        <div id="chart-zone-map" class="location-grid zone-map chart-zone-map" aria-label="Strike zone map"></div>
+        <p id="charts-empty" class="empty-state">No pitch location data logged yet. The zone map is ready when you log pitches.</p>
+      </div>
+
+      <div class="chart-legend" id="chart-legend">
+        <span class="legend-swatch legend-hit"></span>
+        <span>Red = hit-heavy</span>
+        <span class="legend-swatch legend-mixed"></span>
+        <span>Muted blend = mixed hit and out results</span>
+        <span class="legend-swatch legend-out"></span>
+        <span>Navy = out-heavy</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="scripts/data-store.js"></script>
+  <script src="app.js"></script>
+  <script src="charts.js"></script>
+</body>
+</html>

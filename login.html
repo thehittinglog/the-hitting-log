@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitting Log | Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="login">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html">Hitting Log</a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link is-active" href="login.html">Login</a>
+        <a class="nav-link" href="signup.html">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell narrow-shell">
+    <section class="hero compact-hero">
+      <p class="eyebrow">Account</p>
+      <h1>Sign in to your hitting log.</h1>
+      <p class="hero-copy">
+        Use your local account to get back to your saved dashboard in this browser.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Login</h2>
+      <form id="login-form" class="login-form">
+        <label>
+          <span>Email</span>
+          <input type="email" id="login-email" placeholder="player@example.com" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" id="login-password" placeholder="Enter password" required>
+        </label>
+        <button type="submit">Sign In</button>
+      </form>
+      <p id="login-message" class="form-message" aria-live="polite"></p>
+      <p class="auth-switch">
+        Need an account? <a class="text-link" href="signup.html">Create one</a>
+      </p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

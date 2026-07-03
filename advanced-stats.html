@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hitting Log | Advanced Stats</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="advanced">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html">Hitting Log</a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link is-active" href="advanced-stats.html">Advanced Stats</a>
+        <a class="nav-link" href="charts.html">Charts</a>
+        <a class="nav-link" href="account.html">Account</a>
+        <button id="logout-button" class="nav-button" type="button" hidden>Logout</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero compact-hero">
+      <p class="eyebrow">Advanced View</p>
+      <h1>See the season with more detail.</h1>
+      <p class="hero-copy">
+        These metrics are calculated from your saved game log and update automatically.
+      </p>
+    </section>
+
+    <section class="panel featured-metrics-panel">
+      <div class="section-heading">
+        <div>
+          <h2>Featured Development Metrics</h2>
+          <p class="section-copy">Priority indicators for contact quality and two-strike growth.</p>
+        </div>
+      </div>
+      <div class="summary-grid advanced-grid">
+        <article class="stat-card">
+          <span class="stat-label">Hard Hit Ball %</span>
+          <strong id="hard-hit-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Two-Strike %</span>
+          <strong id="two-strike-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Hard Hit Ball % w/ 2 Strikes</span>
+          <strong id="hard-hit-two-strike-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Productive Out %</span>
+          <strong id="productive-out-percent">0.0%</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Contact Quality</h2>
+        </div>
+      </div>
+      <div class="summary-grid advanced-grid">
+        <article class="stat-card">
+          <span class="stat-label">Line Drive %</span>
+          <strong id="line-drive-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Ground Ball %</span>
+          <strong id="ground-ball-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Fly Ball %</span>
+          <strong id="fly-ball-percent">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Extra Base Hit %</span>
+          <strong id="extra-base-hit-percent">0.0%</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Approach &amp; Plate Discipline</h2>
+        </div>
+      </div>
+      <div class="summary-grid advanced-grid">
+        <article class="stat-card">
+          <span class="stat-label">Chase Rate</span>
+          <strong id="chase-rate">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Contact Rate</span>
+          <strong id="contact-rate">0.0%</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Quality At-Bat %</span>
+          <strong id="quality-at-bat-percent">0.0%</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Traditional Production</h2>
+        </div>
+      </div>
+      <div class="summary-grid advanced-grid">
+        <article class="stat-card">
+          <span class="stat-label">Batting Average</span>
+          <strong id="advanced-average">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">OBP</span>
+          <strong id="advanced-obp">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Slugging</span>
+          <strong id="advanced-slg">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">OPS</span>
+          <strong id="advanced-ops">.000</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Hits Per Game</span>
+          <strong id="hits-per-game">0.00</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">At-Bats Per Game</span>
+          <strong id="at-bats-per-game">0.00</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Consistency &amp; Trends</h2>
+        </div>
+      </div>
+      <div class="summary-grid advanced-grid">
+        <article class="stat-card">
+          <span class="stat-label">Multi-Hit Games</span>
+          <strong id="multi-hit-games">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Zero-Hit Games</span>
+          <strong id="zero-hit-games">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Best Single Game</span>
+          <strong id="best-single-game">0 Hits</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Breakdown</h2>
+          <p class="section-copy">A quick read of how the season has gone so far.</p>
+        </div>
+      </div>
+      <div class="insight-stack">
+        <article class="mini-card">
+          <span class="stat-label">Games With A Hit</span>
+          <strong id="games-with-hit">0</strong>
+        </article>
+        <article class="mini-card">
+          <span class="stat-label">Recent 3-Game Average</span>
+          <strong id="recent-three-average">.000</strong>
+        </article>
+        <article class="mini-card">
+          <span class="stat-label">Recent 3-Game OPS</span>
+          <strong id="recent-three-ops">.000</strong>
+        </article>
+        <article class="mini-card">
+          <span class="stat-label">Most Recent Game</span>
+          <strong id="advanced-last-game">No games yet</strong>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
