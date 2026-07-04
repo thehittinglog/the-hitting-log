@@ -1637,19 +1637,20 @@ function initGamesPage(games) {
     const svgNamespace = "http://www.w3.org/2000/svg";
     const wrap = document.createElement("div");
     const title = document.createElement("h4");
+    const helper = document.createElement("p");
     const svg = document.createElementNS(svgNamespace, "svg");
     const positions = [
-      { label: "LF", value: "LF", x: 76, y: 82 },
-      { label: "LCF", value: "LCF", x: 150, y: 50 },
-      { label: "CF", value: "CF", x: 240, y: 38 },
-      { label: "RCF", value: "RCF", x: 330, y: 50 },
-      { label: "RF", value: "RF", x: 404, y: 82 },
-      { label: "SS", value: "SS", x: 172, y: 188 },
-      { label: "2B", value: "2B", x: 240, y: 166 },
-      { label: "1B", value: "1B", x: 314, y: 226 },
-      { label: "3B", value: "3B", x: 166, y: 226 },
-      { label: "P", value: "P", x: 240, y: 250 },
-      { label: "C", value: "C", x: 240, y: 386 },
+      { label: "LF", value: "LF", x: 92, y: 116, labelX: 74, labelY: 105 },
+      { label: "LCF", value: "LCF", x: 168, y: 82, labelX: 142, labelY: 73 },
+      { label: "CF", value: "CF", x: 250, y: 70, labelX: 250, labelY: 58 },
+      { label: "RCF", value: "RCF", x: 332, y: 82, labelX: 358, labelY: 73 },
+      { label: "RF", value: "RF", x: 408, y: 116, labelX: 426, labelY: 105 },
+      { label: "SS", value: "SS", x: 205, y: 218, labelX: 188, labelY: 208 },
+      { label: "2B", value: "2B", x: 250, y: 202, labelX: 250, labelY: 190 },
+      { label: "1B", value: "1B", x: 316, y: 258, labelX: 336, labelY: 250 },
+      { label: "3B", value: "3B", x: 184, y: 258, labelX: 164, labelY: 250 },
+      { label: "P", value: "P", x: 250, y: 258, labelX: 250, labelY: 248 },
+      { label: "C", value: "C", x: 250, y: 328, labelX: 250, labelY: 350 },
     ];
 
     function createSvgElement(name, attributes) {
@@ -1663,10 +1664,10 @@ function initGamesPage(games) {
     function createBase(x, y) {
       return createSvgElement("rect", {
         class: "field-base",
-        x: x - 8,
-        y: y - 8,
-        width: 16,
-        height: 16,
+        x: x - 7,
+        y: y - 7,
+        width: 14,
+        height: 14,
         transform: "rotate(45 " + x + " " + y + ")",
       });
     }
@@ -1681,48 +1682,53 @@ function initGamesPage(games) {
 
     wrap.className = "result-stack hit-location-wrap";
     title.textContent = "Hit Location";
+    helper.className = "hit-location-helper";
+    helper.textContent = "This field is from the catcher\x27s perspective.";
 
     svg.classList.add("field-selector");
-    svg.setAttribute("viewBox", "0 0 480 420");
+    svg.setAttribute("viewBox", "0 0 500 360");
     svg.setAttribute("role", "group");
     svg.setAttribute("aria-label", "Hit location selector");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
     svg.appendChild(createSvgElement("path", {
       class: "field-outfield",
-      d: "M42 360 A198 198 0 0 1 438 360 L392 360 A152 152 0 0 0 88 360 Z",
+      d: "M34 322 C56 145 185 42 250 40 C315 42 444 145 466 322 Z",
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-inner-outfield",
+      d: "M92 322 C112 190 210 112 250 112 C290 112 388 190 408 322 Z",
     }));
     svg.appendChild(createSvgElement("circle", {
       class: "field-infield-dirt",
-      cx: 240,
-      cy: 280,
-      r: 98,
+      cx: 250,
+      cy: 260,
+      r: 82,
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-diamond-fill",
+      d: "M250 330 L318 264 L250 198 L182 264 Z",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M240 386 L56 82",
+      d: "M250 330 L58 94",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M240 386 L424 82",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "field-diamond-line",
-      d: "M240 386 L314 300 L240 214 L166 300 Z",
+      d: "M250 330 L442 94",
     }));
     svg.appendChild(createSvgElement("circle", {
       class: "field-pitcher-circle",
-      cx: 240,
-      cy: 280,
-      r: 34,
+      cx: 250,
+      cy: 258,
+      r: 26,
     }));
-    svg.appendChild(createBase(240, 386));
-    svg.appendChild(createBase(314, 300));
-    svg.appendChild(createBase(240, 214));
-    svg.appendChild(createBase(166, 300));
+    svg.appendChild(createBase(318, 264));
+    svg.appendChild(createBase(250, 198));
+    svg.appendChild(createBase(182, 264));
     svg.appendChild(createSvgElement("path", {
       class: "field-home-plate",
-      d: "M226 390 L254 390 L250 404 L240 412 L230 404 Z",
+      d: "M236 330 L264 330 L260 344 L250 352 L240 344 Z",
     }));
 
     positions.forEach((position) => {
@@ -1743,12 +1749,12 @@ function initGamesPage(games) {
         class: "field-marker",
         cx: position.x,
         cy: position.y,
-        r: 17,
+        r: 4,
       });
       const label = createSvgElement("text", {
         class: "field-marker-label",
-        x: position.x,
-        y: position.y + 4,
+        x: position.labelX,
+        y: position.labelY,
         "text-anchor": "middle",
       });
 
@@ -1767,6 +1773,7 @@ function initGamesPage(games) {
     });
 
     wrap.appendChild(title);
+    wrap.appendChild(helper);
     wrap.appendChild(svg);
     return wrap;
   }
