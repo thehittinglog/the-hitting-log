@@ -1665,16 +1665,16 @@ function initGamesPage(games) {
     const title = document.createElement("h4");
     const helper = document.createElement("p");
     const svg = document.createElementNS(svgNamespace, "svg");
-    const positions = [
-      { label: "LF", x: 118, y: 112, labelX: 118, labelY: 112 },
-      { label: "CF", x: 250, y: 58, labelX: 250, labelY: 58 },
-      { label: "RF", x: 382, y: 112, labelX: 382, labelY: 112 },
-      { label: "SS", x: 196, y: 178, labelX: 196, labelY: 178 },
-      { label: "2B", x: 304, y: 178, labelX: 304, labelY: 178 },
-      { label: "3B", x: 164, y: 235, labelX: 164, labelY: 235 },
-      { label: "1B", x: 336, y: 235, labelX: 336, labelY: 235 },
-      { label: "P", x: 250, y: 250, labelX: 250, labelY: 257 },
-      { label: "C", x: 250, y: 342, labelX: 250, labelY: 348 },
+    const labels = [
+      { text: "CF", x: 250, y: 58 },
+      { text: "LF", x: 122, y: 118 },
+      { text: "RF", x: 378, y: 118 },
+      { text: "SS", x: 197, y: 180 },
+      { text: "2B", x: 303, y: 180 },
+      { text: "3B", x: 162, y: 244 },
+      { text: "1B", x: 338, y: 244 },
+      { text: "P", x: 250, y: 256 },
+      { text: "C", x: 250, y: 348 },
     ];
 
     function createSvgElement(name, attributes) {
@@ -1687,7 +1687,7 @@ function initGamesPage(games) {
 
     function createBase(x, y) {
       return createSvgElement("rect", {
-        class: "field-base",
+        class: "reference-field-base",
         x: x - 7,
         y: y - 7,
         width: 14,
@@ -1735,38 +1735,38 @@ function initGamesPage(games) {
     helper.className = "hit-location-helper";
     helper.textContent = "This field is from the catcher\x27s perspective.";
 
-    svg.classList.add("field-selector", "spray-chart-field");
+    svg.classList.add("reference-hit-field");
     svg.setAttribute("viewBox", "0 0 " + viewBoxWidth + " " + viewBoxHeight);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Tap the field where the ball was hit");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
     svg.appendChild(createSvgElement("path", {
-      class: "field-outfield",
-      d: "M38 140 C116 -20 384 -20 462 140 L342 262 M158 262 L38 140",
+      class: "reference-field-boundary",
+      d: "M42 142 C116 -18 384 -18 458 142 L352 252 M148 252 L42 142",
     }));
     svg.appendChild(createSvgElement("path", {
-      class: "field-inner-outfield",
-      d: "M158 262 C172 166 218 132 250 132 C282 132 328 166 342 262",
+      class: "reference-field-inner-arc",
+      d: "M148 252 C164 160 216 124 250 124 C284 124 336 160 352 252",
     }));
     svg.appendChild(createSvgElement("path", {
-      class: "field-diamond-fill",
+      class: "reference-field-diamond",
       d: "M250 312 L330 232 L250 152 L170 232 Z",
     }));
     svg.appendChild(createSvgElement("path", {
-      class: "field-foul-line",
-      d: "M250 312 L38 140",
+      class: "reference-field-line",
+      d: "M250 312 L170 232 L148 252",
     }));
     svg.appendChild(createSvgElement("path", {
-      class: "field-foul-line",
-      d: "M250 312 L462 140",
+      class: "reference-field-line",
+      d: "M250 312 L330 232 L352 252",
     }));
     svg.appendChild(createSvgElement("path", {
-      class: "field-home-circle",
-      d: "M208 300 C208 338 292 338 292 300",
+      class: "reference-field-home-arc",
+      d: "M208 302 C208 338 292 338 292 302",
     }));
     svg.appendChild(createSvgElement("circle", {
-      class: "field-pitcher-circle",
+      class: "reference-field-pitcher-circle",
       cx: 250,
       cy: 250,
       r: 24,
@@ -1775,38 +1775,31 @@ function initGamesPage(games) {
     svg.appendChild(createBase(250, 152));
     svg.appendChild(createBase(170, 232));
     svg.appendChild(createSvgElement("path", {
-      class: "field-home-plate",
+      class: "reference-field-home-plate",
       d: "M240 316 L260 316 L260 326 L250 334 L240 326 Z",
     }));
 
-    positions.forEach((position) => {
-      const dot = createSvgElement("circle", {
-        class: "field-position-dot",
-        cx: position.x,
-        cy: position.y,
-        r: 4,
-      });
+    labels.forEach((labelData) => {
       const label = createSvgElement("text", {
-        class: "field-position-label",
-        x: position.labelX,
-        y: position.labelY,
+        class: "reference-field-label",
+        x: labelData.x,
+        y: labelData.y,
         "text-anchor": "middle",
       });
-      label.textContent = position.label;
-      svg.appendChild(dot);
+      label.textContent = labelData.text;
       svg.appendChild(label);
     });
 
     const fairTerritory = createSvgElement("path", {
-      class: "field-fair-territory",
-      d: "M250 312 L38 140 C116 -20 384 -20 462 140 Z",
+      class: "reference-field-fair-territory",
+      d: "M250 312 L42 142 C116 -18 384 -18 458 142 Z",
       "aria-label": "Fair territory tap area",
     });
     fairTerritory.addEventListener("click", selectHitPoint);
     svg.appendChild(fairTerritory);
 
     const selectedMarker = createSvgElement("circle", {
-      class: "field-selected-marker",
+      class: "reference-field-selected-marker",
       cx: 250,
       cy: 250,
       r: 8,

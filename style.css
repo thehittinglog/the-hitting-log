@@ -1893,3 +1893,87 @@ svg.field-selector.spray-chart-field {
     font-size: 18px !important;
   }
 }
+
+
+/* CLEAN REFERENCE FIELD SVG */
+.reference-hit-field {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  aspect-ratio: 500 / 360;
+  margin: 0 auto;
+  overflow: visible;
+  background: transparent;
+  touch-action: manipulation;
+}
+
+.reference-field-boundary,
+.reference-field-inner-arc,
+.reference-field-diamond,
+.reference-field-line,
+.reference-field-home-arc {
+  fill: none;
+  stroke: #000000;
+  stroke-width: 3.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.reference-field-inner-arc,
+.reference-field-diamond,
+.reference-field-line,
+.reference-field-home-arc {
+  stroke-width: 3;
+}
+
+.reference-field-base,
+.reference-field-home-plate {
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 3;
+}
+
+.reference-field-pitcher-circle {
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 3;
+}
+
+.reference-field-label {
+  fill: #000000;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.reference-field-fair-territory {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+.reference-field-selected-marker {
+  fill: var(--accent);
+  stroke: #ffffff;
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.24));
+  pointer-events: none;
+}
+
+.reference-field-selected-marker[hidden] {
+  display: none;
+}
+@media (max-width: 520px) {
+  .reference-hit-field {
+    max-width: 100%;
+  }
+
+  .reference-field-label {
+    font-size: 18px;
+  }
+}
