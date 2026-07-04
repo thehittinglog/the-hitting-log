@@ -701,47 +701,13 @@ select:focus {
   padding: 18px;
 }
 
-.spray-field-svg {
+.spray-field-placeholder {
   display: block;
   width: 100%;
   max-width: 1000px;
   height: auto;
   margin: 0 auto;
   background: #ffffff;
-}
-
-.field-line {
-  fill: none;
-  stroke: #000000;
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.base-shape {
-  fill: #ffffff;
-  stroke: #000000;
-  stroke-width: 4;
-  stroke-linejoin: round;
-}
-
-.pitcher-circle {
-  fill: #ffffff;
-  stroke: #000000;
-  stroke-width: 4;
-}
-
-.position-label {
-  font-family: Inter, Arial, sans-serif;
-  font-size: 34px;
-  font-weight: 800;
-  fill: #000000;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
-.position-label--pitcher {
-  font-size: 30px;
 }
 
 .spray-legend-dot--ground {
