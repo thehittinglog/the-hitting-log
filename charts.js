@@ -233,14 +233,30 @@ function renderChartsPage() {
 
 window.renderChartsPage = renderChartsPage;
 
+function getChartsViewFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedView = params.get("view");
+
+  return requestedView === "heat-maps" || requestedView === "spray-charts" ? requestedView : "landing";
+}
+
+function setChartsView(viewName) {
+  document.querySelectorAll("[data-chart-view]").forEach((view) => {
+    view.classList.toggle("is-active", view.dataset.chartView === viewName);
+  });
+}
+
+window.setChartsView = setChartsView;
+
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body?.dataset.page !== "charts") {
     return;
   }
 
+  setChartsView(getChartsViewFromUrl());
   renderChartStrikeZone();
 
-  // This page-specific bootstrap updates the always-visible strike zone with chart data.
+  // This page-specific bootstrap keeps the Heat Maps view ready when opened.
   if (typeof window.renderChartsPage === "function") {
     window.renderChartsPage();
   }

@@ -22,69 +22,186 @@
   </header>
 
   <main class="page-shell">
-    <section class="hero compact-hero">
-      <p class="eyebrow">Visual Trends</p>
-      <h1>See where results happen in the zone.</h1>
-      <p class="hero-copy">
-        Filter your saved pitch and at-bat data to see how different results map across the strike zone.
-      </p>
-    </section>
+    <section id="charts-landing-view" class="chart-view is-active" data-chart-view="landing">
+      <section class="hero compact-hero">
+        <p class="eyebrow">Visual Trends</p>
+        <h1>Chart Insights</h1>
+        <p class="hero-copy">
+          Choose the visual that best matches the swing or pitch pattern you want to inspect.
+        </p>
+      </section>
 
-    <section class="panel">
-      <div class="section-heading">
-        <div>
-          <h2>Strike Zone Map</h2>
-          <p class="section-copy">The map uses your saved pitch locations from localStorage.</p>
-        </div>
-      </div>
-      <div class="chart-controls">
-        <label class="filter-label" for="chart-filter">
-          <span>Filter</span>
-          <select id="chart-filter">
-            <option value="Hot/Cold Zones">Hot/Cold Zones</option>
-            <option value="Called Strike">Called Strike</option>
-            <option value="Swinging Strike">Swinging Strike</option>
-            <option value="Foul Ball">Foul Ball</option>
-            <option value="Ground Ball">Ground Ball</option>
-            <option value="Line Drive">Line Drive</option>
-            <option value="Fly Ball">Fly Ball</option>
-            <option value="Single">Single</option>
-            <option value="Double">Double</option>
-            <option value="Triple">Triple</option>
-            <option value="Home Run">Home Run</option>
-            <option value="Out">Out</option>
-            <option value="Sac Fly">Sac Fly</option>
-            <option value="Strikeout">Strikeout</option>
-          </select>
-        </label>
-        <button id="generate-chart-button" type="button">Generate</button>
-      </div>
-
-      <div class="chart-overview">
-        <article class="mini-card">
-          <span class="stat-label">Total Matching Results</span>
-          <strong id="chart-filter-total">0</strong>
-        </article>
-      </div>
-
-      <div class="zone-map-wrap">
+      <section class="panel">
         <div class="section-heading">
           <div>
-            <h3 id="chart-zone-title">Zone View</h3>
+            <h2>Charts</h2>
+            <p class="section-copy">Select a chart category to open its workspace.</p>
           </div>
         </div>
-        <div id="chart-zone-map" class="location-grid zone-map chart-zone-map" aria-label="Strike zone map"></div>
-        <p id="charts-empty" class="empty-state">No pitch location data logged yet. The zone map is ready when you log pitches.</p>
-      </div>
 
-      <div class="chart-legend" id="chart-legend">
-        <span class="legend-swatch legend-hit"></span>
-        <span>Red = hit-heavy</span>
-        <span class="legend-swatch legend-mixed"></span>
-        <span>Muted blend = mixed hit and out results</span>
-        <span class="legend-swatch legend-out"></span>
-        <span>Navy = out-heavy</span>
-      </div>
+        <div class="chart-selection-grid" aria-label="Chart categories">
+          <a class="chart-category-card" href="charts.html?view=heat-maps" aria-label="Open Heat Maps">
+            <span>
+              <h2>Heat Maps</h2>
+              <p>Open the existing Hot/Cold strike-zone grid with the same filters, totals, and zone calculations.</p>
+            </span>
+            <span class="chart-category-action">Open Heat Maps</span>
+          </a>
+          <a class="chart-category-card" href="charts.html?view=spray-charts" aria-label="Open Spray Charts">
+            <span>
+              <h2>Spray Charts</h2>
+              <p>View a clean field layout prepared for future batted-ball locations, filters, and outcome markers.</p>
+            </span>
+            <span class="chart-category-action">Open Spray Charts</span>
+          </a>
+        </div>
+      </section>
+    </section>
+
+    <section id="heat-maps-view" class="chart-view" data-chart-view="heat-maps">
+      <section class="hero compact-hero">
+        <p class="eyebrow">Visual Trends</p>
+        <h1>Heat Maps</h1>
+        <p class="hero-copy">
+          Filter your saved pitch and at-bat data to see how different results map across the strike zone.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Strike Zone Map</h2>
+            <p class="section-copy">The map uses your saved pitch locations from localStorage.</p>
+          </div>
+          <a class="back-link" href="charts.html">Back to Charts</a>
+        </div>
+        <div class="chart-controls">
+          <label class="filter-label" for="chart-filter">
+            <span>Filter</span>
+            <select id="chart-filter">
+              <option value="Hot/Cold Zones">Hot/Cold Zones</option>
+              <option value="Called Strike">Called Strike</option>
+              <option value="Swinging Strike">Swinging Strike</option>
+              <option value="Foul Ball">Foul Ball</option>
+              <option value="Ground Ball">Ground Ball</option>
+              <option value="Line Drive">Line Drive</option>
+              <option value="Fly Ball">Fly Ball</option>
+              <option value="Single">Single</option>
+              <option value="Double">Double</option>
+              <option value="Triple">Triple</option>
+              <option value="Home Run">Home Run</option>
+              <option value="Out">Out</option>
+              <option value="Sac Fly">Sac Fly</option>
+              <option value="Strikeout">Strikeout</option>
+            </select>
+          </label>
+          <button id="generate-chart-button" type="button">Generate</button>
+        </div>
+
+        <div class="chart-overview">
+          <article class="mini-card">
+            <span class="stat-label">Total Matching Results</span>
+            <strong id="chart-filter-total">0</strong>
+          </article>
+        </div>
+
+        <div class="zone-map-wrap">
+          <div class="section-heading">
+            <div>
+              <h3 id="chart-zone-title">Zone View</h3>
+            </div>
+          </div>
+          <div id="chart-zone-map" class="location-grid zone-map chart-zone-map" aria-label="Strike zone map"></div>
+          <p id="charts-empty" class="empty-state">No pitch location data logged yet. The zone map is ready when you log pitches.</p>
+        </div>
+
+        <div class="chart-legend" id="chart-legend">
+          <span class="legend-swatch legend-hit"></span>
+          <span>Red = hit-heavy</span>
+          <span class="legend-swatch legend-mixed"></span>
+          <span>Muted blend = mixed hit and out results</span>
+          <span class="legend-swatch legend-out"></span>
+          <span>Navy = out-heavy</span>
+        </div>
+      </section>
+    </section>
+
+    <section id="spray-charts-view" class="chart-view" data-chart-view="spray-charts">
+      <section class="hero compact-hero">
+        <p class="eyebrow">Visual Trends</p>
+        <h1>Spray Charts</h1>
+        <p class="hero-copy">A flexible field view for future hit-location data, filters, and outcome overlays.</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Field Overview</h2>
+            <p class="section-copy">Use this area to layer future hit-location data and filter controls.</p>
+          </div>
+          <a class="back-link" href="charts.html">Back to Charts</a>
+        </div>
+
+        <div class="spray-chart-layout">
+          <div class="spray-field-card">
+            <div class="spray-field" aria-label="Simple spray chart field">
+              <div class="spray-field__foul-line spray-field__foul-line--left"></div>
+              <div class="spray-field__foul-line spray-field__foul-line--right"></div>
+              <div class="spray-field__diamond"></div>
+              <div class="spray-marker spray-marker--ground"></div>
+              <div class="spray-marker spray-marker--line"></div>
+              <div class="spray-marker spray-marker--fly"></div>
+              <div class="spray-marker spray-marker--hard"></div>
+              <div class="spray-marker spray-marker--hit"></div>
+              <div class="spray-marker spray-marker--out"></div>
+            </div>
+          </div>
+
+          <aside class="spray-sidebar" aria-label="Spray chart controls">
+            <div class="spray-panel">
+              <h3>Filters</h3>
+              <label>
+                <span>Split</span>
+                <select>
+                  <option>All</option>
+                  <option>Lefty</option>
+                  <option>Righty</option>
+                </select>
+              </label>
+              <label>
+                <span>Result</span>
+                <select>
+                  <option>All results</option>
+                  <option>Single</option>
+                  <option>Double</option>
+                  <option>Home Run</option>
+                </select>
+              </label>
+              <label>
+                <span>Venue</span>
+                <select>
+                  <option>All parks</option>
+                  <option>Home</option>
+                  <option>Away</option>
+                </select>
+              </label>
+              <button type="button">Apply Filters</button>
+            </div>
+
+            <div class="spray-panel">
+              <h3>Legend</h3>
+              <ul class="spray-legend-list">
+                <li><span class="spray-legend-dot spray-legend-dot--ground"></span>Ground Ball</li>
+                <li><span class="spray-legend-dot spray-legend-dot--line"></span>Line Drive</li>
+                <li><span class="spray-legend-dot spray-legend-dot--fly"></span>Fly Ball</li>
+                <li><span class="spray-legend-dot spray-legend-dot--hard"></span>Hard Hit</li>
+                <li><span class="spray-legend-dot spray-legend-dot--hit"></span>Hit</li>
+                <li><span class="spray-legend-dot spray-legend-dot--out"></span>Out</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </section>
     </section>
   </main>
 
