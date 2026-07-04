@@ -2298,8 +2298,6 @@ function initGamesPage(games) {
         ? "Enter pitcher details before logging pitches."
         : state.step === "pitch_type"
           ? "Choose the pitch type."
-        : state.step === "hit_location"
-          ? "Choose where the ball was hit."
         : state.step === "hard_hit_ball"
           ? "Answer the contact detail."
           : state.step === "productive_out"
@@ -2355,10 +2353,6 @@ function initGamesPage(games) {
 
     if (state.step === "batted_ball_type") {
       card.appendChild(renderOptionGroup("Batted Ball Type", battedBallTypeOptions, handleBattedBallType));
-    }
-
-    if (state.step === "hit_location") {
-      card.appendChild(renderHitLocationSelector());
     }
 
     if (state.step === "batted_ball_outcome") {
@@ -2501,7 +2495,7 @@ function initGamesPage(games) {
     state.activePitch.battedBallType = battedBallType;
     state.activePitch.batted_ball_type = battedBallType;
     state.activePitch.contact_type = battedBallType;
-    state.step = "hit_location";
+    state.step = "batted_ball_outcome";
     renderAtBats();
   }
 
