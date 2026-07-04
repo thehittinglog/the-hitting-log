@@ -10,6 +10,31 @@
       average: (value) => value > 25 && value <= 50,
       poor: (value) => value > 50,
     },
+    hardHitTwoStrikePercent: {
+      good: (value) => value >= 80,
+      average: (value) => value >= 50 && value < 80,
+      poor: (value) => value < 50,
+    },
+    productiveOutPercent: {
+      good: (value) => value >= 70,
+      average: (value) => value >= 50 && value < 70,
+      poor: (value) => value < 50,
+    },
+    chaseRate: {
+      good: (value) => value < 20,
+      average: (value) => value >= 20 && value < 40,
+      poor: (value) => value >= 40,
+    },
+    contactRate: {
+      good: (value) => value >= 80,
+      average: (value) => value >= 70 && value < 80,
+      poor: (value) => value < 70,
+    },
+    qualityAtBatPercent: {
+      good: (value) => value >= 70,
+      average: (value) => value >= 50 && value < 70,
+      poor: (value) => value < 50,
+    },
   };
 
   const performanceClasses = ["metric-good", "metric-average", "metric-poor"];
