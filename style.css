@@ -369,6 +369,21 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   border-radius: 10px;
 }
 
+.metric-good {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.metric-average {
+  color: #000000;
+  font-weight: 700;
+}
+
+.metric-poor {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
 .mini-card {
   padding: 18px;
 }

@@ -969,6 +969,10 @@ function setText(id, value) {
   const element = document.getElementById(id);
   if (element) {
     element.textContent = String(value);
+
+    if (element.dataset.performanceMetric && typeof window.applyMetricPerformanceColor === "function") {
+      window.applyMetricPerformanceColor(element, element.dataset.performanceMetric, value);
+    }
   }
 }
 
