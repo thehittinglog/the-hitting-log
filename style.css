@@ -701,6 +701,13 @@ select:focus {
   padding: 18px;
 }
 
+.spray-field-stage {
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
 .spray-field-placeholder {
   display: block;
   width: 100%;
@@ -708,6 +715,46 @@ select:focus {
   height: auto;
   margin: 0 auto;
   background: #ffffff;
+}
+
+.spray-marker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.spray-chart-marker {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--navy), 0 4px 10px rgba(12, 35, 64, 0.18);
+  transform: translate(-50%, -50%);
+}
+
+.spray-chart-marker--hit {
+  background: var(--accent);
+}
+
+.spray-chart-marker--out {
+  background: var(--navy);
+}
+
+.spray-chart-marker--ground {
+  background: #2f7a53;
+}
+
+.spray-chart-marker--line {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #2563eb;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.spray-chart-marker--fly {
+  background: #7c3aed;
 }
 
 .spray-legend-dot--ground {

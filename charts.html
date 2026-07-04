@@ -144,54 +144,40 @@
 
         <div class="spray-chart-layout">
           <div class="spray-field-card">
-            <img
-              class="spray-field-placeholder"
-              src="assets/spray-chart-placeholder.png"
-              alt="Black and white baseball and softball field diagram placeholder for spray charts"
-            >
+            <div class="spray-field-stage" id="spray-field-stage">
+              <img
+                class="spray-field-placeholder"
+                src="assets/spray-chart-placeholder.png"
+                alt="Black and white baseball and softball field diagram placeholder for spray charts"
+              >
+              <div class="spray-marker-layer" id="spray-marker-layer" aria-label="Logged batted ball locations"></div>
+            </div>
+            <p id="spray-empty-state" class="empty-state" hidden>No batted balls match this filter yet.</p>
           </div>
 
           <aside class="spray-sidebar" aria-label="Spray chart controls">
             <div class="spray-panel">
               <h3>Filters</h3>
-              <label>
-                <span>Split</span>
-                <select>
-                  <option>All</option>
-                  <option>Lefty</option>
-                  <option>Righty</option>
+              <label for="spray-result-filter">
+                <span>Batted Ball Result</span>
+                <select id="spray-result-filter">
+                  <option value="all">All Results</option>
+                  <option value="fly_balls">Fly Balls</option>
+                  <option value="line_drives">Line Drives</option>
+                  <option value="ground_balls">Ground Balls</option>
+                  <option value="hits">Hits</option>
+                  <option value="outs">Outs</option>
+                  <option value="singles">Singles</option>
+                  <option value="doubles">Doubles</option>
+                  <option value="triples">Triples</option>
+                  <option value="home_runs">Home Runs</option>
                 </select>
               </label>
-              <label>
-                <span>Result</span>
-                <select>
-                  <option>All results</option>
-                  <option>Single</option>
-                  <option>Double</option>
-                  <option>Home Run</option>
-                </select>
-              </label>
-              <label>
-                <span>Venue</span>
-                <select>
-                  <option>All parks</option>
-                  <option>Home</option>
-                  <option>Away</option>
-                </select>
-              </label>
-              <button type="button">Apply Filters</button>
             </div>
 
             <div class="spray-panel">
               <h3>Legend</h3>
-              <ul class="spray-legend-list">
-                <li><span class="spray-legend-dot spray-legend-dot--ground"></span>Ground Ball</li>
-                <li><span class="spray-legend-dot spray-legend-dot--line"></span>Line Drive</li>
-                <li><span class="spray-legend-dot spray-legend-dot--fly"></span>Fly Ball</li>
-                <li><span class="spray-legend-dot spray-legend-dot--hard"></span>Hard Hit</li>
-                <li><span class="spray-legend-dot spray-legend-dot--hit"></span>Hit</li>
-                <li><span class="spray-legend-dot spray-legend-dot--out"></span>Out</li>
-              </ul>
+              <ul class="spray-legend-list" id="spray-legend-list"></ul>
             </div>
           </aside>
         </div>
