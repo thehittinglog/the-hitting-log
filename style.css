@@ -1488,3 +1488,111 @@ svg.field-selector {
     font-size: 0.76rem;
   }
 }
+
+
+/* FINAL CLEAN HIT LOCATION FIELD OVERRIDES */
+svg.field-selector {
+  display: block !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: transparent !important;
+  overflow: visible !important;
+  touch-action: manipulation;
+}
+
+.field-outfield {
+  fill: #d7d7d7 !important;
+  stroke: none !important;
+}
+
+.field-infield-dirt {
+  fill: #cfcfcf !important;
+  stroke: none !important;
+}
+
+.field-foul-line {
+  fill: none !important;
+  stroke: #000000 !important;
+  stroke-width: 4 !important;
+  stroke-linecap: round !important;
+}
+
+.field-diamond-line {
+  display: none !important;
+}
+
+.field-pitcher-circle {
+  fill: none !important;
+  stroke: #000000 !important;
+  stroke-width: 2 !important;
+  opacity: 0.9;
+}
+
+.field-base {
+  fill: #eeeeee !important;
+  stroke: #000000 !important;
+  stroke-width: 1.5 !important;
+}
+
+.field-home-plate {
+  fill: #eeeeee !important;
+  stroke: #000000 !important;
+  stroke-width: 1.5 !important;
+}
+
+.field-location {
+  cursor: pointer;
+  outline: none;
+}
+
+.field-hit-area {
+  fill: transparent !important;
+  stroke: transparent !important;
+  opacity: 0 !important;
+  pointer-events: all;
+}
+
+.field-marker {
+  r: 4px;
+  fill: #000000 !important;
+  stroke: none !important;
+  opacity: 0.95;
+  transition: fill 140ms ease, r 140ms ease, opacity 140ms ease;
+}
+
+.field-marker-label {
+  fill: #4f4f4f !important;
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 140ms ease, fill 140ms ease;
+}
+
+.field-location:hover .field-marker,
+.field-location:focus-visible .field-marker,
+.field-location.is-selected .field-marker {
+  r: 7px;
+  fill: var(--accent) !important;
+  opacity: 1;
+}
+
+.field-location:hover .field-marker-label,
+.field-location:focus-visible .field-marker-label,
+.field-location.is-selected .field-marker-label {
+  fill: var(--accent) !important;
+  opacity: 1;
+}
+
+@media (max-width: 520px) {
+  svg.field-selector {
+    max-width: 100% !important;
+  }
+}
