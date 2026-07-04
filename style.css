@@ -1720,3 +1720,102 @@ svg.field-selector {
     font-size: 0.58rem !important;
   }
 }
+
+
+/* FINAL SPRAY CHART FIELD TAP OVERRIDES */
+svg.field-selector.spray-chart-field {
+  display: block !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  height: auto !important;
+  aspect-ratio: 500 / 420 !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+  touch-action: manipulation;
+}
+
+.spray-chart-field .field-outfield {
+  fill: #d7d7d7 !important;
+  stroke: none !important;
+}
+
+.spray-chart-field .field-inner-outfield {
+  fill: #e2e2e2 !important;
+  stroke: none !important;
+}
+
+.spray-chart-field .field-infield-dirt {
+  fill: #cfcfcf !important;
+  stroke: none !important;
+}
+
+.spray-chart-field .field-diamond-fill {
+  fill: #eeeeee !important;
+  stroke: none !important;
+}
+
+.spray-chart-field .field-foul-line {
+  fill: none !important;
+  stroke: #000000 !important;
+  stroke-width: 4 !important;
+  stroke-linecap: round !important;
+}
+
+.spray-chart-field .field-pitcher-circle {
+  fill: none !important;
+  stroke: #000000 !important;
+  stroke-width: 1.6 !important;
+  opacity: 0.8;
+}
+
+.spray-chart-field .field-base,
+.spray-chart-field .field-home-plate {
+  fill: #ffffff !important;
+  stroke: #000000 !important;
+  stroke-width: 1.4 !important;
+}
+
+.spray-chart-field .field-position-dot {
+  fill: #000000 !important;
+  stroke: none !important;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.spray-chart-field .field-position-label {
+  fill: #4f4f4f !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  opacity: 0.68 !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+.spray-chart-field .field-fair-territory {
+  fill: transparent !important;
+  stroke: none !important;
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+.spray-chart-field .field-selected-marker {
+  fill: var(--accent) !important;
+  stroke: #ffffff !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.24));
+  pointer-events: none;
+}
+
+.spray-chart-field .field-selected-marker[hidden] {
+  display: none !important;
+}
+@media (max-width: 520px) {
+  svg.field-selector.spray-chart-field {
+    max-width: 100% !important;
+  }
+
+  .spray-chart-field .field-position-label {
+    font-size: 9px !important;
+  }
+}

@@ -254,6 +254,30 @@ function normalizePitch(pitch) {
     }
   });
 
+  [
+    "hitLocationX",
+    "hitLocationY",
+    "hit_location_x",
+    "hit_location_y",
+  ].forEach((field) => {
+    const value = Number(pitch[field]);
+    if (Number.isFinite(value)) {
+      normalizedPitch[field] = Math.min(1, Math.max(0, value));
+    }
+  });
+
+  if (Number.isFinite(normalizedPitch.hitLocationX) && !Number.isFinite(normalizedPitch.hit_location_x)) {
+    normalizedPitch.hit_location_x = normalizedPitch.hitLocationX;
+  } else if (Number.isFinite(normalizedPitch.hit_location_x) && !Number.isFinite(normalizedPitch.hitLocationX)) {
+    normalizedPitch.hitLocationX = normalizedPitch.hit_location_x;
+  }
+
+  if (Number.isFinite(normalizedPitch.hitLocationY) && !Number.isFinite(normalizedPitch.hit_location_y)) {
+    normalizedPitch.hit_location_y = normalizedPitch.hitLocationY;
+  } else if (Number.isFinite(normalizedPitch.hit_location_y) && !Number.isFinite(normalizedPitch.hitLocationY)) {
+    normalizedPitch.hitLocationY = normalizedPitch.hit_location_y;
+  }
+
   if (!normalizedPitch.battedBallType && typeof pitch.contact_type === "string" && pitch.contact_type) {
     normalizedPitch.battedBallType = pitch.contact_type;
   } else if (!normalizedPitch.battedBallType && typeof pitch.batted_ball_type === "string" && pitch.batted_ball_type) {
@@ -1635,22 +1659,24 @@ function initGamesPage(games) {
 
   function renderHitLocationSelector() {
     const svgNamespace = "http://www.w3.org/2000/svg";
+    const viewBoxWidth = 500;
+    const viewBoxHeight = 420;
     const wrap = document.createElement("div");
     const title = document.createElement("h4");
     const helper = document.createElement("p");
     const svg = document.createElementNS(svgNamespace, "svg");
     const positions = [
-      { label: "LF", value: "LF", x: 92, y: 116, labelX: 74, labelY: 105 },
-      { label: "LCF", value: "LCF", x: 168, y: 82, labelX: 142, labelY: 73 },
-      { label: "CF", value: "CF", x: 250, y: 70, labelX: 250, labelY: 58 },
-      { label: "RCF", value: "RCF", x: 332, y: 82, labelX: 358, labelY: 73 },
-      { label: "RF", value: "RF", x: 408, y: 116, labelX: 426, labelY: 105 },
-      { label: "SS", value: "SS", x: 205, y: 218, labelX: 188, labelY: 208 },
-      { label: "2B", value: "2B", x: 250, y: 202, labelX: 250, labelY: 190 },
-      { label: "1B", value: "1B", x: 316, y: 258, labelX: 336, labelY: 250 },
-      { label: "3B", value: "3B", x: 184, y: 258, labelX: 164, labelY: 250 },
-      { label: "P", value: "P", x: 250, y: 258, labelX: 250, labelY: 248 },
-      { label: "C", value: "C", x: 250, y: 328, labelX: 250, labelY: 350 },
+      { label: "LF", x: 104, y: 132, labelX: 86, labelY: 122 },
+      { label: "LCF", x: 174, y: 96, labelX: 150, labelY: 86 },
+      { label: "CF", x: 250, y: 82, labelX: 250, labelY: 68 },
+      { label: "RCF", x: 326, y: 96, labelX: 350, labelY: 86 },
+      { label: "RF", x: 396, y: 132, labelX: 414, labelY: 122 },
+      { label: "SS", x: 205, y: 238, labelX: 188, labelY: 230 },
+      { label: "2B", x: 295, y: 238, labelX: 314, labelY: 230 },
+      { label: "3B", x: 172, y: 306, labelX: 152, labelY: 304 },
+      { label: "1B", x: 328, y: 306, labelX: 348, labelY: 304 },
+      { label: "P", x: 250, y: 292, labelX: 250, labelY: 282 },
+      { label: "C", x: 250, y: 390, labelX: 250, labelY: 408 },
     ];
 
     function createSvgElement(name, attributes) {
@@ -1672,12 +1698,38 @@ function initGamesPage(games) {
       });
     }
 
-    function selectHitLocation(group, value) {
-      svg.querySelectorAll(".field-location.is-selected").forEach((selected) => {
-        selected.classList.remove("is-selected");
-      });
-      group.classList.add("is-selected");
-      window.setTimeout(() => handleHitLocation(value), 120);
+    function clampCoordinate(value) {
+      return Math.min(1, Math.max(0, value));
+    }
+
+    function getSvgPoint(event) {
+      const matrix = svg.getScreenCTM();
+      if (!matrix) {
+        return null;
+      }
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(matrix.inverse());
+    }
+
+    function selectHitPoint(event) {
+      const point = getSvgPoint(event);
+      if (!point) {
+        return;
+      }
+
+      const normalizedX = clampCoordinate(point.x / viewBoxWidth);
+      const normalizedY = clampCoordinate(1 - point.y / viewBoxHeight);
+      selectedMarker.setAttribute("cx", point.x.toFixed(1));
+      selectedMarker.setAttribute("cy", point.y.toFixed(1));
+      selectedMarker.removeAttribute("hidden");
+      window.setTimeout(() => handleHitLocation({
+        x: normalizedX,
+        y: normalizedY,
+        svgX: point.x,
+        svgY: point.y,
+      }), 120);
     }
 
     wrap.className = "result-stack hit-location-wrap";
@@ -1685,92 +1737,86 @@ function initGamesPage(games) {
     helper.className = "hit-location-helper";
     helper.textContent = "This field is from the catcher\x27s perspective.";
 
-    svg.classList.add("field-selector");
-    svg.setAttribute("viewBox", "0 0 500 360");
-    svg.setAttribute("role", "group");
-    svg.setAttribute("aria-label", "Hit location selector");
+    svg.classList.add("field-selector", "spray-chart-field");
+    svg.setAttribute("viewBox", "0 0 " + viewBoxWidth + " " + viewBoxHeight);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Tap the field where the ball was hit");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
     svg.appendChild(createSvgElement("path", {
       class: "field-outfield",
-      d: "M34 322 C56 145 185 42 250 40 C315 42 444 145 466 322 Z",
+      d: "M38 342 C52 150 172 42 250 34 C328 42 448 150 462 342 Z",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-inner-outfield",
-      d: "M92 322 C112 190 210 112 250 112 C290 112 388 190 408 322 Z",
+      d: "M94 338 C110 205 206 118 250 112 C294 118 390 205 406 338 Z",
     }));
     svg.appendChild(createSvgElement("circle", {
       class: "field-infield-dirt",
       cx: 250,
-      cy: 260,
-      r: 82,
+      cy: 298,
+      r: 92,
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-diamond-fill",
-      d: "M250 330 L318 264 L250 198 L182 264 Z",
+      d: "M250 372 L330 292 L250 212 L170 292 Z",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M250 330 L58 94",
+      d: "M250 372 L54 100",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M250 330 L442 94",
+      d: "M250 372 L446 100",
     }));
     svg.appendChild(createSvgElement("circle", {
       class: "field-pitcher-circle",
       cx: 250,
-      cy: 258,
-      r: 26,
+      cy: 292,
+      r: 30,
     }));
-    svg.appendChild(createBase(318, 264));
-    svg.appendChild(createBase(250, 198));
-    svg.appendChild(createBase(182, 264));
+    svg.appendChild(createBase(330, 292));
+    svg.appendChild(createBase(250, 212));
+    svg.appendChild(createBase(170, 292));
     svg.appendChild(createSvgElement("path", {
       class: "field-home-plate",
-      d: "M236 330 L264 330 L260 344 L250 352 L240 344 Z",
+      d: "M236 372 L264 372 L260 386 L250 394 L240 386 Z",
     }));
 
     positions.forEach((position) => {
-      const group = createSvgElement("g", {
-        class: "field-location",
-        "data-location": position.value,
-        role: "button",
-        tabindex: 0,
-        "aria-label": position.label,
-      });
-      const hitArea = createSvgElement("circle", {
-        class: "field-hit-area",
-        cx: position.x,
-        cy: position.y,
-        r: 24,
-      });
-      const marker = createSvgElement("circle", {
-        class: "field-marker",
+      const dot = createSvgElement("circle", {
+        class: "field-position-dot",
         cx: position.x,
         cy: position.y,
         r: 4,
       });
       const label = createSvgElement("text", {
-        class: "field-marker-label",
+        class: "field-position-label",
         x: position.labelX,
         y: position.labelY,
         "text-anchor": "middle",
       });
-
       label.textContent = position.label;
-      group.appendChild(hitArea);
-      group.appendChild(marker);
-      group.appendChild(label);
-      group.addEventListener("click", () => selectHitLocation(group, position.value));
-      group.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          selectHitLocation(group, position.value);
-        }
-      });
-      svg.appendChild(group);
+      svg.appendChild(dot);
+      svg.appendChild(label);
     });
+
+    const fairTerritory = createSvgElement("path", {
+      class: "field-fair-territory",
+      d: "M250 372 L54 100 C92 42 180 20 250 18 C320 20 408 42 446 100 Z",
+      "aria-label": "Fair territory tap area",
+    });
+    fairTerritory.addEventListener("click", selectHitPoint);
+    svg.appendChild(fairTerritory);
+
+    const selectedMarker = createSvgElement("circle", {
+      class: "field-selected-marker",
+      cx: 250,
+      cy: 292,
+      r: 8,
+      hidden: true,
+    });
+    svg.appendChild(selectedMarker);
 
     wrap.appendChild(title);
     wrap.appendChild(helper);
@@ -2475,8 +2521,24 @@ function initGamesPage(games) {
       return;
     }
 
-    state.activePitch.hitLocation = hitLocation;
-    state.activePitch.hit_location = hitLocation;
+    if (hitLocation && typeof hitLocation === "object") {
+      const hitLocationX = Number(hitLocation.x);
+      const hitLocationY = Number(hitLocation.y);
+      const normalizedX = Number.isFinite(hitLocationX) ? Math.min(1, Math.max(0, hitLocationX)) : 0;
+      const normalizedY = Number.isFinite(hitLocationY) ? Math.min(1, Math.max(0, hitLocationY)) : 0;
+      const coordinateLabel = "x:" + normalizedX.toFixed(2) + ",y:" + normalizedY.toFixed(2);
+
+      state.activePitch.hitLocation = coordinateLabel;
+      state.activePitch.hit_location = coordinateLabel;
+      state.activePitch.hitLocationX = normalizedX;
+      state.activePitch.hitLocationY = normalizedY;
+      state.activePitch.hit_location_x = normalizedX;
+      state.activePitch.hit_location_y = normalizedY;
+    } else {
+      state.activePitch.hitLocation = hitLocation;
+      state.activePitch.hit_location = hitLocation;
+    }
+
     state.step = "batted_ball_outcome";
     renderAtBats();
   }
