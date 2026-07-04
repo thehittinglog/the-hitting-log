@@ -701,142 +701,71 @@ select:focus {
   padding: 18px;
 }
 
-.spray-field {
-  position: relative;
-  min-height: clamp(420px, 62vh, 720px);
-  overflow: hidden;
-  border: 1px solid rgba(47, 122, 83, 0.22);
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 50% 96%, rgba(236, 194, 118, 0.96) 0 8%, transparent 8.2%),
-    radial-gradient(circle at 50% 108%, rgba(255, 255, 255, 0.9) 0 18%, transparent 18.3%),
-    conic-gradient(from 225deg at 50% 96%, rgba(241, 204, 138, 0.96) 0 90deg, transparent 90deg 360deg),
-    linear-gradient(180deg, #dcefd6 0%, #aed8a8 58%, #86bd82 100%);
+.spray-field-svg {
+  display: block;
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  margin: 0 auto;
+  background: #ffffff;
 }
 
-.spray-field::before {
-  position: absolute;
-  right: 8%;
-  bottom: 10%;
-  left: 8%;
-  height: 84%;
-  border: 2px solid rgba(255, 255, 255, 0.88);
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  content: "";
+.field-line {
+  fill: none;
+  stroke: #000000;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.spray-field::after {
-  position: absolute;
-  right: 18%;
-  bottom: 12%;
-  left: 18%;
-  height: 58%;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  content: "";
+.base-shape {
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 4;
+  stroke-linejoin: round;
 }
 
-.spray-field__diamond {
-  position: absolute;
-  top: 75%;
-  left: 50%;
-  width: min(22vw, 190px);
-  height: min(22vw, 190px);
-  min-width: 128px;
-  min-height: 128px;
-  border: 2px solid rgba(112, 78, 38, 0.5);
-  background: rgba(241, 204, 138, 0.82);
-  transform: translate(-50%, -50%) rotate(45deg);
+.pitcher-circle {
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 4;
 }
 
-.spray-field__foul-line {
-  position: absolute;
-  bottom: 13%;
-  left: 50%;
-  width: 2px;
-  height: 78%;
-  background: rgba(255, 255, 255, 0.76);
-  transform-origin: bottom center;
+.position-label {
+  font-family: Inter, Arial, sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  fill: #000000;
+  text-anchor: middle;
+  dominant-baseline: middle;
 }
 
-.spray-field__foul-line--left {
-  transform: rotate(-45deg);
+.position-label--pitcher {
+  font-size: 30px;
 }
 
-.spray-field__foul-line--right {
-  transform: rotate(45deg);
-}
-
-.spray-marker {
-  position: absolute;
-  z-index: 1;
-  width: 13px;
-  height: 13px;
-  border: 2px solid #ffffff;
-  border-radius: 999px;
-  box-shadow: 0 6px 14px rgba(12, 35, 64, 0.16);
-}
-
-.spray-marker--ground,
 .spray-legend-dot--ground {
   background: #2f7a53;
 }
 
-.spray-marker--line,
 .spray-legend-dot--line {
   background: #2563eb;
 }
 
-.spray-marker--fly,
 .spray-legend-dot--fly {
   background: #7c3aed;
 }
 
-.spray-marker--hard,
 .spray-legend-dot--hard {
   background: #b45309;
 }
 
-.spray-marker--hit,
 .spray-legend-dot--hit {
   background: var(--accent);
 }
 
-.spray-marker--out,
 .spray-legend-dot--out {
   background: var(--navy);
-}
-
-.spray-marker--ground {
-  top: 67%;
-  left: 42%;
-}
-
-.spray-marker--line {
-  top: 36%;
-  left: 58%;
-}
-
-.spray-marker--fly {
-  top: 28%;
-  left: 44%;
-}
-
-.spray-marker--hard {
-  top: 50%;
-  left: 60%;
-}
-
-.spray-marker--hit {
-  top: 42%;
-  left: 36%;
-}
-
-.spray-marker--out {
-  top: 58%;
-  left: 70%;
 }
 
 .spray-sidebar {
@@ -1151,10 +1080,6 @@ body[data-page="games"] #game-choice-view .choice-card-button {
 
   .spray-sidebar {
     position: static;
-  }
-
-  .spray-field {
-    min-height: 360px;
   }
 
   .edit-field-grid {
