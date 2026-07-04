@@ -39,31 +39,31 @@
       </div>
       <div class="summary-grid dashboard-snapshot-grid dashboard-stat-grid snapshot-stat-grid stats-grid stat-grid">
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">Games</span>
+          <span class="stat-label" data-metric-info="games">Games</span>
           <strong id="games-count" class="stat-value">0</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">At-Bats</span>
+          <span class="stat-label" data-metric-info="atBats">At-Bats</span>
           <strong id="at-bats-total" class="stat-value">0</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">Hits</span>
+          <span class="stat-label" data-metric-info="hits">Hits</span>
           <strong id="hits-total" class="stat-value">0</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">BA</span>
+          <span class="stat-label" data-metric-info="battingAverage">BA</span>
           <strong id="batting-average" class="stat-value">.000</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">OBP</span>
+          <span class="stat-label" data-metric-info="onBasePercentage">OBP</span>
           <strong id="on-base-percentage" class="stat-value">.000</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">SLG</span>
+          <span class="stat-label" data-metric-info="sluggingPercentage">SLG</span>
           <strong id="slugging-percentage" class="stat-value">.000</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">OPS</span>
+          <span class="stat-label" data-metric-info="ops">OPS</span>
           <strong id="ops-total" class="stat-value">.000</strong>
         </article>
       </div>
@@ -104,19 +104,19 @@
         </div>
         <div class="insight-stack">
           <article class="mini-card">
-            <span class="stat-label">Best Game</span>
+            <span class="stat-label" data-metric-info="bestGame">Best Game</span>
             <strong id="best-game">No games yet</strong>
           </article>
           <article class="mini-card">
-            <span class="stat-label">Last Opponent</span>
+            <span class="stat-label" data-metric-info="lastOpponent">Last Opponent</span>
             <strong id="last-opponent">None</strong>
           </article>
           <article class="mini-card">
-            <span class="stat-label">BA Last 5</span>
+            <span class="stat-label" data-metric-info="baLastFive">BA Last 5</span>
             <strong id="last-five-average">.000</strong>
           </article>
           <article class="mini-card">
-            <span class="stat-label">OPS Last 5</span>
+            <span class="stat-label" data-metric-info="opsLastFive">OPS Last 5</span>
             <strong id="last-five-ops">.000</strong>
           </article>
         </div>
@@ -124,6 +124,7 @@
     </section>
   </main>
 
+  <script src="scripts/metric-info.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
