@@ -1658,158 +1658,100 @@ function initGamesPage(games) {
   }
 
   function renderHitLocationSelector() {
-    const svgNamespace = "http://www.w3.org/2000/svg";
-    const viewBoxWidth = 500;
-    const viewBoxHeight = 360;
     const wrap = document.createElement("div");
     const title = document.createElement("h4");
     const helper = document.createElement("p");
-    const svg = document.createElementNS(svgNamespace, "svg");
-    const labels = [
-      { text: "CF", x: 250, y: 58 },
-      { text: "LF", x: 122, y: 118 },
-      { text: "RF", x: 378, y: 118 },
-      { text: "SS", x: 197, y: 180 },
-      { text: "2B", x: 303, y: 180 },
-      { text: "3B", x: 162, y: 244 },
-      { text: "1B", x: 338, y: 244 },
-      { text: "P", x: 250, y: 256 },
-      { text: "C", x: 250, y: 348 },
-    ];
-
-    function createSvgElement(name, attributes) {
-      const element = document.createElementNS(svgNamespace, name);
-      Object.entries(attributes || {}).forEach(([key, value]) => {
-        element.setAttribute(key, String(value));
-      });
-      return element;
-    }
-
-    function createBase(x, y) {
-      return createSvgElement("rect", {
-        class: "reference-field-base",
-        x: x - 7,
-        y: y - 7,
-        width: 14,
-        height: 14,
-        transform: "rotate(45 " + x + " " + y + ")",
-      });
-    }
+    const fieldButton = document.createElement("button");
+    const image = document.createElement("img");
+    const selectedMarker = document.createElement("span");
+    const selectedText = document.createElement("p");
+    const nextButton = document.createElement("button");
 
     function clampCoordinate(value) {
       return Math.min(1, Math.max(0, value));
     }
 
-    function getSvgPoint(event) {
-      const matrix = svg.getScreenCTM();
-      if (!matrix) {
-        return null;
-      }
-      const point = svg.createSVGPoint();
-      point.x = event.clientX;
-      point.y = event.clientY;
-      return point.matrixTransform(matrix.inverse());
+    function hasSelectedLocation() {
+      return Boolean(
+        state.activePitch &&
+        Number.isFinite(state.activePitch.hitLocationX) &&
+        Number.isFinite(state.activePitch.hitLocationY)
+      );
     }
 
-    function selectHitPoint(event) {
-      const point = getSvgPoint(event);
-      if (!point) {
+    function updateSelectedMarker() {
+      if (!hasSelectedLocation()) {
+        selectedMarker.hidden = true;
+        selectedText.textContent = "Tap the field image to set batted ball location.";
+        nextButton.disabled = true;
         return;
       }
 
-      const normalizedX = clampCoordinate(point.x / viewBoxWidth);
-      const normalizedY = clampCoordinate(1 - point.y / viewBoxHeight);
-      selectedMarker.setAttribute("cx", point.x.toFixed(1));
-      selectedMarker.setAttribute("cy", point.y.toFixed(1));
-      selectedMarker.removeAttribute("hidden");
-      window.setTimeout(() => handleHitLocation({
+      const x = state.activePitch.hitLocationX;
+      const y = state.activePitch.hitLocationY;
+      selectedMarker.hidden = false;
+      selectedMarker.style.left = `${x * 100}%`;
+      selectedMarker.style.top = `${y * 100}%`;
+      selectedText.textContent = `Selected location: x ${x.toFixed(2)}, y ${y.toFixed(2)}`;
+      nextButton.disabled = false;
+    }
+
+    function selectHitPoint(event) {
+      const bounds = fieldButton.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) {
+        return;
+      }
+
+      const normalizedX = clampCoordinate((event.clientX - bounds.left) / bounds.width);
+      const normalizedY = clampCoordinate((event.clientY - bounds.top) / bounds.height);
+
+      handleHitLocation({
         x: normalizedX,
         y: normalizedY,
-        svgX: point.x,
-        svgY: point.y,
-      }), 120);
+      });
+      updateSelectedMarker();
     }
 
     wrap.className = "result-stack hit-location-wrap";
-    title.textContent = "Hit Location";
+    title.textContent = "Batted Ball Location";
     helper.className = "hit-location-helper";
-    helper.textContent = "This field is from the catcher\x27s perspective.";
+    helper.textContent = "Tap where the ball was hit, then continue.";
 
-    svg.classList.add("reference-hit-field");
-    svg.setAttribute("viewBox", "0 0 " + viewBoxWidth + " " + viewBoxHeight);
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Tap the field where the ball was hit");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    fieldButton.type = "button";
+    fieldButton.className = "hit-location-image-button";
+    fieldButton.setAttribute("aria-label", "Tap the field where the ball was hit");
+    fieldButton.addEventListener("click", selectHitPoint);
 
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-boundary",
-      d: "M42 142 C116 -18 384 -18 458 142 L352 252 M148 252 L42 142",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-inner-arc",
-      d: "M148 252 C164 160 216 124 250 124 C284 124 336 160 352 252",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-diamond",
-      d: "M250 312 L330 232 L250 152 L170 232 Z",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-line",
-      d: "M250 312 L170 232 L148 252",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-line",
-      d: "M250 312 L330 232 L352 252",
-    }));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-home-arc",
-      d: "M208 302 C208 338 292 338 292 302",
-    }));
-    svg.appendChild(createSvgElement("circle", {
-      class: "reference-field-pitcher-circle",
-      cx: 250,
-      cy: 250,
-      r: 24,
-    }));
-    svg.appendChild(createBase(330, 232));
-    svg.appendChild(createBase(250, 152));
-    svg.appendChild(createBase(170, 232));
-    svg.appendChild(createSvgElement("path", {
-      class: "reference-field-home-plate",
-      d: "M240 316 L260 316 L260 326 L250 334 L240 326 Z",
-    }));
+    image.className = "hit-location-image";
+    image.src = "assets/spray-chart-placeholder.png";
+    image.alt = "";
+    image.draggable = false;
 
-    labels.forEach((labelData) => {
-      const label = createSvgElement("text", {
-        class: "reference-field-label",
-        x: labelData.x,
-        y: labelData.y,
-        "text-anchor": "middle",
-      });
-      label.textContent = labelData.text;
-      svg.appendChild(label);
+    selectedMarker.className = "hit-location-selected-marker";
+    selectedMarker.hidden = true;
+
+    selectedText.className = "hit-location-selection-text";
+
+    nextButton.type = "button";
+    nextButton.textContent = "Next";
+    nextButton.addEventListener("click", () => {
+      if (!hasSelectedLocation()) {
+        return;
+      }
+
+      state.step = "batted_ball_outcome";
+      renderAtBats();
     });
 
-    const fairTerritory = createSvgElement("path", {
-      class: "reference-field-fair-territory",
-      d: "M250 312 L42 142 C116 -18 384 -18 458 142 Z",
-      "aria-label": "Fair territory tap area",
-    });
-    fairTerritory.addEventListener("click", selectHitPoint);
-    svg.appendChild(fairTerritory);
-
-    const selectedMarker = createSvgElement("circle", {
-      class: "reference-field-selected-marker",
-      cx: 250,
-      cy: 250,
-      r: 8,
-      hidden: true,
-    });
-    svg.appendChild(selectedMarker);
+    fieldButton.appendChild(image);
+    fieldButton.appendChild(selectedMarker);
 
     wrap.appendChild(title);
     wrap.appendChild(helper);
-    wrap.appendChild(svg);
+    wrap.appendChild(fieldButton);
+    wrap.appendChild(selectedText);
+    wrap.appendChild(nextButton);
+    updateSelectedMarker();
     return wrap;
   }
 
@@ -2300,8 +2242,10 @@ function initGamesPage(games) {
           ? "Choose the pitch type."
         : state.step === "hard_hit_ball"
           ? "Answer the contact detail."
-          : state.step === "productive_out"
-            ? "Did this out move or score a runner?"
+        : state.step === "productive_out"
+          ? "Did this out move or score a runner?"
+          : state.step === "batted_ball_location"
+            ? "Choose the batted ball location."
           : state.step === "end_at_bat"
             ? "Review and save this at-bat."
             : state.activePitch
@@ -2353,6 +2297,10 @@ function initGamesPage(games) {
 
     if (state.step === "batted_ball_type") {
       card.appendChild(renderOptionGroup("Batted Ball Type", battedBallTypeOptions, handleBattedBallType));
+    }
+
+    if (state.step === "batted_ball_location") {
+      card.appendChild(renderHitLocationSelector());
     }
 
     if (state.step === "batted_ball_outcome") {
@@ -2495,7 +2443,7 @@ function initGamesPage(games) {
     state.activePitch.battedBallType = battedBallType;
     state.activePitch.batted_ball_type = battedBallType;
     state.activePitch.contact_type = battedBallType;
-    state.step = "batted_ball_outcome";
+    state.step = "batted_ball_location";
     renderAtBats();
   }
 
@@ -2520,6 +2468,10 @@ function initGamesPage(games) {
     } else {
       state.activePitch.hitLocation = hitLocation;
       state.activePitch.hit_location = hitLocation;
+    }
+
+    if (hitLocation && typeof hitLocation === "object") {
+      return;
     }
 
     state.step = "batted_ball_outcome";

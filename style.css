@@ -1773,6 +1773,59 @@ svg.field-selector {
   line-height: 1.4;
 }
 
+.hit-location-image-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 620px;
+  padding: 0;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: none;
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+
+.hit-location-image-button:hover,
+.hit-location-image-button:focus-visible {
+  transform: none;
+  box-shadow: 0 0 0 3px rgba(228, 0, 44, 0.12);
+}
+
+.hit-location-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.hit-location-selected-marker {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--navy);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.hit-location-selected-marker[hidden] {
+  display: none;
+}
+
+.hit-location-selection-text {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 svg.field-selector {
   display: block !important;
   width: 100% !important;
