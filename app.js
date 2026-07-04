@@ -1660,23 +1660,21 @@ function initGamesPage(games) {
   function renderHitLocationSelector() {
     const svgNamespace = "http://www.w3.org/2000/svg";
     const viewBoxWidth = 500;
-    const viewBoxHeight = 420;
+    const viewBoxHeight = 360;
     const wrap = document.createElement("div");
     const title = document.createElement("h4");
     const helper = document.createElement("p");
     const svg = document.createElementNS(svgNamespace, "svg");
     const positions = [
-      { label: "LF", x: 104, y: 132, labelX: 86, labelY: 122 },
-      { label: "LCF", x: 174, y: 96, labelX: 150, labelY: 86 },
-      { label: "CF", x: 250, y: 82, labelX: 250, labelY: 68 },
-      { label: "RCF", x: 326, y: 96, labelX: 350, labelY: 86 },
-      { label: "RF", x: 396, y: 132, labelX: 414, labelY: 122 },
-      { label: "SS", x: 205, y: 238, labelX: 188, labelY: 230 },
-      { label: "2B", x: 295, y: 238, labelX: 314, labelY: 230 },
-      { label: "3B", x: 172, y: 306, labelX: 152, labelY: 304 },
-      { label: "1B", x: 328, y: 306, labelX: 348, labelY: 304 },
-      { label: "P", x: 250, y: 292, labelX: 250, labelY: 282 },
-      { label: "C", x: 250, y: 390, labelX: 250, labelY: 408 },
+      { label: "LF", x: 118, y: 112, labelX: 118, labelY: 112 },
+      { label: "CF", x: 250, y: 58, labelX: 250, labelY: 58 },
+      { label: "RF", x: 382, y: 112, labelX: 382, labelY: 112 },
+      { label: "SS", x: 196, y: 178, labelX: 196, labelY: 178 },
+      { label: "2B", x: 304, y: 178, labelX: 304, labelY: 178 },
+      { label: "3B", x: 164, y: 235, labelX: 164, labelY: 235 },
+      { label: "1B", x: 336, y: 235, labelX: 336, labelY: 235 },
+      { label: "P", x: 250, y: 250, labelX: 250, labelY: 257 },
+      { label: "C", x: 250, y: 342, labelX: 250, labelY: 348 },
     ];
 
     function createSvgElement(name, attributes) {
@@ -1745,42 +1743,40 @@ function initGamesPage(games) {
 
     svg.appendChild(createSvgElement("path", {
       class: "field-outfield",
-      d: "M38 342 C52 150 172 42 250 34 C328 42 448 150 462 342 Z",
+      d: "M38 140 C116 -20 384 -20 462 140 L342 262 M158 262 L38 140",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-inner-outfield",
-      d: "M94 338 C110 205 206 118 250 112 C294 118 390 205 406 338 Z",
-    }));
-    svg.appendChild(createSvgElement("circle", {
-      class: "field-infield-dirt",
-      cx: 250,
-      cy: 298,
-      r: 92,
+      d: "M158 262 C172 166 218 132 250 132 C282 132 328 166 342 262",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-diamond-fill",
-      d: "M250 372 L330 292 L250 212 L170 292 Z",
+      d: "M250 312 L330 232 L250 152 L170 232 Z",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M250 372 L54 100",
+      d: "M250 312 L38 140",
     }));
     svg.appendChild(createSvgElement("path", {
       class: "field-foul-line",
-      d: "M250 372 L446 100",
+      d: "M250 312 L462 140",
+    }));
+    svg.appendChild(createSvgElement("path", {
+      class: "field-home-circle",
+      d: "M208 300 C208 338 292 338 292 300",
     }));
     svg.appendChild(createSvgElement("circle", {
       class: "field-pitcher-circle",
       cx: 250,
-      cy: 292,
-      r: 30,
+      cy: 250,
+      r: 24,
     }));
-    svg.appendChild(createBase(330, 292));
-    svg.appendChild(createBase(250, 212));
-    svg.appendChild(createBase(170, 292));
+    svg.appendChild(createBase(330, 232));
+    svg.appendChild(createBase(250, 152));
+    svg.appendChild(createBase(170, 232));
     svg.appendChild(createSvgElement("path", {
       class: "field-home-plate",
-      d: "M236 372 L264 372 L260 386 L250 394 L240 386 Z",
+      d: "M240 316 L260 316 L260 326 L250 334 L240 326 Z",
     }));
 
     positions.forEach((position) => {
@@ -1803,7 +1799,7 @@ function initGamesPage(games) {
 
     const fairTerritory = createSvgElement("path", {
       class: "field-fair-territory",
-      d: "M250 372 L54 100 C92 42 180 20 250 18 C320 20 408 42 446 100 Z",
+      d: "M250 312 L38 140 C116 -20 384 -20 462 140 Z",
       "aria-label": "Fair territory tap area",
     });
     fairTerritory.addEventListener("click", selectHitPoint);
@@ -1812,7 +1808,7 @@ function initGamesPage(games) {
     const selectedMarker = createSvgElement("circle", {
       class: "field-selected-marker",
       cx: 250,
-      cy: 292,
+      cy: 250,
       r: 8,
       hidden: true,
     });
