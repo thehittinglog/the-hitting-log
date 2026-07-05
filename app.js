@@ -970,6 +970,7 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   const date = document.createElement("strong");
   const opponent = document.createElement("p");
   const average = document.createElement("p");
+  const performanceScore = document.createElement("p");
 
   row.className = "logged-game-card-row";
   cell.colSpan = 1;
@@ -980,10 +981,13 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   opponent.textContent = `vs. ${opponentLabel || "Opponent"}`;
   average.className = "logged-game-average";
   average.textContent = `Batting Average: ${formatRate(gameStats.battingAverage)}`;
+  performanceScore.className = "logged-game-score";
+  performanceScore.textContent = `Hitting Log Performance Score: ${calculateHittingLogPerformanceScore(gameStats)}`;
 
   card.appendChild(date);
   card.appendChild(opponent);
   card.appendChild(average);
+  card.appendChild(performanceScore);
   cell.appendChild(card);
   row.appendChild(cell);
   tableBody.appendChild(row);
@@ -3147,6 +3151,7 @@ function initAdvancedPage(games) {
   const allAtBats = games.flatMap((game) => (Array.isArray(game.atBats) ? game.atBats : []));
   const hardHitMetrics = getHardHitMetrics(allAtBats);
   const advancedPercentMetrics = getAdvancedPercentMetrics(allAtBats, totals);
+  const performanceScore = calculateHittingLogPerformanceScore({ atBats: allAtBats, stats: totals });
   const gameCount = games.length;
   const hitGames = games.filter((game) => getGameStats(game).hits > 0);
   const multiHitGames = games.filter((game) => getGameStats(game).hits >= 2);
@@ -3164,6 +3169,7 @@ function initAdvancedPage(games) {
     return best;
   }, null);
 
+  setText("hitting-log-performance-score", performanceScore);
   setText("hard-hit-percent", formatPercent(hardHitMetrics.hardHitPercent));
   setText("two-strike-percent", formatPercent(hardHitMetrics.twoStrikePercent));
   setText("hard-hit-two-strike-percent", formatPercent(hardHitMetrics.hardHitTwoStrikePercent));
@@ -3324,6 +3330,42 @@ function getHardHitMetrics(atBats) {
     hardHitTwoStrikePercent:
       metrics.twoStrikeAtBats === 0 ? 0 : metrics.hardHitTwoStrikeAtBats / metrics.twoStrikeAtBats,
   };
+}
+
+function calculateHittingLogPerformanceScore(source) {
+  const atBats = Array.isArray(source?.atBats) ? source.atBats : [];
+
+  if (atBats.length === 0) {
+    return 0;
+  }
+
+  const totals = source?.stats || getRateStats([{ atBats }]);
+  const hardHitMetrics = getHardHitMetrics(atBats);
+  const advancedPercentMetrics = getAdvancedPercentMetrics(atBats, totals);
+  const totalOuts = atBats.filter((atBat) => isOutOutcome(atBat.outcome)).length;
+  const twoStrikePercent = hardHitMetrics.twoStrikePercent * 100;
+  const hardHitTwoStrikePercent = hardHitMetrics.hardHitTwoStrikePercent * 100;
+  const twoStrikeAdjustment =
+    100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100));
+  const components = [
+    { value: hardHitMetrics.hardHitPercent * 100, weight: 0.45 },
+    { value: advancedPercentMetrics.qualityAtBatPercent * 100, weight: 0.25 },
+    { value: twoStrikeAdjustment, weight: 0.10 },
+  ];
+
+  if (totalOuts > 0) {
+    components.splice(2, 0, {
+      value: advancedPercentMetrics.productiveOutPercent * 100,
+      weight: 0.20,
+    });
+  }
+
+  const totalWeight = components.reduce((sum, component) => sum + component.weight, 0);
+  const rawScore = components.reduce((sum, component) => {
+    return sum + (component.value * (component.weight / totalWeight));
+  }, 0);
+
+  return Math.min(100, Math.max(0, Math.round(rawScore)));
 }
 
 function hasBallInPlay(atBat) {

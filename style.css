@@ -202,6 +202,15 @@ th,
   border-color: rgba(169, 31, 36, 0.28);
 }
 
+.featured-metrics-panel .performance-score-card {
+  grid-column: 1 / -1;
+  border-width: 2px;
+}
+
+.performance-score-card strong {
+  font-size: 2.4rem;
+}
+
 .panel + .panel,
 .dashboard,
 .two-column-layout {
@@ -1212,7 +1221,8 @@ tbody td {
 }
 
 .logged-game-opponent,
-.logged-game-average {
+.logged-game-average,
+.logged-game-score {
   margin: 0;
 }
 
@@ -1221,7 +1231,8 @@ tbody td {
   font-weight: 700;
 }
 
-.logged-game-average {
+.logged-game-average,
+.logged-game-score {
   color: var(--ink);
   font-weight: 800;
 }

@@ -66,6 +66,12 @@
       formula: "OBP over last 5 games + SLG over last 5 games",
       explanation: "This gives a recent production trend that includes power and on-base value.",
     },
+    hittingLogPerformanceScore: {
+      title: "Hitting Log Performance Score",
+      definition: "A 0-100 development score that blends contact quality, quality at-bats, productive outs, and two-strike performance.",
+      formula: "(Hard Hit Ball % x 0.45) + (Quality At-Bat % x 0.25) + (Productive Outs % x 0.20) + (Two-Strike Adjustment x 0.10). Two-Strike Adjustment = 100 - (Two-Strike % x ((100 - Hard Hit Ball % w/ 2 Strikes) / 100)).",
+      explanation: "This creates one quick read on game or season performance while still rewarding strong no-out games by redistributing the productive-out weight when no outs were recorded.",
+    },
     hardHitBallPercent: {
       title: "Hard Hit Ball %",
       definition: "The percentage of batted balls that are classified as hard hit.",
