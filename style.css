@@ -562,9 +562,9 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 .log-panel .choice-grid button,
 .pitch-type-modal .choice-grid button,
 .location-grid .zone-cell {
-  color: var(--bg);
-  background: var(--accent);
-  border: 1px solid rgba(169, 31, 36, 0.44);
+  color: var(--ink);
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
   box-shadow: none;
 }
 
@@ -574,7 +574,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 .pitch-type-modal .choice-grid button:focus-visible,
 .location-grid .zone-cell:hover,
 .location-grid .zone-cell:focus-visible {
-  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.22);
+  box-shadow: 0 12px 24px rgba(7, 50, 79, 0.12);
 }
 
 .pitch-type-modal-backdrop {
