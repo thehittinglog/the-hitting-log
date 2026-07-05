@@ -3378,11 +3378,17 @@ function initChartsPage(games) {
   }
 
   function getZoneCellStyle(bucket, filterType, maxCount, filterId) {
+    const emptyCellStyle = "background: var(--bg); color: var(--muted); border-color: var(--line);";
+
+    if (!bucket || maxCount === 0) {
+      return emptyCellStyle;
+    }
+
     if (filterType === "hotCold") {
       const total = bucket.hits + bucket.outs;
 
       if (total === 0) {
-        return "";
+        return emptyCellStyle;
       }
 
       const hitShare = bucket.hits / total;
@@ -3390,24 +3396,24 @@ function initChartsPage(games) {
 
       if (hitShare > outShare) {
         const opacity = Math.max(0.2, hitShare * (total / Math.max(1, maxCount)));
-        return `background: rgba(228, 0, 44, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(228, 0, 44, 0.45);`;
+        return `background: rgba(169, 31, 36, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(169, 31, 36, 0.45);`;
       }
 
       const opacity = Math.max(0.2, outShare * (total / Math.max(1, maxCount)));
-      return `background: rgba(12, 35, 64, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(12, 35, 64, 0.45);`;
+      return `background: rgba(7, 50, 79, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(7, 50, 79, 0.45);`;
     }
 
     if (bucket.count === 0 || maxCount === 0) {
-      return "";
+      return emptyCellStyle;
     }
 
     const opacity = Math.max(0.16, bucket.count / maxCount);
 
     if (filterId === "outs") {
-      return `background: rgba(12, 35, 64, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(12, 35, 64, 0.45);`;
+      return `background: rgba(7, 50, 79, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(7, 50, 79, 0.45);`;
     }
 
-    return `background: rgba(228, 0, 44, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(228, 0, 44, 0.45);`;
+    return `background: rgba(169, 31, 36, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(169, 31, 36, 0.45);`;
   }
 
   function renderLegend(filterType) {
