@@ -451,6 +451,14 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   margin-top: 16px;
 }
 
+.step-back-actions {
+  grid-template-columns: max-content;
+}
+
+.step-back-button {
+  min-width: 96px;
+}
+
 .logged-games-actions {
   grid-template-columns: max-content;
   margin-top: 16px;

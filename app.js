@@ -1371,7 +1371,9 @@ function initGamesPage(games) {
     editingAtBatIndex: null,
     editingAtBatDraft: null,
     pendingProductiveOutOutcome: "",
+    stepHistory: [],
     step: "at_bat_details",
+    activePitchCompleted: false,
   };
 
   const pitcherHandednessOptions = [
@@ -1593,7 +1595,9 @@ function initGamesPage(games) {
     state.draftGame = createDraftGame();
     state.activeAtBat = null;
     state.activePitch = null;
+    state.activePitchCompleted = false;
     state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
     state.step = "at_bat_details";
     setMessage("", false);
     updateTournamentContext();
@@ -1641,6 +1645,52 @@ function initGamesPage(games) {
     button.textContent = option.label;
     button.addEventListener("click", () => onClick(option.value));
     return button;
+  }
+
+  function goToStep(nextStep, { trackHistory = true } = {}) {
+    if (trackHistory && state.step !== nextStep) {
+      state.stepHistory.push(state.step);
+    }
+
+    state.step = nextStep;
+    renderAtBats();
+  }
+
+  function backStep() {
+    const previousStep = state.stepHistory.pop();
+
+    if (!previousStep) {
+      return;
+    }
+
+    if (previousStep === "location" && state.activePitchCompleted && state.activeAtBat && state.activePitch) {
+      state.activeAtBat.pitches = state.activeAtBat.pitches.filter((pitch) => pitch !== state.activePitch);
+      state.activePitchCompleted = false;
+    }
+
+    state.step = previousStep;
+    renderAtBats();
+  }
+
+  function resetStepHistory() {
+    state.stepHistory = [];
+  }
+
+  function renderBackButton() {
+    const actions = document.createElement("div");
+    const backButton = document.createElement("button");
+
+    actions.className = "builder-actions game-entry-actions step-back-actions";
+    backButton.type = "button";
+    backButton.className = "secondary-button step-back-button";
+    backButton.textContent = "Back";
+    backButton.addEventListener("click", backStep);
+    actions.appendChild(backButton);
+    return actions;
+  }
+
+  function canGoBackStep() {
+    return state.stepHistory.length > 0 && state.step !== "at_bat_details";
   }
 
   function renderOptionGroup(titleText, options, onClick) {
@@ -1743,8 +1793,7 @@ function initGamesPage(games) {
         return;
       }
 
-      state.step = "batted_ball_outcome";
-      renderAtBats();
+      goToStep("batted_ball_outcome");
     });
 
     fieldButton.appendChild(image);
@@ -1833,8 +1882,7 @@ function initGamesPage(games) {
     startButton.type = "button";
     startButton.textContent = "Start Pitch Logging";
     startButton.addEventListener("click", () => {
-      state.step = "location";
-      renderAtBats();
+      goToStep("location");
     });
     actions.appendChild(startButton);
     wrap.appendChild(actions);
@@ -2274,8 +2322,8 @@ function initGamesPage(games) {
         interactive: true,
         onSelectLocation(location) {
           state.activePitch = createPitch(location);
-          state.step = "pitch_type";
-          renderAtBats();
+          state.activePitchCompleted = false;
+          goToStep("pitch_type");
         },
         selectedLocationId: state.activePitch ? state.activePitch.location.id : "",
       });
@@ -2327,6 +2375,10 @@ function initGamesPage(games) {
       card.appendChild(renderActionButtons(false));
     }
 
+    if (canGoBackStep()) {
+      card.appendChild(renderBackButton());
+    }
+
     const sequence = document.createElement("div");
     sequence.className = "pitch-sequence-wrap";
     const sequenceTitle = document.createElement("h4");
@@ -2367,8 +2419,11 @@ function initGamesPage(games) {
       return;
     }
 
-    state.activeAtBat.pitches.push(state.activePitch);
-    state.activePitch = null;
+    if (!state.activeAtBat.pitches.includes(state.activePitch)) {
+      state.activeAtBat.pitches.push(state.activePitch);
+    }
+
+    state.activePitchCompleted = true;
   }
 
   function handlePitchType(pitchType) {
@@ -2378,8 +2433,7 @@ function initGamesPage(games) {
 
     state.activePitch.pitchType = normalizePitchType(pitchType);
     state.activePitch.pitch_type = state.activePitch.pitchType;
-    state.step = "pitch_result";
-    renderAtBats();
+    goToStep("pitch_result");
   }
 
   function handlePitchResult(result) {
@@ -2391,22 +2445,40 @@ function initGamesPage(games) {
     state.activePitch.primaryResult = result;
     state.activePitch.pitch_result = result;
     state.activePitch.swing_result = result;
+    state.activePitchCompleted = false;
+    delete state.activePitch.strikeType;
+    delete state.activePitch.strikeDetail;
+    delete state.activePitch.foulDirection;
+    delete state.activePitch.battedBallType;
+    delete state.activePitch.batted_ball_type;
+    delete state.activePitch.contact_type;
+    delete state.activePitch.hitLocation;
+    delete state.activePitch.hit_location;
+    delete state.activePitch.hitLocationX;
+    delete state.activePitch.hitLocationY;
+    delete state.activePitch.hit_location_x;
+    delete state.activePitch.hit_location_y;
+    delete state.activePitch.battedBallOutcome;
+    delete state.activePitch.batted_ball_outcome;
+    delete state.activePitch.outcome;
+    delete state.activePitch.chartResult;
+    state.activeAtBat.finalOutcome = "";
+    state.activeAtBat.productiveOut = false;
+    state.activeAtBat.hardHitBall = null;
+    state.pendingProductiveOutOutcome = "";
 
     if (result === "strike") {
-      state.step = "strike_type";
-      renderAtBats();
+      goToStep("strike_type");
       return;
     }
 
     if (result === "batted_ball") {
-      state.step = "batted_ball_type";
-      renderAtBats();
+      goToStep("batted_ball_type");
       return;
     }
 
     if (result === "foul_ball") {
-      state.step = "foul_direction";
-      renderAtBats();
+      goToStep("foul_direction");
       return;
     }
 
@@ -2416,22 +2488,19 @@ function initGamesPage(games) {
       state.activePitch.outcome = "hit_by_pitch";
       state.activeAtBat.finalOutcome = "hit_by_pitch";
       completeCurrentPitch();
-      state.step = "end_at_bat";
-      renderAtBats();
+      goToStep("end_at_bat");
       return;
     }
 
     completeCurrentPitch();
-    state.step = "pitch_actions";
-    renderAtBats();
+    goToStep("pitch_actions");
   }
 
   function handleFoulDirection(direction) {
     state.activePitch.foulDirection = direction;
     state.activePitch.chartResult = direction;
     completeCurrentPitch();
-    state.step = "pitch_actions";
-    renderAtBats();
+    goToStep("pitch_actions");
   }
 
   function handleStrikeType(strikeType) {
@@ -2439,16 +2508,14 @@ function initGamesPage(games) {
     state.activePitch.pitch_result = strikeType;
     state.activePitch.swing_result = strikeType;
     completeCurrentPitch();
-    state.step = "pitch_actions";
-    renderAtBats();
+    goToStep("pitch_actions");
   }
 
   function handleBattedBallType(battedBallType) {
     state.activePitch.battedBallType = battedBallType;
     state.activePitch.batted_ball_type = battedBallType;
     state.activePitch.contact_type = battedBallType;
-    state.step = "batted_ball_location";
-    renderAtBats();
+    goToStep("batted_ball_location");
   }
 
   function handleHitLocation(hitLocation) {
@@ -2478,8 +2545,7 @@ function initGamesPage(games) {
       return;
     }
 
-    state.step = "batted_ball_outcome";
-    renderAtBats();
+    goToStep("batted_ball_outcome");
   }
 
   function handleBattedBallOutcome(outcome) {
@@ -2488,6 +2554,8 @@ function initGamesPage(games) {
     state.activePitch.outcome = outcome;
     state.activePitch.chartResult = outcome;
     state.activeAtBat.finalOutcome = outcome;
+    state.activeAtBat.productiveOut = false;
+    state.activeAtBat.hardHitBall = null;
     const normalizedOutcome = normalizeLegacyOutcome(outcome, state.activePitch.battedBallType || "");
 
     if (isAutomaticallyProductiveOut(normalizedOutcome)) {
@@ -2496,8 +2564,7 @@ function initGamesPage(games) {
 
     state.pendingProductiveOutOutcome = isOutOutcome(normalizedOutcome) ? normalizedOutcome : "";
     completeCurrentPitch();
-    state.step = isOutOutcome(normalizedOutcome) ? "productive_out" : "hard_hit_ball";
-    renderAtBats();
+    goToStep(isOutOutcome(normalizedOutcome) ? "productive_out" : "hard_hit_ball");
   }
 
   function handleProductiveOut(isProductiveOut) {
@@ -2508,8 +2575,7 @@ function initGamesPage(games) {
     state.activeAtBat.productiveOut =
       isProductiveOut || isAutomaticallyProductiveOut(state.pendingProductiveOutOutcome);
     state.pendingProductiveOutOutcome = "";
-    state.step = "hard_hit_ball";
-    renderAtBats();
+    goToStep("hard_hit_ball");
   }
 
   function handleHardHitBall(isHardHit) {
@@ -2518,12 +2584,14 @@ function initGamesPage(games) {
     }
 
     state.activeAtBat.hardHitBall = isHardHit;
-    state.step = "end_at_bat";
-    renderAtBats();
+    goToStep("end_at_bat");
   }
 
   function startNextPitch() {
+    completeCurrentPitch();
     state.activePitch = null;
+    state.activePitchCompleted = false;
+    resetStepHistory();
     state.step = "location";
     renderAtBats();
   }
@@ -2532,6 +2600,8 @@ function initGamesPage(games) {
     if (!state.activeAtBat) {
       return;
     }
+
+    completeCurrentPitch();
 
     if (!state.activeAtBat.finalOutcome) {
       const lastPitch = state.activeAtBat.pitches[state.activeAtBat.pitches.length - 1];
@@ -2548,7 +2618,9 @@ function initGamesPage(games) {
 
     state.activeAtBat = null;
     state.activePitch = null;
+    state.activePitchCompleted = false;
     state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
     state.step = "at_bat_details";
     setMessage("At-bat saved to this game.", true);
     renderAtBats();
@@ -2662,7 +2734,9 @@ function initGamesPage(games) {
 
     state.activeAtBat = createDraftAtBat();
     state.activePitch = null;
+    state.activePitchCompleted = false;
     state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
     state.step = "at_bat_details";
     setMessage("", false);
     renderAtBats();
