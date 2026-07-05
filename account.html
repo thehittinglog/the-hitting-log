@@ -55,6 +55,16 @@
           <strong class="stat-value">Not Connected</strong>
         </article>
       </div>
+      <div class="account-summary-setting">
+        <label for="sport-type-select">
+          <span>Sport Type</span>
+          <select id="sport-type-select">
+            <option value="baseball">Baseball</option>
+            <option value="softball">Softball</option>
+          </select>
+        </label>
+        <p id="sport-type-message" class="form-message" aria-live="polite"></p>
+      </div>
     </section>
 
     <section class="two-column-layout">
@@ -62,19 +72,10 @@
         <div class="section-heading">
           <div>
             <h2>Profile</h2>
-            <p class="section-copy">Manage athlete settings used throughout the app.</p>
+            <p class="section-copy">Username, display name, email, and athlete settings will live here.</p>
           </div>
         </div>
-        <div class="single-field-form account-settings-form">
-          <label for="sport-type-select">
-            <span>Sport Type</span>
-            <select id="sport-type-select">
-              <option value="baseball">Baseball</option>
-              <option value="softball">Softball</option>
-            </select>
-          </label>
-          <p id="sport-type-message" class="form-message" aria-live="polite"></p>
-        </div>
+        <button type="button">Edit Profile</button>
       </section>
 
       <section class="panel">
