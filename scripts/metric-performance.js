@@ -1,18 +1,18 @@
 (function () {
   const metricThresholds = {
     hardHitBallPercent: {
-      good: (value) => value >= 70,
-      average: (value) => value >= 40 && value < 70,
-      poor: (value) => value < 40,
+      good: (value) => value >= 60,
+      average: (value) => value >= 50 && value < 60,
+      poor: (value) => value < 50,
     },
     twoStrikePercent: {
-      good: (value) => value <= 25,
-      average: (value) => value > 25 && value <= 50,
-      poor: (value) => value > 50,
+      good: (value) => value <= 30,
+      average: (value) => value > 30 && value <= 40,
+      poor: (value) => value > 40,
     },
     hardHitTwoStrikePercent: {
-      good: (value) => value >= 80,
-      average: (value) => value >= 50 && value < 80,
+      good: (value) => value >= 70,
+      average: (value) => value >= 50 && value < 70,
       poor: (value) => value < 50,
     },
     productiveOutPercent: {
@@ -21,19 +21,49 @@
       poor: (value) => value < 50,
     },
     chaseRate: {
-      good: (value) => value < 20,
-      average: (value) => value >= 20 && value < 40,
-      poor: (value) => value >= 40,
+      good: (value) => value <= 20,
+      average: (value) => value > 20 && value <= 35,
+      poor: (value) => value > 35,
     },
     contactRate: {
-      good: (value) => value >= 80,
-      average: (value) => value >= 70 && value < 80,
-      poor: (value) => value < 70,
+      good: (value) => value >= 85,
+      average: (value) => value >= 75 && value < 85,
+      poor: (value) => value < 75,
     },
     qualityAtBatPercent: {
-      good: (value) => value >= 70,
-      average: (value) => value >= 50 && value < 70,
-      poor: (value) => value < 50,
+      good: (value) => value >= 75,
+      average: (value) => value >= 60 && value < 75,
+      poor: (value) => value < 60,
+    },
+    extraBaseHitPercent: {
+      good: (value) => value >= 30,
+      average: (value) => value >= 15 && value < 30,
+      poor: (value) => value < 15,
+    },
+    battingAverage: {
+      good: (value) => value >= 0.35,
+      average: (value) => value >= 0.25 && value < 0.35,
+      poor: (value) => value < 0.25,
+    },
+    onBasePercentage: {
+      good: (value) => value >= 0.43,
+      average: (value) => value >= 0.33 && value < 0.43,
+      poor: (value) => value < 0.33,
+    },
+    sluggingPercentage: {
+      good: (value) => value >= 0.6,
+      average: (value) => value >= 0.4 && value < 0.6,
+      poor: (value) => value < 0.4,
+    },
+    ops: {
+      good: (value) => value >= 1,
+      average: (value) => value >= 0.75 && value < 1,
+      poor: (value) => value < 0.75,
+    },
+    hitsPerGame: {
+      good: (value) => value >= 1.5,
+      average: (value) => value >= 1 && value < 1.5,
+      poor: (value) => value < 1,
     },
   };
 

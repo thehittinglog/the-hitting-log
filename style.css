@@ -447,17 +447,17 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 }
 
 .metric-good {
-  color: #07324f;
+  color: var(--performance-exceptional);
   font-weight: 700;
 }
 
 .metric-average {
-  color: #07324f;
+  color: var(--performance-good);
   font-weight: 700;
 }
 
 .metric-poor {
-  color: #a91f24;
+  color: var(--performance-needs-work);
   font-weight: 700;
 }
 

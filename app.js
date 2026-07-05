@@ -911,7 +911,15 @@ function updateSummaryCards(games) {
 function appendCells(row, values) {
   values.forEach((value) => {
     const cell = document.createElement("td");
-    cell.textContent = String(value);
+    const text = typeof value === "object" && value !== null ? value.text : value;
+    const metricKey = typeof value === "object" && value !== null ? value.metricKey : "";
+
+    cell.textContent = String(text);
+
+    if (metricKey && typeof window.applyMetricPerformanceColor === "function") {
+      window.applyMetricPerformanceColor(cell, metricKey, text);
+    }
+
     row.appendChild(cell);
   });
 }
@@ -919,14 +927,20 @@ function appendCells(row, values) {
 function appendGameCells(row, gameStats, options = {}) {
   const opponentLabel = options.opponentLabel || gameStats.opponent;
   const values = options.compact
-    ? [gameStats.date, opponentLabel, getGameAtBatCount(gameStats), gameStats.hits, formatRate(gameStats.ops)]
+    ? [
+        gameStats.date,
+        opponentLabel,
+        getGameAtBatCount(gameStats),
+        gameStats.hits,
+        { text: formatRate(gameStats.ops), metricKey: "ops" },
+      ]
     : [
         gameStats.date,
         opponentLabel,
         getGameAtBatCount(gameStats),
         gameStats.hits,
-        formatRate(gameStats.battingAverage),
-        formatRate(gameStats.ops),
+        { text: formatRate(gameStats.battingAverage), metricKey: "battingAverage" },
+        { text: formatRate(gameStats.ops), metricKey: "ops" },
       ];
 
   appendCells(row, values);
@@ -970,6 +984,7 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   const date = document.createElement("strong");
   const opponent = document.createElement("p");
   const average = document.createElement("p");
+  const averageValue = document.createElement("span");
   const performanceScore = document.createElement("p");
   const score = calculateHittingLogPerformanceScore(gameStats);
 
@@ -981,7 +996,12 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   opponent.className = "logged-game-opponent";
   opponent.textContent = `vs. ${opponentLabel || "Opponent"}`;
   average.className = "logged-game-average";
-  average.textContent = `Batting Average: ${formatRate(gameStats.battingAverage)}`;
+  average.append("Batting Average: ");
+  averageValue.textContent = formatRate(gameStats.battingAverage);
+  average.appendChild(averageValue);
+  if (typeof window.applyMetricPerformanceColor === "function") {
+    window.applyMetricPerformanceColor(averageValue, "battingAverage", averageValue.textContent);
+  }
   performanceScore.className = "logged-game-score";
   performanceScore.textContent = `Hitting Log Performance Score: ${formatPerformanceScore(score)}`;
   applyPerformanceScoreStatus(performanceScore, score);
