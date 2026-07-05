@@ -1,18 +1,18 @@
 :root {
-  --navy: #0c2340;
-  --bg: #f5f1e6;
+  --navy: #07324f;
+  --bg: #f3eadb;
   --panel: #ffffff;
   --panel-solid: #ffffff;
-  --ink: #0c2340;
-  --muted: #6b7280;
-  --accent: #e4002c;
-  --accent-soft: rgba(12, 35, 64, 0.08);
-  --line: #c4ced3;
-  --shadow: 0 18px 48px rgba(12, 35, 64, 0.08);
-  --success: #2f7a53;
-  --chart-hot: #e4002c;
-  --chart-cold: #0c2340;
-  --chart-mixed: #5f5560;
+  --ink: #07324f;
+  --muted: rgba(7, 50, 79, 0.68);
+  --accent: #a91f24;
+  --accent-soft: rgba(7, 50, 79, 0.08);
+  --line: rgba(7, 50, 79, 0.22);
+  --shadow: 0 18px 48px rgba(7, 50, 79, 0.08);
+  --success: #07324f;
+  --chart-hot: #a91f24;
+  --chart-cold: #07324f;
+  --chart-mixed: rgba(7, 50, 79, 0.56);
 }
 
 * {
@@ -48,7 +48,7 @@ p {
   top: 0;
   z-index: 10;
   backdrop-filter: blur(14px);
-  background: rgba(245, 241, 230, 0.92);
+  background: rgba(243, 234, 219, 0.92);
   border-bottom: 1px solid var(--line);
 }
 
@@ -69,7 +69,8 @@ p {
 .brand {
   font-size: 1.15rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .top-nav {
@@ -174,12 +175,12 @@ th,
 }
 
 .featured-metrics-panel {
-  border-color: rgba(180, 91, 49, 0.45);
-  box-shadow: 0 22px 48px rgba(12, 35, 64, 0.14);
+  border-color: rgba(169, 31, 36, 0.45);
+  box-shadow: 0 22px 48px rgba(7, 50, 79, 0.14);
 }
 
 .featured-metrics-panel .stat-card {
-  border-color: rgba(180, 91, 49, 0.28);
+  border-color: rgba(169, 31, 36, 0.28);
 }
 
 .panel + .panel,
@@ -277,10 +278,10 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #a8b0ba;
+  border: 1px solid rgba(7, 50, 79, 0.42);
   border-radius: 999px;
   background: #ffffff;
-  color: #6b7280;
+  color: rgba(7, 50, 79, 0.68);
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
@@ -306,11 +307,11 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   z-index: 40;
   width: min(300px, calc(100vw - 24px));
   padding: 16px;
-  border: 1px solid rgba(196, 206, 211, 0.9);
+  border: 1px solid rgba(7, 50, 79, 0.18);
   border-radius: 16px;
   background: #ffffff;
   color: var(--ink);
-  box-shadow: 0 18px 44px rgba(12, 35, 64, 0.18);
+  box-shadow: 0 18px 44px rgba(7, 50, 79, 0.18);
 }
 
 .metric-info-popover::before {
@@ -319,8 +320,8 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   left: var(--metric-info-arrow-left);
   width: 12px;
   height: 12px;
-  border-top: 1px solid rgba(196, 206, 211, 0.9);
-  border-left: 1px solid rgba(196, 206, 211, 0.9);
+  border-top: 1px solid rgba(7, 50, 79, 0.18);
+  border-left: 1px solid rgba(7, 50, 79, 0.18);
   background: #ffffff;
   content: "";
   transform: translateX(-50%) rotate(45deg);
@@ -370,17 +371,17 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 }
 
 .metric-good {
-  color: #2e7d32;
+  color: #07324f;
   font-weight: 700;
 }
 
 .metric-average {
-  color: #000000;
+  color: #07324f;
   font-weight: 700;
 }
 
 .metric-poor {
-  color: #d32f2f;
+  color: #a91f24;
   font-weight: 700;
 }
 
@@ -531,7 +532,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 
 .zone-cell.is-selected {
   transform: translateY(-1px);
-  box-shadow: 0 14px 24px rgba(12, 35, 64, 0.12);
+  box-shadow: 0 14px 24px rgba(7, 50, 79, 0.12);
   border-color: var(--accent);
 }
 
@@ -558,7 +559,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(12, 35, 64, 0.24);
+  background: rgba(7, 50, 79, 0.24);
 }
 
 .pitch-type-modal {
@@ -567,7 +568,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--panel-solid);
-  box-shadow: 0 24px 60px rgba(12, 35, 64, 0.18);
+  box-shadow: 0 24px 60px rgba(7, 50, 79, 0.18);
 }
 
 .pitch-type-modal h4 {
@@ -584,7 +585,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 }
 
 .clickable-game-row:focus-visible {
-  outline: 2px solid rgba(180, 91, 49, 0.28);
+  outline: 2px solid rgba(169, 31, 36, 0.28);
   outline-offset: -2px;
 }
 
@@ -642,7 +643,7 @@ select {
 }
 
 select:focus {
-  outline: 2px solid rgba(180, 91, 49, 0.18);
+  outline: 2px solid rgba(169, 31, 36, 0.18);
   border-color: var(--accent);
 }
 
@@ -694,16 +695,16 @@ select:focus {
   padding: 26px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, rgba(245, 241, 230, 0.72) 100%);
-  box-shadow: 0 12px 30px rgba(12, 35, 64, 0.06);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(243, 234, 219, 0.72) 100%);
+  box-shadow: 0 12px 30px rgba(7, 50, 79, 0.06);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .chart-category-card:hover,
 .chart-category-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(228, 0, 44, 0.32);
-  box-shadow: 0 18px 42px rgba(12, 35, 64, 0.1);
+  border-color: rgba(169, 31, 36, 0.32);
+  box-shadow: 0 18px 42px rgba(7, 50, 79, 0.1);
   outline: none;
 }
 
@@ -737,7 +738,7 @@ select:focus {
 .back-link {
   padding: 10px 14px;
   color: var(--accent);
-  background: rgba(228, 0, 44, 0.08);
+  background: rgba(169, 31, 36, 0.08);
   white-space: nowrap;
 }
 
@@ -790,19 +791,19 @@ select:focus {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(74, 56, 42, 0.12);
+  border: 1px solid rgba(7, 50, 79, 0.12);
 }
 
 .legend-hit {
-  background: rgba(228, 0, 44, 0.8);
+  background: rgba(169, 31, 36, 0.8);
 }
 
 .legend-mixed {
-  background: rgba(95, 85, 96, 0.8);
+  background: rgba(7, 50, 79, 0.56);
 }
 
 .legend-out {
-  background: rgba(12, 35, 64, 0.8);
+  background: rgba(7, 50, 79, 0.8);
 }
 
 .zone-map .zone-cell {
@@ -869,7 +870,7 @@ select:focus {
   height: 18px;
   border: 3px solid #ffffff;
   border-radius: 999px;
-  box-shadow: 0 0 0 2px var(--navy), 0 4px 10px rgba(12, 35, 64, 0.18);
+  box-shadow: 0 0 0 2px var(--navy), 0 4px 10px rgba(7, 50, 79, 0.18);
   transform: translate(-50%, -50%);
 }
 
@@ -882,35 +883,35 @@ select:focus {
 }
 
 .spray-chart-marker--ground {
-  background: #2f7a53;
+  background: var(--navy);
 }
 
 .spray-chart-marker--line {
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background: #2563eb;
+  background: var(--accent);
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .spray-chart-marker--fly {
-  background: #7c3aed;
+  background: #ffffff;
 }
 
 .spray-legend-dot--ground {
-  background: #2f7a53;
+  background: var(--navy);
 }
 
 .spray-legend-dot--line {
-  background: #2563eb;
+  background: var(--accent);
 }
 
 .spray-legend-dot--fly {
-  background: #7c3aed;
+  background: #ffffff;
 }
 
 .spray-legend-dot--hard {
-  background: #b45309;
+  background: var(--accent);
 }
 
 .spray-legend-dot--hit {
@@ -961,7 +962,7 @@ select:focus {
   flex: 0 0 auto;
   border: 2px solid rgba(255, 255, 255, 0.82);
   border-radius: 999px;
-  box-shadow: 0 0 0 1px rgba(74, 56, 42, 0.1);
+  box-shadow: 0 0 0 1px rgba(7, 50, 79, 0.1);
 }
 
 label {
@@ -986,7 +987,7 @@ input {
 }
 
 input:focus {
-  outline: 2px solid rgba(180, 91, 49, 0.18);
+  outline: 2px solid rgba(169, 31, 36, 0.18);
   border-color: var(--accent);
 }
 
@@ -996,11 +997,11 @@ button {
   padding: 14px 18px;
   font: inherit;
   font-weight: 800;
-  color: #fff9f4;
-  background: linear-gradient(135deg, var(--accent) 0%, #8f431f 100%);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--navy) 100%);
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease;
-  box-shadow: 0 12px 24px rgba(180, 91, 49, 0.24);
+  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.24);
 }
 
 .secondary-button {
@@ -1017,12 +1018,12 @@ button {
 button:hover,
 button:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(180, 91, 49, 0.28);
+  box-shadow: 0 16px 30px rgba(169, 31, 36, 0.28);
 }
 
 .nav-button:hover,
 .nav-button:focus-visible {
-  box-shadow: 0 12px 24px rgba(180, 91, 49, 0.2);
+  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.2);
 }
 
 .form-message {
@@ -1102,7 +1103,7 @@ tbody td {
   height: 14px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(108, 99, 91, 0.12);
+  background: rgba(7, 50, 79, 0.12);
 }
 
 .chart-fill {
@@ -1111,11 +1112,11 @@ tbody td {
 }
 
 .chart-fill.hits {
-  background: linear-gradient(90deg, #d97845 0%, #b45b31 100%);
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 100%);
 }
 
 .chart-fill.at-bats {
-  background: linear-gradient(90deg, #4d6c8d 0%, #35526f 100%);
+  background: linear-gradient(90deg, var(--navy) 0%, var(--navy) 100%);
 }
 
 .game-choice-view,
@@ -1697,8 +1698,8 @@ body,
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, transparent 47%, rgba(12, 35, 64, 0.12) 48%, rgba(12, 35, 64, 0.12) 52%, transparent 53%),
-    linear-gradient(45deg, transparent 47%, rgba(12, 35, 64, 0.12) 48%, rgba(12, 35, 64, 0.12) 52%, transparent 53%),
+    linear-gradient(135deg, transparent 47%, rgba(7, 50, 79, 0.12) 48%, rgba(7, 50, 79, 0.12) 52%, transparent 53%),
+    linear-gradient(45deg, transparent 47%, rgba(7, 50, 79, 0.12) 48%, rgba(7, 50, 79, 0.12) 52%, transparent 53%),
     rgba(255, 255, 255, 0.72);
   overflow: hidden;
 }
@@ -1755,42 +1756,42 @@ svg.field-selector {
 }
 
 .field-outfield {
-  fill: #ededed;
-  stroke: #111111;
+  fill: #f3eadb;
+  stroke: #07324f;
   stroke-width: 3;
   stroke-linejoin: round;
 }
 
 .field-infield-dirt {
-  fill: #d8d8d8;
-  stroke: #111111;
+  fill: #f3eadb;
+  stroke: #07324f;
   stroke-width: 2.5;
 }
 
 .field-foul-line {
   fill: none;
-  stroke: #111111;
+  stroke: #07324f;
   stroke-width: 5;
   stroke-linecap: round;
 }
 
 .field-diamond-line {
   fill: none;
-  stroke: #111111;
+  stroke: #07324f;
   stroke-width: 2.5;
   stroke-linejoin: round;
 }
 
 .field-pitcher-circle {
   fill: none;
-  stroke: #111111;
+  stroke: #07324f;
   stroke-width: 2.5;
 }
 
 .field-base,
 .field-home-plate {
   fill: #ffffff;
-  stroke: #111111;
+  stroke: #07324f;
   stroke-width: 2;
 }
 
@@ -1807,7 +1808,7 @@ svg.field-selector {
 
 .field-marker {
   fill: rgba(255, 255, 255, 0.92);
-  stroke: #111111;
+  stroke: #07324f;
   stroke-width: 2;
   transition: fill 140ms ease, stroke 140ms ease, transform 140ms ease;
 }
@@ -1860,18 +1861,18 @@ svg.field-selector {
 }
 
 .field-outfield {
-  fill: #d7d7d7 !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .field-infield-dirt {
-  fill: #cfcfcf !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .field-foul-line {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 4 !important;
   stroke-linecap: round !important;
 }
@@ -1882,20 +1883,20 @@ svg.field-selector {
 
 .field-pitcher-circle {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 2 !important;
   opacity: 0.9;
 }
 
 .field-base {
-  fill: #eeeeee !important;
-  stroke: #000000 !important;
+  fill: #ffffff !important;
+  stroke: #07324f !important;
   stroke-width: 1.5 !important;
 }
 
 .field-home-plate {
-  fill: #eeeeee !important;
-  stroke: #000000 !important;
+  fill: #ffffff !important;
+  stroke: #07324f !important;
   stroke-width: 1.5 !important;
 }
 
@@ -1913,14 +1914,14 @@ svg.field-selector {
 
 .field-marker {
   r: 4px;
-  fill: #000000 !important;
+  fill: #07324f !important;
   stroke: none !important;
   opacity: 0.95;
   transition: fill 140ms ease, r 140ms ease, opacity 140ms ease;
 }
 
 .field-marker-label {
-  fill: #4f4f4f !important;
+  fill: #07324f !important;
   font-size: 0.62rem !important;
   font-weight: 700 !important;
   letter-spacing: 0 !important;
@@ -1979,7 +1980,7 @@ svg.field-selector {
 .hit-location-image-button:hover,
 .hit-location-image-button:focus-visible {
   transform: none;
-  box-shadow: 0 0 0 3px rgba(228, 0, 44, 0.12);
+  box-shadow: 0 0 0 3px rgba(169, 31, 36, 0.12);
 }
 
 .hit-location-image {
@@ -2029,28 +2030,28 @@ svg.field-selector {
 }
 
 .field-outfield {
-  fill: #d7d7d7 !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .field-inner-outfield {
-  fill: #e2e2e2 !important;
+  fill: #ffffff !important;
   stroke: none !important;
 }
 
 .field-infield-dirt {
-  fill: #cfcfcf !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .field-diamond-fill {
-  fill: #eeeeee !important;
+  fill: #ffffff !important;
   stroke: none !important;
 }
 
 .field-foul-line {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 4 !important;
   stroke-linecap: round !important;
 }
@@ -2061,15 +2062,15 @@ svg.field-selector {
 
 .field-pitcher-circle {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 1.8 !important;
   opacity: 0.85;
 }
 
 .field-base,
 .field-home-plate {
-  fill: #eeeeee !important;
-  stroke: #000000 !important;
+  fill: #ffffff !important;
+  stroke: #07324f !important;
   stroke-width: 1.5 !important;
 }
 
@@ -2086,14 +2087,14 @@ svg.field-selector {
 }
 
 .field-marker {
-  fill: #000000 !important;
+  fill: #07324f !important;
   stroke: none !important;
   opacity: 0.96;
   transition: fill 140ms ease, r 140ms ease, opacity 140ms ease;
 }
 
 .field-marker-label {
-  fill: #4f4f4f !important;
+  fill: #07324f !important;
   font-size: 0.64rem !important;
   font-weight: 700 !important;
   letter-spacing: 0 !important;
@@ -2142,35 +2143,35 @@ svg.field-selector.spray-chart-field {
 }
 
 .spray-chart-field .field-outfield {
-  fill: #d7d7d7 !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .spray-chart-field .field-inner-outfield {
-  fill: #e2e2e2 !important;
+  fill: #ffffff !important;
   stroke: none !important;
 }
 
 .spray-chart-field .field-infield-dirt {
-  fill: #cfcfcf !important;
+  fill: #f3eadb !important;
   stroke: none !important;
 }
 
 .spray-chart-field .field-diamond-fill {
-  fill: #eeeeee !important;
+  fill: #ffffff !important;
   stroke: none !important;
 }
 
 .spray-chart-field .field-foul-line {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 4 !important;
   stroke-linecap: round !important;
 }
 
 .spray-chart-field .field-pitcher-circle {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 1.6 !important;
   opacity: 0.8;
 }
@@ -2178,19 +2179,19 @@ svg.field-selector.spray-chart-field {
 .spray-chart-field .field-base,
 .spray-chart-field .field-home-plate {
   fill: #ffffff !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 1.4 !important;
 }
 
 .spray-chart-field .field-position-dot {
-  fill: #000000 !important;
+  fill: #07324f !important;
   stroke: none !important;
   opacity: 0.92;
   pointer-events: none;
 }
 
 .spray-chart-field .field-position-label {
-  fill: #4f4f4f !important;
+  fill: #07324f !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   letter-spacing: 0 !important;
@@ -2210,7 +2211,7 @@ svg.field-selector.spray-chart-field {
   fill: var(--accent) !important;
   stroke: #ffffff !important;
   stroke-width: 3 !important;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.24));
+  filter: drop-shadow(0 2px 4px rgba(7, 50, 79, 0.24));
   pointer-events: none;
 }
 
@@ -2238,7 +2239,7 @@ svg.field-selector.spray-chart-field {
 .spray-chart-field .field-diamond-fill,
 .spray-chart-field .field-home-circle {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 3.5 !important;
   stroke-linecap: square !important;
   stroke-linejoin: miter !important;
@@ -2254,14 +2255,14 @@ svg.field-selector.spray-chart-field {
 
 .spray-chart-field .field-foul-line {
   fill: none !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 3.5 !important;
   stroke-linecap: square !important;
 }
 
 .spray-chart-field .field-pitcher-circle {
   fill: #ffffff !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 3 !important;
   opacity: 1 !important;
 }
@@ -2269,7 +2270,7 @@ svg.field-selector.spray-chart-field {
 .spray-chart-field .field-base,
 .spray-chart-field .field-home-plate {
   fill: #ffffff !important;
-  stroke: #000000 !important;
+  stroke: #07324f !important;
   stroke-width: 3 !important;
 }
 
@@ -2278,7 +2279,7 @@ svg.field-selector.spray-chart-field {
 }
 
 .spray-chart-field .field-position-label {
-  fill: #000000 !important;
+  fill: #07324f !important;
   font-size: 20px !important;
   font-weight: 800 !important;
   opacity: 1 !important;
@@ -2321,7 +2322,7 @@ svg.field-selector.spray-chart-field {
 .reference-field-line,
 .reference-field-home-arc {
   fill: none;
-  stroke: #000000;
+  stroke: #07324f;
   stroke-width: 3.5;
   stroke-linecap: square;
   stroke-linejoin: miter;
@@ -2337,18 +2338,18 @@ svg.field-selector.spray-chart-field {
 .reference-field-base,
 .reference-field-home-plate {
   fill: #ffffff;
-  stroke: #000000;
+  stroke: #07324f;
   stroke-width: 3;
 }
 
 .reference-field-pitcher-circle {
   fill: #ffffff;
-  stroke: #000000;
+  stroke: #07324f;
   stroke-width: 3;
 }
 
 .reference-field-label {
-  fill: #000000;
+  fill: #07324f;
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 0;
@@ -2368,7 +2369,7 @@ svg.field-selector.spray-chart-field {
   fill: var(--accent);
   stroke: #ffffff;
   stroke-width: 3;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.24));
+  filter: drop-shadow(0 2px 4px rgba(7, 50, 79, 0.24));
   pointer-events: none;
 }
 
