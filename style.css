@@ -493,6 +493,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 
 .location-grid {
   --zone-gap: 6px;
+  --zone-border-gap: 4px;
   display: grid;
   position: relative;
   width: min(100%, 560px);
@@ -504,12 +505,12 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 .location-grid::after {
   content: "";
   position: absolute;
-  top: calc((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2);
-  left: calc((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2);
-  width: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2));
-  height: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2));
+  top: calc(((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2) - var(--zone-border-gap));
+  left: calc(((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2) - var(--zone-border-gap));
+  width: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2) + (var(--zone-border-gap) * 2));
+  height: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2) + (var(--zone-border-gap) * 2));
   border: 3px solid var(--navy);
-  border-radius: 14px;
+  border-radius: 16px;
   pointer-events: none;
   z-index: 2;
 }
