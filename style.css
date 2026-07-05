@@ -596,6 +596,11 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   box-shadow: 0 12px 24px rgba(7, 50, 79, 0.12);
 }
 
+.choice-grid button.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(169, 31, 36, 0.16);
+}
+
 .pitch-type-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -703,6 +708,28 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.saved-at-bat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saved-at-bat-edit-button {
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.saved-at-bat-edit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  box-shadow: none;
 }
 
 .saved-at-bat-sequence {

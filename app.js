@@ -1484,6 +1484,9 @@ function initGamesPage(games) {
     reviewGameId: "",
     editingAtBatIndex: null,
     editingAtBatDraft: null,
+    workflowEditAtBatIndex: null,
+    workflowEditOriginalAtBat: null,
+    activePitchIndex: null,
     pendingProductiveOutOutcome: "",
     stepHistory: [],
     step: "at_bat_details",
@@ -1604,6 +1607,16 @@ function initGamesPage(games) {
     };
   }
 
+  function cloneAtBatForWorkflow(atBat) {
+    return normalizeAtBat(JSON.parse(JSON.stringify(atBat || createDraftAtBat())));
+  }
+
+  function resetWorkflowEditState() {
+    state.workflowEditAtBatIndex = null;
+    state.workflowEditOriginalAtBat = null;
+    state.activePitchIndex = null;
+  }
+
   function setMessage(text, success = false) {
     formMessage.textContent = text;
     formMessage.classList.toggle("is-success", success);
@@ -1702,6 +1715,7 @@ function initGamesPage(games) {
     state.activeAtBat = null;
     state.activePitch = null;
     state.activePitchCompleted = false;
+    resetWorkflowEditState();
     state.pendingProductiveOutOutcome = "";
     resetStepHistory();
     state.step = "at_bat_details";
@@ -1745,6 +1759,107 @@ function initGamesPage(games) {
     };
   }
 
+  function updateActivePitchLocation(location) {
+    if (!state.activePitch) {
+      state.activePitch = createPitch(location);
+    }
+
+    state.activePitch.location = {
+      id: location.id,
+      label: location.label,
+      isZone: location.isZone,
+    };
+    state.activePitch.locationId = location.id;
+    state.activePitch.locationLabel = location.label;
+    state.activePitch.pitch_location = location.id;
+
+    if (state.activeAtBat && Number.isInteger(state.activePitchIndex) && state.activePitchIndex >= 0) {
+      state.activeAtBat.pitches[state.activePitchIndex] = state.activePitch;
+    }
+  }
+
+  function getPitchLocationFromSavedPitch(pitch) {
+    const locationId =
+      (pitch && pitch.location && typeof pitch.location === "object" ? pitch.location.id : "") ||
+      pitch?.locationId ||
+      pitch?.pitch_location ||
+      (typeof pitch?.location === "string" ? pitch.location : "");
+    const locationLabel =
+      (pitch && pitch.location && typeof pitch.location === "object" ? pitch.location.label : "") ||
+      pitch?.locationLabel ||
+      "";
+    const matchingLocation = pitchLocations.find((location) => {
+      return (
+        location.id === locationId ||
+        location.label === locationId ||
+        location.id === locationLabel ||
+        location.label === locationLabel
+      );
+    });
+
+    return matchingLocation || pitchLocations.find((location) => location.id === "zone-5") || pitchLocations[0];
+  }
+
+  function setActivePitchFromIndex(index) {
+    if (!state.activeAtBat || !Array.isArray(state.activeAtBat.pitches)) {
+      state.activePitch = null;
+      state.activePitchIndex = null;
+      return;
+    }
+
+    const pitch = state.activeAtBat.pitches[index];
+
+    if (!pitch) {
+      state.activePitch = null;
+      state.activePitchIndex = null;
+      return;
+    }
+
+    state.activePitch = pitch;
+    state.activePitchIndex = index;
+    state.activePitchCompleted = true;
+  }
+
+  function startWorkflowEditAtBat(index) {
+    const atBat = state.draftGame?.atBats?.[index];
+
+    if (!atBat || state.activeAtBat) {
+      return;
+    }
+
+    state.workflowEditAtBatIndex = index;
+    state.workflowEditOriginalAtBat = cloneAtBatForWorkflow(atBat);
+    state.activeAtBat = cloneAtBatForWorkflow(atBat);
+
+    if (!Array.isArray(state.activeAtBat.pitches)) {
+      state.activeAtBat.pitches = [];
+    }
+
+    if (state.activeAtBat.pitches.length === 0) {
+      state.activeAtBat.pitches.push(createPitch(pitchLocations.find((location) => location.id === "zone-5") || pitchLocations[0]));
+    }
+
+    setActivePitchFromIndex(0);
+    state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
+    state.stepHistory.push("at_bat_details");
+    state.step = "location";
+    setMessage("", false);
+    renderAtBats();
+  }
+
+  function cancelWorkflowEditAtBat() {
+    state.activeAtBat = null;
+    state.activePitch = null;
+    state.activePitchCompleted = false;
+    state.pendingProductiveOutOutcome = "";
+    resetWorkflowEditState();
+    resetStepHistory();
+    state.step = "at_bat_details";
+    setMessage("At-bat edit canceled.", false);
+    renderAtBats();
+  }
+
   function createButton(option, onClick) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1769,7 +1884,13 @@ function initGamesPage(games) {
       return;
     }
 
-    if (previousStep === "location" && state.activePitchCompleted && state.activeAtBat && state.activePitch) {
+    if (
+      previousStep === "location" &&
+      state.activePitchCompleted &&
+      state.activeAtBat &&
+      state.activePitch &&
+      !Number.isInteger(state.workflowEditAtBatIndex)
+    ) {
       state.activeAtBat.pitches = state.activeAtBat.pitches.filter((pitch) => pitch !== state.activePitch);
       state.activePitchCompleted = false;
     }
@@ -1799,7 +1920,7 @@ function initGamesPage(games) {
     return state.stepHistory.length > 0 && state.step !== "at_bat_details";
   }
 
-  function renderOptionGroup(titleText, options, onClick) {
+  function renderOptionGroup(titleText, options, onClick, selectedValue = null) {
     const wrap = document.createElement("div");
     wrap.className = "result-stack";
 
@@ -1810,7 +1931,14 @@ function initGamesPage(games) {
     const grid = document.createElement("div");
     grid.className = "choice-grid";
     options.forEach((option) => {
-      grid.appendChild(createButton(option, onClick));
+      const button = createButton(option, onClick);
+
+      if (selectedValue !== null && String(option.value) === String(selectedValue)) {
+        button.classList.add("is-selected");
+        button.setAttribute("aria-pressed", "true");
+      }
+
+      grid.appendChild(button);
     });
 
     wrap.appendChild(grid);
@@ -2365,9 +2493,22 @@ function initGamesPage(games) {
     state.draftGame.atBats.forEach((atBat, index) => {
       const card = document.createElement("article");
       card.className = "saved-at-bat";
+      const heading = document.createElement("div");
       const title = document.createElement("strong");
+      const editButton = document.createElement("button");
+
+      heading.className = "saved-at-bat-heading";
       title.textContent = `At-Bat ${index + 1}: ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
-      card.appendChild(title);
+      editButton.type = "button";
+      editButton.className = "secondary-button saved-at-bat-edit-button";
+      editButton.textContent = "Edit";
+      editButton.disabled = Boolean(state.activeAtBat);
+      editButton.addEventListener("click", () => {
+        startWorkflowEditAtBat(index);
+      });
+      heading.appendChild(title);
+      heading.appendChild(editButton);
+      card.appendChild(heading);
 
       const sequence = document.createElement("div");
       sequence.className = "pitch-sequence";
@@ -2387,9 +2528,25 @@ function initGamesPage(games) {
     const card = document.createElement("article");
     card.className = "saved-at-bat at-bat-card";
 
+    const isEditingWorkflow = Number.isInteger(state.workflowEditAtBatIndex);
+    const heading = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = `At-Bat ${state.draftGame.atBats.length + 1}`;
-    card.appendChild(title);
+    heading.className = "saved-at-bat-heading";
+    title.textContent = isEditingWorkflow
+      ? `Editing At-Bat ${state.workflowEditAtBatIndex + 1}`
+      : `At-Bat ${state.draftGame.atBats.length + 1}`;
+    heading.appendChild(title);
+
+    if (isEditingWorkflow) {
+      const cancelEditButton = document.createElement("button");
+      cancelEditButton.type = "button";
+      cancelEditButton.className = "secondary-button saved-at-bat-edit-button";
+      cancelEditButton.textContent = "Cancel Edit";
+      cancelEditButton.addEventListener("click", cancelWorkflowEditAtBat);
+      heading.appendChild(cancelEditButton);
+    }
+
+    card.appendChild(heading);
 
     const prompt = document.createElement("p");
     prompt.className = "section-copy";
@@ -2427,34 +2584,38 @@ function initGamesPage(games) {
       renderStrikeZoneLayout(zone, {
         interactive: true,
         onSelectLocation(location) {
-          state.activePitch = createPitch(location);
+          if (Number.isInteger(state.activePitchIndex) && state.activePitch) {
+            updateActivePitchLocation(location);
+          } else {
+            state.activePitch = createPitch(location);
+          }
           state.activePitchCompleted = false;
           goToStep("pitch_type");
         },
-        selectedLocationId: state.activePitch ? state.activePitch.location.id : "",
+        selectedLocationId: state.activePitch ? getPitchLocationFromSavedPitch(state.activePitch).id : "",
       });
       card.appendChild(zone);
       card.appendChild(helper);
     }
 
     if (state.step === "pitch_type") {
-      card.appendChild(renderOptionGroup("Pitch Type", getPitchTypeOptions(), handlePitchType));
+      card.appendChild(renderOptionGroup("Pitch Type", getPitchTypeOptions(), handlePitchType, normalizePitchType(state.activePitch?.pitchType || state.activePitch?.pitch_type || "")));
     }
 
     if (state.step === "pitch_result") {
-      card.appendChild(renderOptionGroup("Pitch Result", pitchResultOptions, handlePitchResult));
+      card.appendChild(renderOptionGroup("Pitch Result", pitchResultOptions, handlePitchResult, state.activePitch?.primaryResult || state.activePitch?.result || ""));
     }
 
     if (state.step === "strike_type") {
-      card.appendChild(renderOptionGroup("Strike Type", strikeOptions, handleStrikeType));
+      card.appendChild(renderOptionGroup("Strike Type", strikeOptions, handleStrikeType, state.activePitch?.strikeType || state.activePitch?.strikeDetail || ""));
     }
 
     if (state.step === "foul_direction") {
-      card.appendChild(renderOptionGroup("Foul Direction", foulDirectionOptions, handleFoulDirection));
+      card.appendChild(renderOptionGroup("Foul Direction", foulDirectionOptions, handleFoulDirection, state.activePitch?.foulDirection || ""));
     }
 
     if (state.step === "batted_ball_type") {
-      card.appendChild(renderOptionGroup("Batted Ball Type", battedBallTypeOptions, handleBattedBallType));
+      card.appendChild(renderOptionGroup("Batted Ball Type", battedBallTypeOptions, handleBattedBallType, state.activePitch?.battedBallType || state.activePitch?.batted_ball_type || state.activePitch?.contact_type || ""));
     }
 
     if (state.step === "batted_ball_location") {
@@ -2462,15 +2623,15 @@ function initGamesPage(games) {
     }
 
     if (state.step === "batted_ball_outcome") {
-      card.appendChild(renderOptionGroup("Batted Ball Outcome", battedBallOutcomeOptions, handleBattedBallOutcome));
+      card.appendChild(renderOptionGroup("Batted Ball Outcome", battedBallOutcomeOptions, handleBattedBallOutcome, state.activePitch?.battedBallOutcome || state.activePitch?.batted_ball_outcome || state.activePitch?.outcome || ""));
     }
 
     if (state.step === "hard_hit_ball") {
-      card.appendChild(renderOptionGroup("Hard hit ball?", hardHitBallOptions, handleHardHitBall));
+      card.appendChild(renderOptionGroup("Hard hit ball?", hardHitBallOptions, handleHardHitBall, typeof state.activeAtBat?.hardHitBall === "boolean" ? state.activeAtBat.hardHitBall : null));
     }
 
     if (state.step === "productive_out") {
-      card.appendChild(renderOptionGroup("Did this out move or score a runner?", productiveOutOptions, handleProductiveOut));
+      card.appendChild(renderOptionGroup("Did this out move or score a runner?", productiveOutOptions, handleProductiveOut, state.activeAtBat?.productiveOut === true));
     }
 
     if (state.step === "pitch_actions") {
@@ -2513,7 +2674,12 @@ function initGamesPage(games) {
 
     const endAtBat = document.createElement("button");
     endAtBat.type = "button";
-    endAtBat.textContent = "Finish At-Bat";
+    endAtBat.textContent =
+      state.step === "end_at_bat"
+        ? Number.isInteger(state.workflowEditAtBatIndex)
+          ? "Save Changes"
+          : "Save At-Bat"
+        : "Finish At-Bat";
     endAtBat.addEventListener("click", endAtBatFlow);
     actions.appendChild(endAtBat);
 
@@ -2526,7 +2692,12 @@ function initGamesPage(games) {
     }
 
     if (!state.activeAtBat.pitches.includes(state.activePitch)) {
-      state.activeAtBat.pitches.push(state.activePitch);
+      if (Number.isInteger(state.activePitchIndex) && state.activePitchIndex >= 0) {
+        state.activeAtBat.pitches[state.activePitchIndex] = state.activePitch;
+      } else {
+        state.activeAtBat.pitches.push(state.activePitch);
+        state.activePitchIndex = state.activeAtBat.pitches.length - 1;
+      }
     }
 
     state.activePitchCompleted = true;
@@ -2695,7 +2866,21 @@ function initGamesPage(games) {
 
   function startNextPitch() {
     completeCurrentPitch();
+
+    if (
+      Number.isInteger(state.workflowEditAtBatIndex) &&
+      Number.isInteger(state.activePitchIndex) &&
+      state.activeAtBat?.pitches?.[state.activePitchIndex + 1]
+    ) {
+      setActivePitchFromIndex(state.activePitchIndex + 1);
+      resetStepHistory();
+      state.step = "location";
+      renderAtBats();
+      return;
+    }
+
     state.activePitch = null;
+    state.activePitchIndex = null;
     state.activePitchCompleted = false;
     resetStepHistory();
     state.step = "location";
@@ -2709,12 +2894,27 @@ function initGamesPage(games) {
 
     completeCurrentPitch();
 
+    if (
+      Number.isInteger(state.workflowEditAtBatIndex) &&
+      Number.isInteger(state.activePitchIndex) &&
+      Array.isArray(state.activeAtBat.pitches)
+    ) {
+      state.activeAtBat.pitches = state.activeAtBat.pitches.slice(0, state.activePitchIndex + 1);
+    }
+
     if (!state.activeAtBat.finalOutcome) {
       const lastPitch = state.activeAtBat.pitches[state.activeAtBat.pitches.length - 1];
       state.activeAtBat.finalOutcome = lastPitch ? lastPitch.battedBallOutcome || lastPitch.strikeType || lastPitch.result : "";
     }
 
-    state.draftGame.atBats.push(normalizeAtBat(state.activeAtBat));
+    const wasEditingWorkflow = Number.isInteger(state.workflowEditAtBatIndex) && state.workflowEditAtBatIndex >= 0;
+
+    if (wasEditingWorkflow) {
+      state.draftGame.atBats[state.workflowEditAtBatIndex] = normalizeAtBat(state.activeAtBat);
+    } else {
+      state.draftGame.atBats.push(normalizeAtBat(state.activeAtBat));
+    }
+
     syncDraftFields();
     if (state.draftGame.date && state.draftGame.opponent) {
       state.draftGame = upsertSavedGame(games, state.draftGame);
@@ -2724,11 +2924,13 @@ function initGamesPage(games) {
 
     state.activeAtBat = null;
     state.activePitch = null;
+    state.activePitchIndex = null;
     state.activePitchCompleted = false;
     state.pendingProductiveOutOutcome = "";
+    resetWorkflowEditState();
     resetStepHistory();
     state.step = "at_bat_details";
-    setMessage("At-bat saved to this game.", true);
+    setMessage(wasEditingWorkflow ? "At-bat updated." : "At-bat saved to this game.", true);
     renderAtBats();
   }
 
@@ -2840,7 +3042,9 @@ function initGamesPage(games) {
 
     state.activeAtBat = createDraftAtBat();
     state.activePitch = null;
+    state.activePitchIndex = null;
     state.activePitchCompleted = false;
+    resetWorkflowEditState();
     state.pendingProductiveOutOutcome = "";
     resetStepHistory();
     state.step = "at_bat_details";
