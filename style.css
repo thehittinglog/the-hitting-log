@@ -67,10 +67,17 @@ p {
 }
 
 .brand {
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.brand-logo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .top-nav {
@@ -1386,7 +1393,12 @@ body,
   }
 
   .brand {
-    font-size: 1rem;
+    align-self: center;
+  }
+
+  .brand-logo {
+    width: 56px;
+    height: 56px;
   }
 
   .top-nav {
