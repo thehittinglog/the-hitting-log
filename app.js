@@ -971,6 +971,7 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   const opponent = document.createElement("p");
   const average = document.createElement("p");
   const performanceScore = document.createElement("p");
+  const score = calculateHittingLogPerformanceScore(gameStats);
 
   row.className = "logged-game-card-row";
   cell.colSpan = 1;
@@ -982,7 +983,8 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   average.className = "logged-game-average";
   average.textContent = `Batting Average: ${formatRate(gameStats.battingAverage)}`;
   performanceScore.className = "logged-game-score";
-  performanceScore.textContent = `Hitting Log Performance Score: ${calculateHittingLogPerformanceScore(gameStats)}`;
+  performanceScore.textContent = `Hitting Log Performance Score: ${formatPerformanceScore(score)}`;
+  applyPerformanceScoreStatus(performanceScore, score);
 
   card.appendChild(date);
   card.appendChild(opponent);
@@ -1137,6 +1139,11 @@ function setText(id, value) {
 
     if (element.dataset.performanceMetric && typeof window.applyMetricPerformanceColor === "function") {
       window.applyMetricPerformanceColor(element, element.dataset.performanceMetric, value);
+    }
+
+    if (element.dataset.performanceScore !== undefined) {
+      applyPerformanceScoreStatus(element, value);
+      element.textContent = formatPerformanceScore(value);
     }
   }
 }
@@ -3366,6 +3373,56 @@ function calculateHittingLogPerformanceScore(source) {
   }, 0);
 
   return Math.min(100, Math.max(0, Math.round(rawScore)));
+}
+
+const performanceScoreClasses = [
+  "performance-score-needs-work",
+  "performance-score-good",
+  "performance-score-exceptional",
+];
+
+function getPerformanceScoreStatus(score) {
+  const numericScore = Number(score);
+  const normalizedScore = Number.isFinite(numericScore)
+    ? Math.min(100, Math.max(0, Math.round(numericScore)))
+    : 0;
+
+  if (normalizedScore >= 65) {
+    return {
+      label: "Exceptional",
+      className: "performance-score-exceptional",
+    };
+  }
+
+  if (normalizedScore >= 50) {
+    return {
+      label: "Good",
+      className: "performance-score-good",
+    };
+  }
+
+  return {
+    label: "Needs Work",
+    className: "performance-score-needs-work",
+  };
+}
+
+function formatPerformanceScore(score) {
+  const numericScore = Number(score);
+  const normalizedScore = Number.isFinite(numericScore)
+    ? Math.min(100, Math.max(0, Math.round(numericScore)))
+    : 0;
+  const status = getPerformanceScoreStatus(normalizedScore);
+
+  return `${normalizedScore} - ${status.label}`;
+}
+
+function applyPerformanceScoreStatus(element, score) {
+  const status = getPerformanceScoreStatus(score);
+
+  element.classList.remove(...performanceScoreClasses);
+  element.classList.add(status.className);
+  element.dataset.performanceScoreStatus = status.label;
 }
 
 function hasBallInPlay(atBat) {

@@ -6,6 +6,9 @@
   --ink: #07324f;
   --muted: rgba(7, 50, 79, 0.68);
   --accent: #a91f24;
+  --performance-needs-work: #a91f24;
+  --performance-good: #07324f;
+  --performance-exceptional: #2f6f3e;
   --accent-soft: rgba(7, 50, 79, 0.08);
   --line: rgba(7, 50, 79, 0.22);
   --shadow: 0 18px 48px rgba(7, 50, 79, 0.08);
@@ -209,6 +212,36 @@ th,
 
 .performance-score-card strong {
   font-size: 2.4rem;
+}
+
+.performance-score-needs-work {
+  color: var(--performance-needs-work);
+}
+
+.performance-score-good {
+  color: var(--performance-good);
+}
+
+.performance-score-exceptional {
+  color: var(--performance-exceptional);
+}
+
+.performance-score-badge.performance-score-needs-work,
+.performance-score-progress.performance-score-needs-work {
+  background: var(--performance-needs-work);
+  color: #ffffff;
+}
+
+.performance-score-badge.performance-score-good,
+.performance-score-progress.performance-score-good {
+  background: var(--performance-good);
+  color: #ffffff;
+}
+
+.performance-score-badge.performance-score-exceptional,
+.performance-score-progress.performance-score-exceptional {
+  background: var(--performance-exceptional);
+  color: #ffffff;
 }
 
 .panel + .panel,
