@@ -76,6 +76,16 @@
           <a class="back-link" href="charts.html">Back to Charts</a>
         </div>
         <div class="chart-controls">
+          <div class="date-filter-group" aria-label="Heat map date range">
+            <label class="filter-label" for="chart-start-date">
+              <span>Start Date</span>
+              <input id="chart-start-date" type="date">
+            </label>
+            <label class="filter-label" for="chart-end-date">
+              <span>End Date</span>
+              <input id="chart-end-date" type="date">
+            </label>
+          </div>
           <label class="filter-label" for="chart-filter">
             <span>Filter</span>
             <select id="chart-filter">
@@ -158,6 +168,16 @@
           <aside class="spray-sidebar" aria-label="Spray chart controls">
             <div class="spray-panel">
               <h3>Filters</h3>
+              <div class="date-filter-group spray-date-filter-group" aria-label="Spray chart date range">
+                <label for="spray-start-date">
+                  <span>Start Date</span>
+                  <input id="spray-start-date" type="date">
+                </label>
+                <label for="spray-end-date">
+                  <span>End Date</span>
+                  <input id="spray-end-date" type="date">
+                </label>
+              </div>
               <label for="spray-result-filter">
                 <span>Batted Ball Result</span>
                 <select id="spray-result-filter">

@@ -781,6 +781,18 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.date-filter-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 12px;
+  flex: 1 1 320px;
+}
+
+.spray-date-filter-group {
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+
 .filter-label {
   flex: 1 1 240px;
   max-width: 280px;

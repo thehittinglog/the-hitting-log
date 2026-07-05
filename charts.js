@@ -17,6 +17,40 @@ function removeHiddenChartFilterOptions(filterSelect) {
   });
 }
 
+function normalizeChartDate(value) {
+  const trimmed = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : "";
+}
+
+function getChartDateRange(startInput, endInput) {
+  return {
+    startDate: normalizeChartDate(startInput?.value),
+    endDate: normalizeChartDate(endInput?.value),
+  };
+}
+
+function isGameInChartDateRange(game, dateRange) {
+  const gameDate = normalizeChartDate(game?.date);
+
+  if (!gameDate) {
+    return false;
+  }
+
+  if (dateRange.startDate && gameDate < dateRange.startDate) {
+    return false;
+  }
+
+  if (dateRange.endDate && gameDate > dateRange.endDate) {
+    return false;
+  }
+
+  return true;
+}
+
+function filterGamesByChartDateRange(games, dateRange) {
+  return games.filter((game) => isGameInChartDateRange(game, dateRange));
+}
+
 function renderChartStrikeZone() {
   const zoneMap = document.getElementById("chart-zone-map");
 
@@ -153,13 +187,15 @@ function renderChartLegend(filterName) {
 
 function renderChartsPage() {
   const filterSelect = document.getElementById("chart-filter");
+  const startDateInput = document.getElementById("chart-start-date");
+  const endDateInput = document.getElementById("chart-end-date");
   const generateButton = document.getElementById("generate-chart-button");
   const chartsEmpty = document.getElementById("charts-empty");
   const zoneMap = document.getElementById("chart-zone-map");
   const filterTotal = document.getElementById("chart-filter-total");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
+  if (!filterSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
     return;
   }
 
@@ -171,11 +207,12 @@ function renderChartsPage() {
         ? window.normalizeResultName(filterSelect.value)
         : filterSelect.value;
     const savedGames = typeof window.getSavedGames === "function" ? window.getSavedGames() : [];
-    const allAtBats = typeof window.getAllAtBats === "function" ? window.getAllAtBats() : [];
-    const allPitches = typeof window.getAllPitches === "function" ? window.getAllPitches() : [];
+    const filteredGames = filterGamesByChartDateRange(savedGames, getChartDateRange(startDateInput, endDateInput));
+    const allAtBats = typeof window.getAllAtBats === "function" ? window.getAllAtBats(filteredGames) : [];
+    const allPitches = typeof window.getAllPitches === "function" ? window.getAllPitches(filteredGames) : [];
     const chartData =
       typeof window.getChartDataForFilter === "function"
-        ? window.getChartDataForFilter(selectedFilter)
+        ? window.getChartDataForFilter(selectedFilter, filteredGames)
         : { buckets: {}, totalMatches: 0, matchingPitches: [] };
     const zoneCounts = Object.entries(chartData.buckets || {}).reduce((counts, [locationId, bucket]) => {
       const count =
@@ -230,6 +267,8 @@ function renderChartsPage() {
 
   generateButton.addEventListener("click", renderSelectedFilter);
   filterSelect.addEventListener("change", renderSelectedFilter);
+  startDateInput.addEventListener("change", renderSelectedFilter);
+  endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();
 }
 
@@ -319,8 +358,7 @@ function isSprayOut(entry) {
   return SPRAY_OUT_OUTCOMES.has(entry.outcome);
 }
 
-function getSprayEntries() {
-  const games = typeof window.getSavedGames === "function" ? window.getSavedGames() : [];
+function getSprayEntries(games = typeof window.getSavedGames === "function" ? window.getSavedGames() : []) {
   const entries = [];
 
   games.forEach((game) => {
@@ -444,17 +482,21 @@ function renderSprayLegend(legendList, filterId) {
 
 function renderSprayChartsPage() {
   const filterSelect = document.getElementById("spray-result-filter");
+  const startDateInput = document.getElementById("spray-start-date");
+  const endDateInput = document.getElementById("spray-end-date");
   const markerLayer = document.getElementById("spray-marker-layer");
   const emptyState = document.getElementById("spray-empty-state");
   const legendList = document.getElementById("spray-legend-list");
 
-  if (!filterSelect || !markerLayer || !emptyState || !legendList) {
+  if (!filterSelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
     return;
   }
 
   function renderSelectedFilter() {
     const filterId = SPRAY_RESULT_FILTERS.includes(filterSelect.value) ? filterSelect.value : "all";
-    const matches = getSprayEntries().filter((entry) => matchesSprayFilter(entry, filterId));
+    const savedGames = typeof window.getSavedGames === "function" ? window.getSavedGames() : [];
+    const filteredGames = filterGamesByChartDateRange(savedGames, getChartDateRange(startDateInput, endDateInput));
+    const matches = getSprayEntries(filteredGames).filter((entry) => matchesSprayFilter(entry, filterId));
 
     markerLayer.innerHTML = "";
     matches.forEach((entry) => {
@@ -472,6 +514,8 @@ function renderSprayChartsPage() {
 
   filterSelect.value = "all";
   filterSelect.addEventListener("change", renderSelectedFilter);
+  startDateInput.addEventListener("change", renderSelectedFilter);
+  endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();
 }
 

@@ -3175,6 +3175,8 @@ function createChartBar(widthClass, percentageText) {
 
 function initChartsPage(games) {
   const filterSelect = document.getElementById("chart-filter");
+  const startDateInput = document.getElementById("chart-start-date");
+  const endDateInput = document.getElementById("chart-end-date");
   const generateButton = document.getElementById("generate-chart-button");
   const chartsEmpty = document.getElementById("charts-empty");
   const zoneMap = document.getElementById("chart-zone-map") || document.getElementById("zone-map");
@@ -3182,7 +3184,7 @@ function initChartsPage(games) {
   const chartLegend = document.getElementById("chart-legend");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartLegend || !chartZoneTitle) {
+  if (!filterSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartLegend || !chartZoneTitle) {
     return;
   }
 
@@ -3202,6 +3204,36 @@ function initChartsPage(games) {
       };
       return buckets;
     }, {});
+  }
+
+  function normalizeChartDate(value) {
+    const trimmed = String(value || "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : "";
+  }
+
+  function getChartDateRange() {
+    return {
+      startDate: normalizeChartDate(startDateInput.value),
+      endDate: normalizeChartDate(endDateInput.value),
+    };
+  }
+
+  function isGameInChartDateRange(game, dateRange) {
+    const gameDate = normalizeChartDate(game?.date);
+
+    if (!gameDate) {
+      return false;
+    }
+
+    if (dateRange.startDate && gameDate < dateRange.startDate) {
+      return false;
+    }
+
+    if (dateRange.endDate && gameDate > dateRange.endDate) {
+      return false;
+    }
+
+    return true;
   }
 
   function getPitchLocationId(pitch) {
@@ -3318,7 +3350,9 @@ function initChartsPage(games) {
   function getChartEntries() {
     const entries = [];
 
-    games.forEach((game) => {
+    const dateRange = getChartDateRange();
+
+    games.filter((game) => isGameInChartDateRange(game, dateRange)).forEach((game) => {
       if (!Array.isArray(game.atBats)) {
         return;
       }
@@ -3479,6 +3513,14 @@ function initChartsPage(games) {
   });
 
   filterSelect.addEventListener("change", () => {
+    renderZoneMap(filterSelect.value);
+  });
+
+  startDateInput.addEventListener("change", () => {
+    renderZoneMap(filterSelect.value);
+  });
+
+  endDateInput.addEventListener("change", () => {
     renderZoneMap(filterSelect.value);
   });
 

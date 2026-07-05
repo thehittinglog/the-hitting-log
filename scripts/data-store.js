@@ -186,8 +186,8 @@
     return savedGame;
   }
 
-  function getAllAtBats() {
-    return getSavedGames().flatMap((game) => {
+  function getAllAtBats(games = getSavedGames()) {
+    return games.flatMap((game) => {
       if (!Array.isArray(game.atBats)) {
         return [];
       }
@@ -281,8 +281,8 @@
     return Array.from(new Set(names));
   }
 
-  function getAllPitches() {
-    return getSavedGames().flatMap((game) => {
+  function getAllPitches(games = getSavedGames()) {
+    return games.flatMap((game) => {
       if (!Array.isArray(game.atBats) && Number(game?.stats?.atBats || game?.atBatCount || game?.atBats || 0) > 0) {
         console.warn("Saved game has at-bat stats but no pitch/location detail for charts", game);
       }
@@ -316,12 +316,12 @@
     }, {});
   }
 
-  function getChartDataForFilter(filterName) {
+  function getChartDataForFilter(filterName, games = getSavedGames()) {
     const selectedFilter = normalizeResultName(filterName || "Hot/Cold Zones");
     const buckets = createLocationBuckets();
     const matchingPitches = [];
 
-    getAllPitches().forEach((pitch) => {
+    getAllPitches(games).forEach((pitch) => {
       if (!pitch.locationId || !buckets[pitch.locationId]) {
         return;
       }
