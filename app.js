@@ -1325,6 +1325,68 @@ function renderPitchSequence(sequenceElement, atBat) {
   });
 }
 
+function getSimplePitchResultLabel(pitch) {
+  const rawResult =
+    pitch?.primaryResult ||
+    pitch?.result ||
+    pitch?.pitch_result ||
+    pitch?.swing_result ||
+    pitch?.strikeType ||
+    pitch?.strikeDetail ||
+    "";
+
+  if (rawResult === "ball") {
+    return "Ball";
+  }
+
+  if (
+    rawResult === "strike" ||
+    rawResult === "called_strike" ||
+    rawResult === "swinging_strike"
+  ) {
+    return "Strike";
+  }
+
+  if (rawResult === "foul_ball") {
+    return "Foul";
+  }
+
+  if (rawResult === "hit_by_pitch") {
+    return "HBP";
+  }
+
+  if (
+    rawResult === "batted_ball" ||
+    pitch?.battedBallType ||
+    pitch?.batted_ball_type ||
+    pitch?.battedBallOutcome ||
+    pitch?.batted_ball_outcome
+  ) {
+    return "In Play";
+  }
+
+  return getPitchResultLabel(rawResult || "Unknown");
+}
+
+function renderSimplePitchSequence(sequenceElement, atBat) {
+  sequenceElement.innerHTML = "";
+
+  if (!atBat || !Array.isArray(atBat.pitches) || atBat.pitches.length === 0) {
+    const emptyItem = document.createElement("p");
+    emptyItem.className = "empty-state compact-empty";
+    emptyItem.textContent = "No pitches logged yet.";
+    sequenceElement.appendChild(emptyItem);
+    return;
+  }
+
+  atBat.pitches.forEach((pitch, index) => {
+    const item = document.createElement("article");
+    item.className = "pitch-chip pitch-chip-simple";
+    item.textContent = `Pitch ${index + 1}: ${getSimplePitchResultLabel(pitch)}`;
+    sequenceElement.appendChild(item);
+  });
+}
+
 function renderAtBatList(listElement, atBats) {
   listElement.innerHTML = "";
 
@@ -1341,52 +1403,13 @@ function renderAtBatList(listElement, atBats) {
     item.className = "saved-at-bat";
 
     const title = document.createElement("strong");
-    title.textContent = `At-Bat ${index + 1}: ${getOutcomeLabel(atBat.outcome)}`;
+    title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
 
-    const meta = document.createElement("p");
-    meta.className = "section-copy";
-    meta.textContent = `Final count: ${atBat.balls}-${atBat.strikes} | ${atBat.pitches.length} pitches`;
-
-    const sequence = document.createElement("p");
-    sequence.className = "saved-at-bat-sequence";
-    sequence.textContent = atBat.pitches
-      .map((pitch, pitchIndex) => {
-        const details = [];
-        const locationLabel =
-          pitch.locationLabel ||
-          (pitch.location && typeof pitch.location.label === "string" ? pitch.location.label : "");
-
-        details.push(getPitchTypeLabel(pitch.pitchType));
-
-        if (pitch.strikeType || pitch.strikeDetail) {
-          details.push(getPitchResultLabel(pitch.strikeType || pitch.strikeDetail));
-        }
-
-        if (pitch.foulDirection) {
-          details.push(getFoulDirectionLabel(pitch.foulDirection));
-        }
-
-        if (pitch.battedBallType) {
-          details.push(getBattedBallTypeLabel(pitch.battedBallType));
-        }
-
-        if (pitch.hitLocation || pitch.hit_location) {
-          details.push(getHitLocationLabel(pitch.hitLocation || pitch.hit_location));
-        }
-
-        if (pitch.battedBallOutcome || pitch.outcome) {
-          details.push(getOutcomeLabel(pitch.battedBallOutcome || pitch.outcome));
-        }
-
-        return (
-          `${pitchIndex + 1}. ${locationLabel} - ${getPitchResultLabel(pitch.primaryResult || pitch.result)}` +
-          (details.length ? ` (${details.join(", ")})` : "")
-        );
-      })
-      .join(" | ");
+    const sequence = document.createElement("div");
+    sequence.className = "pitch-sequence";
+    renderSimplePitchSequence(sequence, atBat);
 
     item.appendChild(title);
-    item.appendChild(meta);
     item.appendChild(sequence);
     listElement.appendChild(item);
   });
@@ -2424,12 +2447,11 @@ function initGamesPage(games) {
       const heading = document.createElement("div");
       const title = document.createElement("strong");
       const editButton = document.createElement("button");
-      const meta = document.createElement("p");
       const sequence = document.createElement("div");
 
       card.className = "saved-at-bat review-at-bat-card";
       heading.className = "review-at-bat-heading";
-      title.textContent = `At-Bat ${index + 1}: ${getOutcomeLabel(atBat.outcome)}`;
+      title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
       editButton.className = "secondary-button";
       editButton.textContent = "Edit";
@@ -2443,16 +2465,10 @@ function initGamesPage(games) {
       heading.appendChild(title);
       heading.appendChild(editButton);
 
-      meta.className = "section-copy";
-      meta.textContent =
-        `Final count: ${atBat.balls}-${atBat.strikes} | ${atBat.pitches.length} pitches` +
-        (atBat.productiveOut ? " | Productive out" : "");
-
       sequence.className = "pitch-sequence";
-      renderPitchSequence(sequence, atBat);
+      renderSimplePitchSequence(sequence, atBat);
 
       card.appendChild(heading);
-      card.appendChild(meta);
       card.appendChild(sequence);
 
       if (state.editingAtBatIndex === index && state.editingAtBatDraft) {
@@ -2498,7 +2514,7 @@ function initGamesPage(games) {
       const editButton = document.createElement("button");
 
       heading.className = "saved-at-bat-heading";
-      title.textContent = `At-Bat ${index + 1}: ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+      title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
       editButton.className = "secondary-button saved-at-bat-edit-button";
       editButton.textContent = "Edit";
@@ -2512,7 +2528,7 @@ function initGamesPage(games) {
 
       const sequence = document.createElement("div");
       sequence.className = "pitch-sequence";
-      renderPitchSequence(sequence, atBat);
+      renderSimplePitchSequence(sequence, atBat);
       card.appendChild(sequence);
       atBatList.appendChild(card);
     });
