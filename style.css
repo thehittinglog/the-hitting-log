@@ -552,6 +552,24 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   box-shadow: none;
 }
 
+.log-panel .choice-grid button,
+.pitch-type-modal .choice-grid button,
+.location-grid .zone-cell {
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid rgba(169, 31, 36, 0.44);
+  box-shadow: none;
+}
+
+.log-panel .choice-grid button:hover,
+.log-panel .choice-grid button:focus-visible,
+.pitch-type-modal .choice-grid button:hover,
+.pitch-type-modal .choice-grid button:focus-visible,
+.location-grid .zone-cell:hover,
+.location-grid .zone-cell:focus-visible {
+  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.22);
+}
+
 .pitch-type-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -732,13 +750,13 @@ select:focus {
   min-width: 150px;
   padding: 11px 16px;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--bg);
 }
 
 .back-link {
   padding: 10px 14px;
-  color: var(--accent);
-  background: rgba(169, 31, 36, 0.08);
+  color: var(--bg);
+  background: var(--navy);
   white-space: nowrap;
 }
 
@@ -997,17 +1015,17 @@ button {
   padding: 14px 18px;
   font: inherit;
   font-weight: 800;
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--navy) 100%);
+  color: var(--bg);
+  background: var(--navy);
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease;
-  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.24);
+  box-shadow: 0 12px 24px rgba(7, 50, 79, 0.18);
 }
 
 .secondary-button {
-  color: var(--accent);
-  background: var(--panel-solid);
-  border: 1px solid var(--line);
+  color: var(--bg);
+  background: var(--navy);
+  border: 1px solid rgba(7, 50, 79, 0.32);
   box-shadow: none;
 }
 
@@ -1018,12 +1036,12 @@ button {
 button:hover,
 button:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(169, 31, 36, 0.28);
+  box-shadow: 0 16px 30px rgba(7, 50, 79, 0.24);
 }
 
 .nav-button:hover,
 .nav-button:focus-visible {
-  box-shadow: 0 12px 24px rgba(169, 31, 36, 0.2);
+  box-shadow: 0 12px 24px rgba(7, 50, 79, 0.2);
 }
 
 .form-message {
