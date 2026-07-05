@@ -3412,7 +3412,7 @@ function initChartsPage(games) {
   }
 
   function getZoneCellStyle(bucket, filterType, maxCount, filterId) {
-    const emptyCellStyle = "background: var(--bg); color: var(--muted); border-color: var(--line);";
+    const emptyCellStyle = "background: var(--panel-solid); color: var(--muted); border-color: var(--line);";
 
     if (!bucket || maxCount === 0) {
       return emptyCellStyle;

@@ -116,7 +116,7 @@ function renderChartStrikeZone() {
 window.renderChartStrikeZone = renderChartStrikeZone;
 
 function getChartCellStyle(bucket, filterName, maxCount) {
-  const emptyCellStyle = "background: var(--bg); color: var(--muted); border-color: var(--line);";
+  const emptyCellStyle = "background: var(--panel-solid); color: var(--muted); border-color: var(--line);";
 
   if (!bucket || maxCount === 0) {
     return emptyCellStyle;
