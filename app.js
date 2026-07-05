@@ -4,6 +4,28 @@ const currentUserKey = "hitting-log-current-user";
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "advanced", "charts", "account"]);
 const authPages = new Set(["login", "signup"]);
+const DEFAULT_SPORT_TYPE = "baseball";
+const PITCH_TYPES_BY_SPORT = {
+  baseball: [
+    { label: "4 Seam Fastball", value: "four_seam_fastball" },
+    { label: "2 Seam Fastball", value: "two_seam_fastball" },
+    { label: "Changeup", value: "changeup" },
+    { label: "Sinker", value: "sinker" },
+    { label: "Slider", value: "slider" },
+    { label: "Cutter", value: "cutter" },
+    { label: "12-6 Curve", value: "twelve_six_curve" },
+    { label: "Sweeper Curve", value: "sweeper_curve" },
+  ],
+  softball: [
+    { label: "Fastball", value: "fastball" },
+    { label: "Changeup", value: "changeup" },
+    { label: "Curve", value: "curve" },
+    { label: "Screw", value: "screwball" },
+    { label: "Drop", value: "drop" },
+    { label: "Rise", value: "rise" },
+    { label: "Drop-Curve", value: "drop_curve" },
+  ],
+};
 const outcomeFields = [
   "single",
   "double",
@@ -98,6 +120,10 @@ function saveAccounts(accounts) {
   localStorage.setItem(accountsKey, JSON.stringify(accounts));
 }
 
+function normalizeSportType(sportType) {
+  return sportType === "softball" ? "softball" : DEFAULT_SPORT_TYPE;
+}
+
 function getCurrentUser() {
   const savedUser = JSON.parse(localStorage.getItem(currentUserKey) || "null");
 
@@ -117,6 +143,42 @@ function setCurrentUser(email) {
       email: normalizeEmail(email),
     })
   );
+}
+
+function getCurrentAccount() {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return loadAccounts().find((account) => normalizeEmail(account.email || "") === currentUser.email) || null;
+}
+
+function getCurrentSportType() {
+  return normalizeSportType(getCurrentAccount()?.sportType);
+}
+
+function updateCurrentAccountSportType(sportType) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const accounts = loadAccounts();
+  const accountIndex = accounts.findIndex((account) => normalizeEmail(account.email || "") === currentUser.email);
+
+  if (accountIndex === -1) {
+    return null;
+  }
+
+  accounts[accountIndex] = {
+    ...accounts[accountIndex],
+    sportType: normalizeSportType(sportType),
+  };
+  saveAccounts(accounts);
+  return accounts[accountIndex];
 }
 
 function createId(prefix) {
@@ -175,13 +237,35 @@ function updateAuthUI() {
 }
 
 function normalizePitchType(pitchType) {
-  const normalized = String(pitchType || "unknown").trim().toLowerCase().replace(/\s+/g, "_");
-  const normalizedPitchType = normalized === "screw" ? "screwball" : normalized;
+  const normalized = String(pitchType || "unknown")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
+  const pitchTypeMap = {
+    "4_seam_fastball": "four_seam_fastball",
+    "4seam_fastball": "four_seam_fastball",
+    four_seam: "four_seam_fastball",
+    "2_seam_fastball": "two_seam_fastball",
+    "2seam_fastball": "two_seam_fastball",
+    two_seam: "two_seam_fastball",
+    "12_6_curve": "twelve_six_curve",
+    "12_6": "twelve_six_curve",
+    screw: "screwball",
+    dropcurve: "drop_curve",
+  };
+  const normalizedPitchType = pitchTypeMap[normalized] || normalized;
   const allowedPitchTypes = new Set([
+    "four_seam_fastball",
+    "two_seam_fastball",
     "fastball",
     "changeup",
+    "sinker",
     "curve",
+    "twelve_six_curve",
+    "sweeper_curve",
     "drop",
+    "drop_curve",
     "rise",
     "slider",
     "cutter",
@@ -1036,10 +1120,16 @@ function getPitchResultLabel(result) {
 
 function getPitchTypeLabel(pitchType) {
   const labelMap = {
+    four_seam_fastball: "4 Seam Fastball",
+    two_seam_fastball: "2 Seam Fastball",
     fastball: "Fastball",
     changeup: "Changeup",
+    sinker: "Sinker",
     curve: "Curve",
+    twelve_six_curve: "12-6 Curve",
+    sweeper_curve: "Sweeper Curve",
     drop: "Drop",
+    drop_curve: "Drop-Curve",
     rise: "Rise",
     slider: "Slider",
     cutter: "Cutter",
@@ -1395,17 +1485,9 @@ function initGamesPage(games) {
     { label: "Batted Ball", value: "batted_ball" },
     { label: "HBP", value: "hit_by_pitch" },
   ];
-  const pitchTypeOptions = [
-    { label: "Fastball", value: "fastball" },
-    { label: "Changeup", value: "changeup" },
-    { label: "Curve", value: "curve" },
-    { label: "Drop", value: "drop" },
-    { label: "Rise", value: "rise" },
-    { label: "Slider", value: "slider" },
-    { label: "Cutter", value: "cutter" },
-    { label: "Screwball", value: "screwball" },
-    { label: "Unknown", value: "unknown" },
-  ];
+  function getPitchTypeOptions() {
+    return PITCH_TYPES_BY_SPORT[getCurrentSportType()] || PITCH_TYPES_BY_SPORT[DEFAULT_SPORT_TYPE];
+  }
   const strikeOptions = [
     { label: "Called Strike", value: "called_strike" },
     { label: "Swinging Strike", value: "swinging_strike" },
@@ -1824,7 +1906,7 @@ function initGamesPage(games) {
     title.textContent = "What type of pitch was this?";
     grid.className = "choice-grid pitch-type-grid";
 
-    pitchTypeOptions.forEach((option) => {
+    getPitchTypeOptions().forEach((option) => {
       grid.appendChild(createButton(option, handlePitchType));
     });
 
@@ -2332,7 +2414,7 @@ function initGamesPage(games) {
     }
 
     if (state.step === "pitch_type") {
-      card.appendChild(renderOptionGroup("Pitch Type", pitchTypeOptions, handlePitchType));
+      card.appendChild(renderOptionGroup("Pitch Type", getPitchTypeOptions(), handlePitchType));
     }
 
     if (state.step === "pitch_result") {
@@ -3402,6 +3484,25 @@ window.renderChartsPage = function renderChartsPage() {
   initChartsPage(loadRawGames());
 };
 
+function initAccountPage() {
+  const sportTypeSelect = document.getElementById("sport-type-select");
+  const sportTypeMessage = document.getElementById("sport-type-message");
+
+  if (!sportTypeSelect) {
+    return;
+  }
+
+  sportTypeSelect.value = getCurrentSportType();
+  sportTypeSelect.addEventListener("change", () => {
+    const updatedAccount = updateCurrentAccountSportType(sportTypeSelect.value);
+
+    if (sportTypeMessage) {
+      sportTypeMessage.textContent = updatedAccount ? "Sport type saved." : "Unable to save sport type.";
+      sportTypeMessage.classList.toggle("is-success", Boolean(updatedAccount));
+    }
+  });
+}
+
 function initLoginPage() {
   const loginForm = document.getElementById("login-form");
   const emailInput = document.getElementById("login-email");
@@ -3464,7 +3565,7 @@ function initSignupPage() {
       return;
     }
 
-    accounts.push({ email, password });
+    accounts.push({ email, password, sportType: DEFAULT_SPORT_TYPE });
     saveAccounts(accounts);
     setCurrentUser(email);
     signupMessage.textContent = "Account created. Redirecting...";
@@ -3488,6 +3589,10 @@ if (guardRoute()) {
 
   if (page === "advanced") {
     initAdvancedPage(games);
+  }
+
+  if (page === "account") {
+    initAccountPage();
   }
 
   if (page === "login") {
