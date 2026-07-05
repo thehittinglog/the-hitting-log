@@ -68,9 +68,27 @@
     },
     hittingLogPerformanceScore: {
       title: "Hitting Log Performance Score",
-      definition: "A 0-100 development score that blends contact quality, quality at-bats, productive outs, and two-strike performance.",
-      formula: "(Hard Hit Ball % x 0.45) + (Quality At-Bat % x 0.25) + (Productive Outs % x 0.20) + (Two-Strike Adjustment x 0.10). Two-Strike Adjustment = 100 - (Two-Strike % x ((100 - Hard Hit Ball % w/ 2 Strikes) / 100)).",
-      explanation: "This creates one quick read on game or season performance while still rewarding strong no-out games by redistributing the productive-out weight when no outs were recorded.",
+      sections: [
+        {
+          label: "Definition",
+          content: "The Hitting Log Performance Score™ is a proprietary 0-100 rating that evaluates the overall quality of a player's offensive performance in a game.",
+        },
+        {
+          label: "What It's Based On",
+          content: [
+            "Hard Hit Ball %",
+            "Quality At-Bat %",
+            "Productive Outs %",
+            "Two-Strike Performance",
+          ],
+          note: "These metrics are weighted using Hitting Log's proprietary scoring model to generate a single overall Performance Score.",
+        },
+        {
+          label: "Why It Matters",
+          content: "The Performance Score is designed to reward the process that leads to long-term offensive success, rather than simply rewarding outcomes. Players who consistently make quality contact, produce quality at-bats, compete with two strikes, and help their team offensively will generally earn higher Performance Scores.",
+        },
+      ],
+      footer: "Hitting Log Performance Score™ is calculated using Hitting Log's proprietary performance model.",
     },
     hardHitBallPercent: {
       title: "Hard Hit Ball %",
@@ -261,6 +279,19 @@
     return section;
   }
 
+  function createMetricInfoSection(sectionDefinition) {
+    const section = createSection(sectionDefinition.label, sectionDefinition.content);
+
+    if (sectionDefinition.note) {
+      const note = document.createElement("p");
+      note.className = "metric-info-note";
+      note.textContent = sectionDefinition.note;
+      section.appendChild(note);
+    }
+
+    return section;
+  }
+
   function positionPopover(popover, button) {
     const buttonRect = button.getBoundingClientRect();
     const popoverRect = popover.getBoundingClientRect();
@@ -289,9 +320,23 @@
 
     title.textContent = definition.title;
     popover.appendChild(title);
-    popover.appendChild(createSection("Definition", definition.definition));
-    popover.appendChild(createSection("Formula", definition.formula));
-    popover.appendChild(createSection("Why It Matters", definition.explanation));
+
+    if (Array.isArray(definition.sections)) {
+      definition.sections.forEach((sectionDefinition) => {
+        popover.appendChild(createMetricInfoSection(sectionDefinition));
+      });
+    } else {
+      popover.appendChild(createSection("Definition", definition.definition));
+      popover.appendChild(createSection("Formula", definition.formula));
+      popover.appendChild(createSection("Why It Matters", definition.explanation));
+    }
+
+    if (definition.footer) {
+      const footer = document.createElement("p");
+      footer.className = "metric-info-footer";
+      footer.textContent = definition.footer;
+      popover.appendChild(footer);
+    }
 
     document.body.appendChild(popover);
     activeButton = button;
