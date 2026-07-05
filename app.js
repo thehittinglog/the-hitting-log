@@ -944,6 +944,51 @@ function appendGameCells(row, gameStats, options = {}) {
   }
 }
 
+function formatDisplayDate(dateValue) {
+  if (!dateValue) {
+    return "No date";
+  }
+
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+  const date = year && month && day ? new Date(year, month - 1, day) : new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(dateValue);
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opponent) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  const card = document.createElement("article");
+  const date = document.createElement("strong");
+  const opponent = document.createElement("p");
+  const average = document.createElement("p");
+
+  row.className = "logged-game-card-row";
+  cell.colSpan = 1;
+  card.className = "logged-game-card";
+  date.className = "logged-game-date";
+  date.textContent = formatDisplayDate(gameStats.date);
+  opponent.className = "logged-game-opponent";
+  opponent.textContent = `vs. ${opponentLabel || "Opponent"}`;
+  average.className = "logged-game-average";
+  average.textContent = `Batting Average: ${formatRate(gameStats.battingAverage)}`;
+
+  card.appendChild(date);
+  card.appendChild(opponent);
+  card.appendChild(average);
+  cell.appendChild(card);
+  row.appendChild(cell);
+  tableBody.appendChild(row);
+}
+
 function hasTournamentGame(game) {
   return Boolean(game.tournamentId || game.tournamentName);
 }
@@ -1044,6 +1089,12 @@ function renderGroupedGamesTable(tableBody, games, options = {}) {
   }
 }
 
+function renderSimpleGamesTable(tableBody, games) {
+  games.forEach((game) => {
+    appendSimpleGameRow(tableBody, getGameStats(game));
+  });
+}
+
 function renderGamesTable(games, tbodyId, emptyId, limit) {
   const tableBody = document.getElementById(tbodyId);
   const emptyState = document.getElementById(emptyId);
@@ -1057,8 +1108,10 @@ function renderGamesTable(games, tbodyId, emptyId, limit) {
   const sortedGames = sortGamesByDateDesc(games);
   const visibleGames = typeof limit === "number" ? sortedGames.slice(0, limit) : sortedGames;
 
-  if ((tbodyId === "games-table-body" || tbodyId === "review-games-table-body") && typeof limit !== "number") {
-    renderGroupedGamesTable(tableBody, visibleGames, { withAction: tbodyId === "review-games-table-body" });
+  if (tbodyId === "games-table-body" && typeof limit !== "number") {
+    renderSimpleGamesTable(tableBody, visibleGames);
+  } else if (tbodyId === "review-games-table-body" && typeof limit !== "number") {
+    renderGroupedGamesTable(tableBody, visibleGames, { withAction: true });
   } else {
     visibleGames.forEach((game) => {
       const gameStats = getGameStats(game);

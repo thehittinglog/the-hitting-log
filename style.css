@@ -31,6 +31,18 @@ body {
   background: var(--bg);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -1174,6 +1186,44 @@ tbody tr + tr {
 
 tbody td {
   font-weight: 600;
+}
+
+.logged-games-table tbody tr + tr {
+  border-top: 0;
+}
+
+.logged-game-card-row td {
+  padding: 8px 0;
+}
+
+.logged-game-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.logged-game-date {
+  color: var(--ink);
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.logged-game-opponent,
+.logged-game-average {
+  margin: 0;
+}
+
+.logged-game-opponent {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.logged-game-average {
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .empty-state {
