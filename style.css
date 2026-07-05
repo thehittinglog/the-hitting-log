@@ -492,10 +492,26 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 }
 
 .location-grid {
+  --zone-gap: 6px;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 16px;
+  position: relative;
+  width: min(100%, 560px);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--zone-gap);
+  margin: 16px auto 0;
+}
+
+.location-grid::after {
+  content: "";
+  position: absolute;
+  top: calc((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2);
+  left: calc((((100% - (var(--zone-gap) * 6)) / 7) + var(--zone-gap)) * 2);
+  width: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2));
+  height: calc((((100% - (var(--zone-gap) * 6)) / 7) * 3) + (var(--zone-gap) * 2));
+  border: 3px solid var(--navy);
+  border-radius: 14px;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .zone-cell {
@@ -504,16 +520,18 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-  min-height: 56px;
+  min-height: 40px;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: none;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .zone-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
@@ -528,7 +546,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 .zone-cell.is-zone {
   background: var(--panel-solid);
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(7, 50, 79, 0.42);
 }
 
 .zone-cell.is-outside {
@@ -822,9 +840,8 @@ select:focus {
 }
 
 .zone-map {
-  width: min(100%, 480px);
+  width: min(100%, 560px);
   margin: 0 auto;
-  grid-template-columns: repeat(5, minmax(52px, 1fr));
 }
 
 .legend-swatch {
@@ -1323,7 +1340,8 @@ body[data-page="games"] #game-choice-view .choice-card-button {
   }
 
   .location-grid {
-    grid-template-columns: repeat(5, minmax(44px, 1fr));
+    --zone-gap: 5px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }
 
@@ -1756,6 +1774,10 @@ body,
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.chart-location-helper {
+  text-align: center;
 }
 
 .field-selector {

@@ -56,31 +56,55 @@ const outOutcomeFields = new Set([
   "fly_out",
 ]);
 const pitchLocations = [
+  { id: "extreme-top-left-out", label: "Extreme Top Left", isZone: false },
+  { id: "top-edge-left-out", label: "Top Edge Left", isZone: false },
+  { id: "top-edge-mid-left-out", label: "Top Edge Mid Left", isZone: false },
+  { id: "top-edge-mid-out", label: "Top Edge Middle", isZone: false },
+  { id: "top-edge-mid-right-out", label: "Top Edge Mid Right", isZone: false },
+  { id: "top-edge-right-out", label: "Top Edge Right", isZone: false },
+  { id: "extreme-top-right-out", label: "Extreme Top Right", isZone: false },
+  { id: "extreme-high-left-out", label: "Extreme High Left", isZone: false },
   { id: "top-left-out", label: "Top Left", isZone: false },
   { id: "high-left-out", label: "High Left", isZone: false },
   { id: "high-mid-out", label: "High", isZone: false },
   { id: "high-right-out", label: "High Right", isZone: false },
   { id: "top-right-out", label: "Top Right", isZone: false },
+  { id: "extreme-high-right-out", label: "Extreme High Right", isZone: false },
+  { id: "extreme-upper-left-out", label: "Extreme Upper Left", isZone: false },
   { id: "far-left-high-out", label: "Far Inside High", isZone: false },
   { id: "zone-1", label: "Zone 1", isZone: true },
   { id: "zone-2", label: "Zone 2", isZone: true },
   { id: "zone-3", label: "Zone 3", isZone: true },
   { id: "far-right-high-out", label: "Far Outside High", isZone: false },
+  { id: "extreme-upper-right-out", label: "Extreme Upper Right", isZone: false },
+  { id: "extreme-mid-left-out", label: "Extreme Inside", isZone: false },
   { id: "left-out", label: "Inside", isZone: false },
   { id: "zone-4", label: "Zone 4", isZone: true },
   { id: "zone-5", label: "Zone 5", isZone: true },
   { id: "zone-6", label: "Zone 6", isZone: true },
   { id: "right-out", label: "Outside", isZone: false },
+  { id: "extreme-mid-right-out", label: "Extreme Outside", isZone: false },
+  { id: "extreme-lower-left-out", label: "Extreme Lower Left", isZone: false },
   { id: "far-left-low-out", label: "Far Inside Low", isZone: false },
   { id: "zone-7", label: "Zone 7", isZone: true },
   { id: "zone-8", label: "Zone 8", isZone: true },
   { id: "zone-9", label: "Zone 9", isZone: true },
   { id: "far-right-low-out", label: "Far Outside Low", isZone: false },
+  { id: "extreme-lower-right-out", label: "Extreme Lower Right", isZone: false },
+  { id: "extreme-low-left-out", label: "Extreme Low Left", isZone: false },
   { id: "bottom-left-out", label: "Bottom Left", isZone: false },
   { id: "low-left-out", label: "Low Left", isZone: false },
   { id: "low-mid-out", label: "Low", isZone: false },
   { id: "low-right-out", label: "Low Right", isZone: false },
   { id: "bottom-right-out", label: "Bottom Right", isZone: false },
+  { id: "extreme-low-right-out", label: "Extreme Low Right", isZone: false },
+  { id: "extreme-bottom-left-out", label: "Extreme Bottom Left", isZone: false },
+  { id: "bottom-edge-left-out", label: "Bottom Edge Left", isZone: false },
+  { id: "bottom-edge-mid-left-out", label: "Bottom Edge Mid Left", isZone: false },
+  { id: "bottom-edge-mid-out", label: "Bottom Edge Middle", isZone: false },
+  { id: "bottom-edge-mid-right-out", label: "Bottom Edge Mid Right", isZone: false },
+  { id: "bottom-edge-right-out", label: "Bottom Edge Right", isZone: false },
+  { id: "extreme-bottom-right-out", label: "Extreme Bottom Right", isZone: false },
 ];
 const chartFilterOptions = [
   { id: "hot_cold", label: "Hot/Cold Zones", type: "hotCold" },
@@ -2399,7 +2423,7 @@ function initGamesPage(games) {
       zone.setAttribute("aria-label", "Pitch location selector");
       const helper = document.createElement("p");
       helper.className = "pitch-location-helper";
-      helper.textContent = "This grid is from the catcher's perspective.";
+      helper.textContent = "This is the catcher's perspective of the pitch location.";
       renderStrikeZoneLayout(zone, {
         interactive: true,
         onSelectLocation(location) {
@@ -2409,8 +2433,8 @@ function initGamesPage(games) {
         },
         selectedLocationId: state.activePitch ? state.activePitch.location.id : "",
       });
-      card.appendChild(helper);
       card.appendChild(zone);
+      card.appendChild(helper);
     }
 
     if (state.step === "pitch_type") {
