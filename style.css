@@ -244,6 +244,45 @@ th,
   color: #ffffff;
 }
 
+.metric-color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(7, 50, 79, 0.14);
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.metric-color-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.metric-color-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+}
+
+.metric-color-dot--needs-improvement {
+  background: var(--performance-needs-work);
+}
+
+.metric-color-dot--good {
+  background: var(--performance-good);
+}
+
+.metric-color-dot--exceptional {
+  background: var(--performance-exceptional);
+}
+
 .panel + .panel,
 .dashboard,
 .two-column-layout {
