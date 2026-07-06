@@ -2,7 +2,7 @@ const storageKey = "hitting-log-games";
 const accountsKey = "hitting-log-accounts";
 const currentUserKey = "hitting-log-current-user";
 const page = document.body.dataset.page;
-const protectedPages = new Set(["dashboard", "games", "advanced", "charts", "account"]);
+const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
 const authPages = new Set(["login", "signup"]);
 const DEFAULT_SPORT_TYPE = "baseball";
 const PITCH_TYPES_BY_SPORT = {
@@ -801,6 +801,34 @@ function sortGamesByDateAsc(games) {
   return games.slice().sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function parseGameDate(dateValue) {
+  if (!dateValue) {
+    return null;
+  }
+
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+  const date = year && month && day ? new Date(year, month - 1, day) : new Date(dateValue);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isGameWithinLastDays(game, days) {
+  const gameDate = parseGameDate(game.date);
+
+  if (!gameDate) {
+    return false;
+  }
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const rangeStart = new Date(todayStart);
+
+  rangeStart.setDate(todayStart.getDate() - (days - 1));
+  gameDate.setHours(0, 0, 0, 0);
+
+  return gameDate >= rangeStart && gameDate <= todayStart;
+}
+
 function formatRate(value) {
   if (!Number.isFinite(value) || value <= 0) {
     return ".000";
@@ -963,10 +991,9 @@ function formatDisplayDate(dateValue) {
     return "No date";
   }
 
-  const [year, month, day] = String(dateValue).split("-").map(Number);
-  const date = year && month && day ? new Date(year, month - 1, day) : new Date(dateValue);
+  const date = parseGameDate(dateValue);
 
-  if (Number.isNaN(date.getTime())) {
+  if (!date) {
     return String(dateValue);
   }
 
@@ -1121,6 +1148,44 @@ function renderSimpleGamesTable(tableBody, games) {
   });
 }
 
+function renderGameSummaryRow(tableBody, game, options = {}) {
+  const gameStats = getGameStats(game);
+  const row = document.createElement("tr");
+  const dateCell = document.createElement("td");
+  const opponentCell = document.createElement("td");
+  const averageCell = document.createElement("td");
+  const scoreCell = document.createElement("td");
+  const score = calculateHittingLogPerformanceScore(gameStats);
+
+  dateCell.textContent = formatDisplayDate(gameStats.date);
+  opponentCell.textContent = gameStats.opponent || "Opponent";
+  averageCell.textContent = formatRate(gameStats.battingAverage);
+  scoreCell.textContent = String(score);
+
+  if (typeof window.applyMetricPerformanceColor === "function") {
+    window.applyMetricPerformanceColor(averageCell, "battingAverage", averageCell.textContent);
+  }
+
+  applyPerformanceScoreStatus(scoreCell, score);
+
+  if (options.clickable) {
+    row.className = "clickable-game-row";
+    row.tabIndex = 0;
+    row.dataset.gameId = gameStats.id;
+  }
+
+  row.appendChild(dateCell);
+  row.appendChild(opponentCell);
+  row.appendChild(averageCell);
+  row.appendChild(scoreCell);
+  tableBody.appendChild(row);
+}
+
+function renderGameSummaryTable(tableBody, games, options = {}) {
+  tableBody.innerHTML = "";
+  games.forEach((game) => renderGameSummaryRow(tableBody, game, options));
+}
+
 function renderGamesTable(games, tbodyId, emptyId, limit) {
   const tableBody = document.getElementById(tbodyId);
   const emptyState = document.getElementById(emptyId);
@@ -1135,7 +1200,7 @@ function renderGamesTable(games, tbodyId, emptyId, limit) {
   const visibleGames = typeof limit === "number" ? sortedGames.slice(0, limit) : sortedGames;
 
   if (tbodyId === "games-table-body" && typeof limit !== "number") {
-    renderSimpleGamesTable(tableBody, visibleGames);
+    renderGameSummaryTable(tableBody, visibleGames.filter((game) => isGameWithinLastDays(game, 7)));
   } else if (tbodyId === "review-games-table-body" && typeof limit !== "number") {
     renderGroupedGamesTable(tableBody, visibleGames, { withAction: true });
   } else {
@@ -1148,7 +1213,7 @@ function renderGamesTable(games, tbodyId, emptyId, limit) {
   }
 
   if (emptyState) {
-    emptyState.hidden = visibleGames.length > 0;
+    emptyState.hidden = tableBody.children.length > 0;
   }
 }
 
@@ -3170,7 +3235,89 @@ function initGamesPage(games) {
   });
 
   dateInput.value = getDefaultDate();
-  showHomeView();
+
+  const requestedReviewGameId = new URLSearchParams(window.location.search).get("reviewGameId");
+  if (requestedReviewGameId && games.some((game) => getGameStats(game).id === requestedReviewGameId)) {
+    showGameReview(requestedReviewGameId);
+  } else {
+    showHomeView();
+  }
+}
+
+function initAllGamesPage(games) {
+  const tableBody = document.getElementById("all-games-table-body");
+  const emptyState = document.getElementById("all-games-empty");
+  const pagination = document.getElementById("all-games-pagination");
+  const gamesPerPage = 20;
+  let currentPage = 1;
+
+  if (!tableBody || !emptyState || !pagination) {
+    return;
+  }
+
+  function getPageCount() {
+    return Math.max(1, Math.ceil(games.length / gamesPerPage));
+  }
+
+  function renderPagination(pageCount) {
+    pagination.innerHTML = "";
+    pagination.hidden = games.length <= gamesPerPage;
+
+    if (pagination.hidden) {
+      return;
+    }
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "pagination-button";
+      button.textContent = String(pageNumber);
+      button.setAttribute("aria-label", `Go to page ${pageNumber}`);
+      button.setAttribute("aria-current", pageNumber === currentPage ? "page" : "false");
+      button.addEventListener("click", () => {
+        currentPage = pageNumber;
+        renderAllGames();
+      });
+      pagination.appendChild(button);
+    }
+  }
+
+  function renderAllGames() {
+    const sortedGames = sortGamesByDateDesc(games);
+    const pageCount = getPageCount();
+    const startIndex = (currentPage - 1) * gamesPerPage;
+    const pageGames = sortedGames.slice(startIndex, startIndex + gamesPerPage);
+
+    renderGameSummaryTable(tableBody, pageGames, { clickable: true });
+    emptyState.hidden = sortedGames.length > 0;
+    renderPagination(pageCount);
+  }
+
+  function openGame(gameId) {
+    if (gameId) {
+      window.location.href = `games.html?reviewGameId=${encodeURIComponent(gameId)}`;
+    }
+  }
+
+  tableBody.addEventListener("click", (event) => {
+    const row = event.target.closest(".clickable-game-row");
+    openGame(row?.dataset.gameId || "");
+  });
+
+  tableBody.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    const row = event.target.closest(".clickable-game-row");
+
+    if (row?.dataset.gameId) {
+      event.preventDefault();
+      openGame(row.dataset.gameId);
+    }
+  });
+
+  renderAllGames();
 }
 
 function initAdvancedPage(games) {
@@ -4049,6 +4196,10 @@ if (guardRoute()) {
 
   if (page === "games") {
     initGamesPage(games);
+  }
+
+  if (page === "all-games") {
+    initAllGamesPage(games);
   }
 
   if (page === "advanced") {

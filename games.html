@@ -77,21 +77,25 @@
         <div class="section-heading">
           <div>
             <h2>Logged Games</h2>
-            <p class="section-copy">Saved games appear here after you add them.</p>
+            <p class="section-copy">Games from the last 7 days appear here after you add them.</p>
           </div>
         </div>
         <div class="table-wrap">
           <table class="logged-games-table">
-            <thead class="sr-only">
+            <thead>
               <tr>
-                <th>Game</th>
+                <th>Date</th>
+                <th>Opponent</th>
+                <th>Batting Average</th>
+                <th>HLP Score</th>
               </tr>
             </thead>
             <tbody id="games-table-body"></tbody>
           </table>
         </div>
-        <p id="empty-state" class="empty-state">No games logged yet.</p>
+        <p id="empty-state" class="empty-state">No games from the last 7 days yet.</p>
         <div class="builder-actions logged-games-actions">
+          <a class="button-link" href="all-games.html">View All Games</a>
           <button id="review-games-button" type="button">Review / Edit Games</button>
         </div>
       </section>
