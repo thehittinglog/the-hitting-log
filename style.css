@@ -844,11 +844,48 @@ select:focus {
   background: rgba(255, 255, 255, 0.72);
 }
 
-.saved-at-bat-heading {
+.saved-at-bat-heading,
+.review-at-bat-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.saved-at-bat-edit-link {
+  flex: 0 0 auto;
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--navy);
+  box-shadow: none;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.saved-at-bat-edit-link:hover,
+.saved-at-bat-edit-link:focus-visible {
+  background: transparent;
+  color: #031f32;
+  box-shadow: none;
+  text-decoration: underline;
+  transform: none;
+  outline: none;
+}
+
+.saved-at-bat-edit-link:active {
+  color: var(--accent);
+  transform: translateY(1px);
+}
+
+.saved-at-bat-edit-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  box-shadow: none;
 }
 
 .saved-at-bat-edit-button {

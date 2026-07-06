@@ -2602,7 +2602,7 @@ function initGamesPage(games) {
       heading.className = "review-at-bat-heading";
       title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
-      editButton.className = "secondary-button";
+      editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
       editButton.addEventListener("click", () => {
         state.editingAtBatIndex = index;
@@ -2665,7 +2665,7 @@ function initGamesPage(games) {
       heading.className = "saved-at-bat-heading";
       title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
-      editButton.className = "secondary-button saved-at-bat-edit-button";
+      editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
       editButton.disabled = Boolean(state.activeAtBat);
       editButton.addEventListener("click", () => {
