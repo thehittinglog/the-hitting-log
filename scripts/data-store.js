@@ -30,6 +30,10 @@
     strikeout: "Strikeout",
     hit_by_pitch: "HBP",
     hbp: "HBP",
+    on_time: "On Time",
+    ontime: "On Time",
+    early: "Early",
+    late: "Late",
     singles: "Single",
     doubles: "Double",
     triples: "Triple",
@@ -44,6 +48,7 @@
     "line drive": "Line Drive",
     "fly ball": "Fly Ball",
     "home run": "Home Run",
+    "on time": "On Time",
     "fielder's choice": "Fielder's Choice",
     "fielders choice": "Fielder's Choice",
     "sac fly": "Sac Fly",
@@ -292,6 +297,7 @@
       normalizeResultName(pitch?.foulDirection || ""),
       normalizeResultName(pitch?.battedBallType || ""),
       normalizeResultName(pitch?.battedBallOutcome || pitch?.outcome || ""),
+      normalizeResultName(atBat?.timing || pitch?.timing || ""),
     ].filter(Boolean);
 
     if ((isOutcomePitch || isBattedBallPitch(pitch)) && atBatOutcome) {

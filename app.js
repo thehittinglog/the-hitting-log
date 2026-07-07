@@ -55,6 +55,11 @@ const outOutcomeFields = new Set([
   "line_out",
   "fly_out",
 ]);
+const timingOptions = [
+  { label: "On Time", value: "on_time" },
+  { label: "Early", value: "early" },
+  { label: "Late", value: "late" },
+];
 const pitchLocations = [
   { id: "extreme-top-left-out", label: "Extreme Top Left", isZone: false },
   { id: "top-edge-left-out", label: "Top Edge Left", isZone: false },
@@ -121,6 +126,9 @@ const chartFilterOptions = [
   { id: "Triple", label: "Triple", type: "count" },
   { id: "Home Run", label: "Home Run", type: "count" },
   { id: "Out", label: "Out", type: "count" },
+  { id: "On Time", label: "On Time", type: "count" },
+  { id: "Early", label: "Early", type: "count" },
+  { id: "Late", label: "Late", type: "count" },
   { id: "Fielder's Choice", label: "Fielder's Choice", type: "count" },
   { id: "ROE", label: "ROE", type: "count" },
   { id: "Sac Fly", label: "Sac Fly", type: "count" },
@@ -509,6 +517,35 @@ function isAutomaticallyProductiveOut(outcome) {
   return productiveOutOutcomeFields.has(outcome);
 }
 
+function normalizeTiming(value) {
+  const timing = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_")
+    .replace(/\s+/g, "_");
+
+  if (timing === "on_time" || timing === "ontime") {
+    return "on_time";
+  }
+
+  if (timing === "early") {
+    return "early";
+  }
+
+  if (timing === "late") {
+    return "late";
+  }
+
+  return "";
+}
+
+function getTimingLabel(value) {
+  const normalizedTiming = normalizeTiming(value);
+  const match = timingOptions.find((option) => option.value === normalizedTiming);
+
+  return match ? match.label : "";
+}
+
 function createCalculatedStats(stats) {
   const hits = stats.single + stats.double + stats.triple + stats.home_run;
   const atBats =
@@ -646,6 +683,7 @@ function normalizeAtBat(atBat) {
           : "",
     hardHitBall: typeof atBat.hardHitBall === "boolean" ? atBat.hardHitBall : null,
     productiveOut: atBat.productiveOut === true || isAutomaticallyProductiveOut(outcome),
+    timing: normalizeTiming(atBat.timing),
     pitches,
     finalOutcome: rawOutcome,
     outcome,
@@ -1774,6 +1812,7 @@ function initGamesPage(games) {
       pitcherVelocity: "",
       hardHitBall: null,
       productiveOut: false,
+      timing: "",
       pitches: [],
       finalOutcome: "",
     };
@@ -2357,6 +2396,7 @@ function initGamesPage(games) {
       battedBallType,
       hardHitBall: typeof atBat.hardHitBall === "boolean" ? atBat.hardHitBall : null,
       productiveOut: atBat.productiveOut === true,
+      timing: normalizeTiming(atBat.timing),
     };
   }
 
@@ -2421,6 +2461,7 @@ function initGamesPage(games) {
       productiveOut: isOutOutcome(normalizedOutcome)
         ? draft.productiveOut || isAutomaticallyProductiveOut(normalizedOutcome)
         : false,
+      timing: isBattedEditOutcome(draft.outcome) ? normalizeTiming(draft.timing) : "",
       finalOutcome: draft.outcome,
       outcome: normalizedOutcome,
       pitches: Array.isArray(originalAtBat.pitches)
@@ -2502,6 +2543,14 @@ function initGamesPage(games) {
         value: String(option.value),
       })), (value) => {
         draft.productiveOut = value === "true";
+      })
+    );
+    fieldGrid.appendChild(
+      renderEditSelect("Timing", draft.timing, [
+        { label: "Not Set", value: "" },
+        ...timingOptions,
+      ], (value) => {
+        draft.timing = normalizeTiming(value);
       })
     );
     fieldGrid.appendChild(
@@ -2724,6 +2773,8 @@ function initGamesPage(games) {
           ? "Answer the contact detail."
         : state.step === "productive_out"
           ? "Did this out move or score a runner?"
+        : state.step === "timing"
+          ? "Select your timing."
           : state.step === "batted_ball_location"
             ? "Choose the batted ball location."
           : state.step === "end_at_bat"
@@ -2797,6 +2848,10 @@ function initGamesPage(games) {
 
     if (state.step === "productive_out") {
       card.appendChild(renderOptionGroup("Did this out move or score a runner?", productiveOutOptions, handleProductiveOut, state.activeAtBat?.productiveOut === true));
+    }
+
+    if (state.step === "timing") {
+      card.appendChild(renderOptionGroup("How was your timing?", timingOptions, handleTiming, state.activeAtBat?.timing || ""));
     }
 
     if (state.step === "pitch_actions") {
@@ -2907,6 +2962,7 @@ function initGamesPage(games) {
     state.activeAtBat.finalOutcome = "";
     state.activeAtBat.productiveOut = false;
     state.activeAtBat.hardHitBall = null;
+    state.activeAtBat.timing = "";
     state.pendingProductiveOutOutcome = "";
 
     if (result === "strike") {
@@ -2998,6 +3054,7 @@ function initGamesPage(games) {
     state.activeAtBat.finalOutcome = outcome;
     state.activeAtBat.productiveOut = false;
     state.activeAtBat.hardHitBall = null;
+    state.activeAtBat.timing = "";
     const normalizedOutcome = normalizeLegacyOutcome(outcome, state.activePitch.battedBallType || "");
 
     if (isAutomaticallyProductiveOut(normalizedOutcome)) {
@@ -3026,6 +3083,15 @@ function initGamesPage(games) {
     }
 
     state.activeAtBat.hardHitBall = isHardHit;
+    goToStep("timing");
+  }
+
+  function handleTiming(timing) {
+    if (!state.activeAtBat) {
+      return;
+    }
+
+    state.activeAtBat.timing = normalizeTiming(timing);
     goToStep("end_at_bat");
   }
 
@@ -3070,6 +3136,13 @@ function initGamesPage(games) {
     if (!state.activeAtBat.finalOutcome) {
       const lastPitch = state.activeAtBat.pitches[state.activeAtBat.pitches.length - 1];
       state.activeAtBat.finalOutcome = lastPitch ? lastPitch.battedBallOutcome || lastPitch.strikeType || lastPitch.result : "";
+    }
+
+    if (hasBallInPlay(state.activeAtBat) && !normalizeTiming(state.activeAtBat.timing)) {
+      state.step = "timing";
+      setMessage("Select your timing before saving this at-bat.");
+      renderAtBats();
+      return;
     }
 
     const wasEditingWorkflow = Number.isInteger(state.workflowEditAtBatIndex) && state.workflowEditAtBatIndex >= 0;
@@ -3325,6 +3398,7 @@ function initAdvancedPage(games) {
   const allAtBats = games.flatMap((game) => (Array.isArray(game.atBats) ? game.atBats : []));
   const hardHitMetrics = getHardHitMetrics(allAtBats);
   const advancedPercentMetrics = getAdvancedPercentMetrics(allAtBats, totals);
+  const timingMetrics = getTimingMetrics(allAtBats);
   const performanceScore = calculateHittingLogPerformanceScore({ atBats: allAtBats, stats: totals });
   const gameCount = games.length;
   const hitGames = games.filter((game) => getGameStats(game).hits > 0);
@@ -3355,6 +3429,9 @@ function initAdvancedPage(games) {
   setText("chase-rate", formatPercent(advancedPercentMetrics.chaseRate));
   setText("contact-rate", formatPercent(advancedPercentMetrics.contactRate));
   setText("quality-at-bat-percent", formatPercent(advancedPercentMetrics.qualityAtBatPercent));
+  setText("on-time-percent", formatPercent(timingMetrics.onTimePercent));
+  setText("early-percent", formatPercent(timingMetrics.earlyPercent));
+  setText("late-percent", formatPercent(timingMetrics.latePercent));
   setText("advanced-average", formatRate(totals.battingAverage));
   setText("advanced-obp", formatRate(totals.onBasePercentage));
   setText("advanced-slg", formatRate(totals.sluggingPercentage));
@@ -3503,6 +3580,42 @@ function getHardHitMetrics(atBats) {
     twoStrikePercent: metrics.plateAppearances === 0 ? 0 : metrics.twoStrikeAtBats / metrics.plateAppearances,
     hardHitTwoStrikePercent:
       metrics.twoStrikeAtBats === 0 ? 0 : metrics.hardHitTwoStrikeAtBats / metrics.twoStrikeAtBats,
+  };
+}
+
+function getTimingMetrics(atBats) {
+  const metrics = atBats.reduce(
+    (summary, atBat) => {
+      const timing = normalizeTiming(atBat.timing);
+
+      if (!timing) {
+        return summary;
+      }
+
+      summary.total += 1;
+
+      if (timing === "on_time") {
+        summary.onTime += 1;
+      } else if (timing === "early") {
+        summary.early += 1;
+      } else if (timing === "late") {
+        summary.late += 1;
+      }
+
+      return summary;
+    },
+    {
+      total: 0,
+      onTime: 0,
+      early: 0,
+      late: 0,
+    }
+  );
+
+  return {
+    onTimePercent: metrics.total === 0 ? 0 : metrics.onTime / metrics.total,
+    earlyPercent: metrics.total === 0 ? 0 : metrics.early / metrics.total,
+    latePercent: metrics.total === 0 ? 0 : metrics.late / metrics.total,
   };
 }
 
@@ -3851,6 +3964,12 @@ function initChartsPage(games) {
     return Boolean(outcomeMap[filterId] && outcomeMap[filterId].includes(outcome));
   }
 
+  function isMatchingTiming(timing, filterId) {
+    const timingLabel = getTimingLabel(timing);
+
+    return Boolean(timingLabel && timingLabel === filterId);
+  }
+
   function getAtBatOutcome(atBat) {
     if (typeof atBat.finalOutcome === "string" && atBat.finalOutcome) {
       return normalizeSavedBattedBallOutcome(atBat.finalOutcome);
@@ -3886,13 +4005,14 @@ function initChartsPage(games) {
   function getChartPitchEntries(atBat) {
     const entries = [];
     const atBatOutcome = getAtBatOutcome(atBat);
+    const timing = normalizeTiming(atBat.timing);
 
     atBat.pitches.forEach((pitch) => {
       const battedBallOutcome = getSavedPitchBattedBallOutcome(pitch, atBat);
       const locationId = getPitchLocationId(pitch);
 
       if (battedBallOutcome && locationId) {
-        entries.push({ locationId, battedBallOutcome });
+        entries.push({ locationId, battedBallOutcome, timing });
       }
     });
 
@@ -3903,6 +4023,7 @@ function initChartsPage(games) {
         entries.push({
           locationId: getPitchLocationId(lastLocatedPitch),
           battedBallOutcome: atBatOutcome,
+          timing,
         });
       }
     }
@@ -3948,7 +4069,7 @@ function initChartsPage(games) {
     const buckets = createLocationBuckets();
     let totalMatches = 0;
 
-    getChartEntries().forEach(({ locationId, battedBallOutcome }) => {
+    getChartEntries().forEach(({ locationId, battedBallOutcome, timing }) => {
       if (!buckets[locationId]) {
         return;
       }
@@ -3965,7 +4086,7 @@ function initChartsPage(games) {
         return;
       }
 
-      if (isMatchingOutcome(battedBallOutcome, filterId)) {
+      if (isMatchingOutcome(battedBallOutcome, filterId) || isMatchingTiming(timing, filterId)) {
         buckets[locationId].count += 1;
         totalMatches += 1;
       }

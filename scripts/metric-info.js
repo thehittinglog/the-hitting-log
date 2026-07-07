@@ -156,6 +156,24 @@
       formula: "Quality At-Bats / Plate Appearances x 100",
       explanation: "This gives a broader development view than hit results alone.",
     },
+    onTimePercent: {
+      title: "On-Time Percentage",
+      definition: "The percentage of at-bats with timing recorded that were logged as on time.",
+      formula: "On Time Timing Results / Total At-Bats With Timing Recorded x 100",
+      explanation: "This helps track how often swing timing is synced with the pitch.",
+    },
+    earlyPercent: {
+      title: "Early Percentage",
+      definition: "The percentage of at-bats with timing recorded that were logged as early.",
+      formula: "Early Timing Results / Total At-Bats With Timing Recorded x 100",
+      explanation: "This can reveal whether timing issues are showing up ahead of the pitch.",
+    },
+    latePercent: {
+      title: "Late Percentage",
+      definition: "The percentage of at-bats with timing recorded that were logged as late.",
+      formula: "Late Timing Results / Total At-Bats With Timing Recorded x 100",
+      explanation: "This can reveal whether timing issues are showing up behind the pitch.",
+    },
     hitsPerGame: {
       title: "Hits Per Game",
       definition: "Average number of hits per saved game.",

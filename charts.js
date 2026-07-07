@@ -285,6 +285,9 @@ const SPRAY_RESULT_FILTERS = [
   "doubles",
   "triples",
   "home_runs",
+  "on_time",
+  "early",
+  "late",
 ];
 
 const SPRAY_HIT_OUT_FILTERS = new Set(["all", "fly_balls", "line_drives", "ground_balls"]);
@@ -326,6 +329,12 @@ function getSprayBattedBallType(pitch, atBat) {
     atBat.battedBallType ||
     atBat.batted_ball_type
   );
+}
+
+function getSprayTiming(pitch, atBat) {
+  const timing = normalizeSprayValue(atBat.timing || pitch.timing || "");
+
+  return timing === "ontime" ? "on_time" : timing;
 }
 
 function getSprayLocation(pitch) {
@@ -386,6 +395,7 @@ function getSprayEntries(games = typeof window.getSavedGames === "function" ? wi
         entries.push({
           battedBallType,
           outcome,
+          timing: getSprayTiming(pitch, atBat),
           x: location.x,
           y: location.y,
         });
@@ -435,6 +445,18 @@ function matchesSprayFilter(entry, filterId) {
 
   if (filterId === "home_runs") {
     return entry.outcome === "home_run";
+  }
+
+  if (filterId === "on_time") {
+    return entry.timing === "on_time";
+  }
+
+  if (filterId === "early") {
+    return entry.timing === "early";
+  }
+
+  if (filterId === "late") {
+    return entry.timing === "late";
   }
 
   return true;
