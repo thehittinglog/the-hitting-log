@@ -243,7 +243,7 @@ function guardRoute() {
   }
 
   if (authPages.has(page) && currentUser) {
-    redirectTo("index.html");
+    redirectTo("dashboard.html");
     return false;
   }
 
@@ -4263,7 +4263,7 @@ function initLoginPage() {
     setCurrentUser(email);
     loginMessage.textContent = "Login successful. Redirecting...";
     loginMessage.classList.add("is-success");
-    redirectTo("index.html");
+    redirectTo("dashboard.html");
   });
 }
 
@@ -4302,7 +4302,7 @@ function initSignupPage() {
     setCurrentUser(email);
     signupMessage.textContent = "Account created. Redirecting...";
     signupMessage.classList.add("is-success");
-    redirectTo("index.html");
+    redirectTo("dashboard.html");
   });
 }
 
