@@ -3,7 +3,8 @@ const accountsKey = "hitting-log-accounts";
 const currentUserKey = "hitting-log-current-user";
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
-const authPages = new Set(["login", "signup"]);
+const authPages = new Set(["login"]);
+const signupEnabled = false;
 const DEFAULT_SPORT_TYPE = "baseball";
 const PITCH_TYPES_BY_SPORT = {
   baseball: [
@@ -236,6 +237,11 @@ function redirectTo(path) {
 
 function guardRoute() {
   const currentUser = getCurrentUser();
+
+  if (page === "signup" && !signupEnabled) {
+    redirectTo("index.html#waitlist");
+    return false;
+  }
 
   if (protectedPages.has(page) && !currentUser) {
     redirectTo("login.html");

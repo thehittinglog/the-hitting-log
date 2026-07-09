@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/signup", "destination": "/signup.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/games", "destination": "/games.html" },
+    { "source": "/all-games", "destination": "/all-games.html" },
+    { "source": "/stats", "destination": "/advanced-stats.html" },
+    { "source": "/advanced-stats", "destination": "/advanced-stats.html" },
+    { "source": "/charts", "destination": "/charts.html" },
+    { "source": "/profile", "destination": "/account.html" },
+    { "source": "/account", "destination": "/account.html" },
+    { "source": "/at-bat-log", "destination": "/games.html" }
+  ]
+}
