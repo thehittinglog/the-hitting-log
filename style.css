@@ -695,6 +695,233 @@ th,
   }
 }
 
+body[data-page="landing"] {
+  background: var(--bg);
+}
+
+.landing-page {
+  overflow: hidden;
+}
+
+.landing-header {
+  background: rgba(243, 234, 219, 0.86);
+}
+
+.landing-shell {
+  width: min(1040px, calc(100% - 36px));
+}
+
+.landing-hero {
+  padding: 64px 0 112px;
+  border-bottom: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.72), rgba(243, 234, 219, 0) 46%), var(--bg);
+  background-size: auto;
+}
+
+.landing-hero-inner,
+.landing-story {
+  display: grid;
+  gap: 38px;
+  justify-items: center;
+}
+
+.landing-copy {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing-copy-center {
+  max-width: 780px;
+}
+
+.landing-copy h1 {
+  margin-bottom: 20px;
+  color: var(--ink);
+  font-size: clamp(3.25rem, 10vw, 7rem);
+  line-height: 0.92;
+  letter-spacing: 0;
+}
+
+.landing-copy h2 {
+  margin-bottom: 14px;
+  color: var(--ink);
+  font-size: clamp(2.35rem, 7vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.landing-copy h2 + h2 {
+  color: var(--accent);
+}
+
+.landing-copy p {
+  max-width: 620px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: clamp(1.08rem, 2vw, 1.28rem);
+  line-height: 1.7;
+}
+
+.landing-cta-row {
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.landing-button {
+  min-height: 50px;
+  padding: 13px 24px;
+  border-radius: 999px;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.landing-button:hover,
+.landing-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+.landing-button-primary {
+  box-shadow: 0 14px 30px rgba(169, 31, 36, 0.22);
+}
+
+.landing-button-secondary {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.landing-device {
+  width: min(100%, 390px);
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(7, 50, 79, 0.26);
+  border-radius: 42px;
+  background: linear-gradient(180deg, rgba(7, 50, 79, 0.98), rgba(7, 50, 79, 0.9));
+  box-shadow: 0 34px 80px rgba(7, 50, 79, 0.18);
+}
+
+.landing-device-hero {
+  width: min(100%, 430px);
+}
+
+.landing-device-wide {
+  width: min(100%, 720px);
+  border-radius: 34px;
+}
+
+.landing-device img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 760px;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: 30px;
+  background: #ffffff;
+}
+
+.landing-device-wide img {
+  max-height: 520px;
+  object-fit: contain;
+}
+
+.landing-story-section {
+  padding: 96px 0;
+}
+
+.landing-story-section + .landing-story-section {
+  border-top: 1px solid rgba(7, 50, 79, 0.12);
+}
+
+.development-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 620px;
+  margin: 28px auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.development-list li {
+  padding: 9px 14px;
+  border: 1px solid rgba(7, 50, 79, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.landing-final-cta {
+  padding: 92px 0 104px;
+}
+
+.landing-final-cta h2 {
+  max-width: 760px;
+  color: var(--bg);
+  font-size: clamp(2.5rem, 8vw, 5.8rem);
+  line-height: 0.95;
+}
+
+.landing-final-cta p {
+  max-width: 560px;
+  color: rgba(243, 234, 219, 0.82);
+}
+
+.waitlist-form {
+  margin-top: 32px;
+}
+
+@media (min-width: 900px) {
+  .landing-story {
+    gap: 54px;
+  }
+
+  .landing-story-section {
+    padding: 124px 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-shell {
+    width: min(100% - 28px, 1040px);
+  }
+
+  .landing-hero {
+    padding: 34px 0 80px;
+  }
+
+  .landing-story-section {
+    padding: 74px 0;
+  }
+
+  .landing-device,
+  .landing-device-hero,
+  .landing-device-wide {
+    width: min(100%, 390px);
+    border-radius: 34px;
+  }
+
+  .landing-device img {
+    border-radius: 24px;
+  }
+
+  .landing-copy h1 {
+    font-size: clamp(3rem, 14vw, 4.65rem);
+  }
+
+  .landing-copy h2 {
+    font-size: clamp(2.35rem, 12vw, 3.8rem);
+  }
+
+  .development-list {
+    justify-content: flex-start;
+  }
+
+  .development-list li {
+    font-size: 0.92rem;
+  }
+}
+
 .dashboard,
 .two-column-layout {
   display: grid;
