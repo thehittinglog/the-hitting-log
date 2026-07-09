@@ -20,9 +20,6 @@
   <main class="landing-page">
     <section class="landing-hero">
       <div class="landing-shell landing-hero-inner">
-        <figure class="landing-device landing-device-hero">
-          <img src="assets/landing-games.png" alt="Hitting Log at-bat logging screen">
-        </figure>
         <div class="landing-copy landing-copy-center">
           <p class="eyebrow">Track development, not just performance.</p>
           <h1>Stop Guessing.<br>Start Tracking What Actually Develops Hitters.</h1>
@@ -30,19 +27,26 @@
             Hitting Log helps you understand WHY you're succeeding or struggling by tracking
             the development metrics that actually improve hitters, not just batting average.
           </p>
+          <form class="waitlist-form waitlist-form-hero" data-waitlist-form>
+            <label for="hero-waitlist-email">Join the waitlist</label>
+            <div class="waitlist-form-row">
+              <input id="hero-waitlist-email" name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
+              <button class="landing-button landing-button-primary" type="submit">Join Waitlist</button>
+            </div>
+            <p class="waitlist-message" aria-live="polite"></p>
+          </form>
           <div class="landing-cta-row">
-            <a class="landing-button landing-button-primary" href="#waitlist">Join Waitlist</a>
             <a class="landing-button landing-button-secondary" href="login.html">Log In</a>
           </div>
         </div>
+        <figure class="landing-device landing-device-hero">
+          <img src="assets/landing-dashboard-screenshot.jpg" alt="Hitting Log dashboard screen">
+        </figure>
       </div>
     </section>
 
     <section class="landing-story-section">
       <div class="landing-shell landing-story">
-        <figure class="landing-device">
-          <img src="assets/landing-at-bat.png" alt="Hitting Log development tracking screen">
-        </figure>
         <div class="landing-copy">
           <h2>Traditional stats tell you WHAT happened.</h2>
           <h2>Hitting Log tells you WHY.</h2>
@@ -57,14 +61,14 @@
             <li>HLP Score</li>
           </ul>
         </div>
+        <figure class="landing-device">
+          <img src="assets/landing-advanced-stats-screenshot.jpg" alt="Hitting Log advanced statistics screen">
+        </figure>
       </div>
     </section>
 
     <section class="landing-story-section">
       <div class="landing-shell landing-story">
-        <figure class="landing-device">
-          <img src="assets/landing-charts-2.png" alt="Hitting Log heat map screen">
-        </figure>
         <div class="landing-copy">
           <h2>See where pitchers beat you.</h2>
           <p>
@@ -72,42 +76,42 @@
             and where you need work.
           </p>
         </div>
+        <figure class="landing-device">
+          <img src="assets/landing-heatmap-screenshot.jpg" alt="Hitting Log heat map screen">
+        </figure>
       </div>
     </section>
 
     <section class="landing-story-section">
       <div class="landing-shell landing-story">
-        <figure class="landing-device">
-          <img src="assets/landing-games.png" alt="Hitting Log hit location screen">
-        </figure>
         <div class="landing-copy">
           <h2>Every swing leaves a pattern.</h2>
           <p>
             Spray charts reveal your tendencies over hundreds of at-bats so adjustments become obvious.
           </p>
         </div>
+        <figure class="landing-device">
+          <img src="assets/landing-spray-screenshot.jpg" alt="Hitting Log spray chart screen">
+        </figure>
       </div>
     </section>
 
     <section class="landing-story-section">
       <div class="landing-shell landing-story">
-        <figure class="landing-device">
-          <img src="assets/landing-at-bat.png" alt="Hitting Log at-bat logging flow">
-        </figure>
         <div class="landing-copy">
           <h2>Log an at-bat in seconds.</h2>
           <p>
             Track timing, approach, quality of contact, and every important detail while it's still fresh.
           </p>
         </div>
+        <figure class="landing-device">
+          <img src="assets/landing-dashboard-screenshot.jpg" alt="Hitting Log dashboard progress screen">
+        </figure>
       </div>
     </section>
 
     <section class="landing-story-section">
-      <div class="landing-shell landing-story">
-        <figure class="landing-device">
-          <img src="assets/landing-games.png" alt="Hitting Log saved game progress screen">
-        </figure>
+      <div class="landing-shell landing-story landing-story-text-only">
         <div class="landing-copy">
           <h2>Watch your development happen.</h2>
           <p>
@@ -121,7 +125,7 @@
       <div class="landing-shell">
         <h2>Become the smartest hitter on your team.</h2>
         <p>Stop chasing better results. Start understanding why those results happen.</p>
-        <form id="waitlist" class="waitlist-form">
+        <form id="waitlist" class="waitlist-form" data-waitlist-form>
           <label for="waitlist-email">Join the waitlist</label>
           <div class="waitlist-form-row">
             <input id="waitlist-email" name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
@@ -135,11 +139,16 @@
   </main>
 
   <script>
-    const waitlistForm = document.getElementById("waitlist");
-    const waitlistEmail = document.getElementById("waitlist-email");
-    const waitlistMessage = document.getElementById("waitlist-message");
+    const waitlistForms = document.querySelectorAll("[data-waitlist-form]");
 
-    if (waitlistForm && waitlistEmail && waitlistMessage) {
+    waitlistForms.forEach((waitlistForm) => {
+      const waitlistEmail = waitlistForm.querySelector("input[type='email']");
+      const waitlistMessage = waitlistForm.querySelector(".waitlist-message");
+
+      if (!waitlistEmail || !waitlistMessage) {
+        return;
+      }
+
       waitlistForm.addEventListener("submit", (event) => {
         event.preventDefault();
         const email = waitlistEmail.value.trim().toLowerCase();
@@ -159,7 +168,7 @@
         waitlistMessage.textContent = "You're on the waitlist. We'll keep you posted.";
         waitlistForm.reset();
       });
-    }
+    });
   </script>
 </body>
 </html>
