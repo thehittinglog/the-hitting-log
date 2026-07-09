@@ -1733,18 +1733,27 @@ select:focus {
 
 .spray-field-stage {
   position: relative;
-  max-width: 1000px;
+  width: 100%;
+  max-width: 620px;
+  aspect-ratio: 1536 / 1260;
   margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
   background: #ffffff;
 }
 
 .spray-field-placeholder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: block;
   width: 100%;
-  max-width: 1000px;
   height: auto;
-  margin: 0 auto;
   background: #ffffff;
+  user-select: none;
+  pointer-events: none;
 }
 
 .spray-marker-layer {
