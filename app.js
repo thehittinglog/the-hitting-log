@@ -239,12 +239,12 @@ function guardRoute() {
   const currentUser = getCurrentUser();
 
   if (page === "signup" && !signupEnabled) {
-    redirectTo("index.html#waitlist");
+    redirectTo("/#waitlist");
     return false;
   }
 
   if (protectedPages.has(page) && !currentUser) {
-    redirectTo("login.html");
+    redirectTo("/");
     return false;
   }
 
@@ -4261,7 +4261,12 @@ function initLoginPage() {
 
     loginMessage.classList.remove("is-success");
 
-    if (!account || account.password !== password) {
+    if (!account) {
+      loginMessage.textContent = "Hitting Log is currently in private beta. Join the waitlist for early access.";
+      return;
+    }
+
+    if (account.password !== password) {
       loginMessage.textContent = "Incorrect email or password.";
       return;
     }
@@ -4274,42 +4279,7 @@ function initLoginPage() {
 }
 
 function initSignupPage() {
-  const signupForm = document.getElementById("signup-form");
-  const emailInput = document.getElementById("signup-email");
-  const passwordInput = document.getElementById("signup-password");
-  const signupMessage = document.getElementById("signup-message");
-
-  if (!signupForm || !signupMessage || !emailInput || !passwordInput) {
-    return;
-  }
-
-  signupForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const email = normalizeEmail(emailInput.value);
-    const password = passwordInput.value;
-    const accounts = loadAccounts();
-    const accountExists = accounts.some((account) => account.email === email);
-
-    signupMessage.classList.remove("is-success");
-
-    if (!email || !password) {
-      signupMessage.textContent = "Enter an email and password.";
-      return;
-    }
-
-    if (accountExists) {
-      signupMessage.textContent = "An account with that email already exists.";
-      return;
-    }
-
-    accounts.push({ email, password, sportType: DEFAULT_SPORT_TYPE });
-    saveAccounts(accounts);
-    setCurrentUser(email);
-    signupMessage.textContent = "Account created. Redirecting...";
-    signupMessage.classList.add("is-success");
-    redirectTo("dashboard.html");
-  });
+  redirectTo("/#waitlist");
 }
 
 if (guardRoute()) {
