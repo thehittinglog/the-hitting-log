@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>hitting log | Track Development</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/supabase-client.js" defer></script>
+  <script src="scripts/waitlist.js" defer></script>
 </head>
 <body data-page="landing">
   <header class="site-header landing-header">
@@ -26,12 +29,37 @@
             The Hitting Log helps you understand why you're succeeding or struggling by tracking
             the development metrics that actually improve hitters, not just batting average.
           </p>
-          <form class="waitlist-form waitlist-form-hero" data-waitlist-form>
-            <label for="hero-waitlist-email">Join the waitlist</label>
-            <div class="waitlist-form-row">
-              <input id="hero-waitlist-email" name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
-              <button class="landing-button landing-button-primary" type="submit">Join Waitlist</button>
+          <form class="waitlist-form waitlist-form-hero" data-waitlist-form novalidate>
+            <p class="waitlist-form-title">Join the waitlist</p>
+            <div class="waitlist-form-grid">
+              <label>
+                <span>First Name</span>
+                <input name="firstName" type="text" autocomplete="given-name" required>
+              </label>
+              <label>
+                <span>Last Name</span>
+                <input name="lastName" type="text" autocomplete="family-name" required>
+              </label>
+              <label class="waitlist-form-full">
+                <span>Email Address</span>
+                <input name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
+              </label>
+              <fieldset class="waitlist-sport-toggle waitlist-form-full">
+                <legend>Sport</legend>
+                <label>
+                  <input type="radio" name="sport" value="baseball" required>
+                  <span>Baseball</span>
+                </label>
+                <label>
+                  <input type="radio" name="sport" value="softball" required>
+                  <span>Softball</span>
+                </label>
+              </fieldset>
             </div>
+            <button class="landing-button landing-button-primary waitlist-submit-button" type="submit">
+              <span class="waitlist-submit-text">Join Waitlist</span>
+              <span class="waitlist-spinner" aria-hidden="true"></span>
+            </button>
             <p class="waitlist-message" aria-live="polite"></p>
           </form>
           <div class="landing-cta-row">
@@ -135,12 +163,37 @@
       <div class="landing-shell">
         <h2>Become the hitter you dream of being.</h2>
         <p>Stop chasing better results. Start understanding why those results happen.</p>
-        <form id="waitlist" class="waitlist-form" data-waitlist-form>
-          <label for="waitlist-email">Join the waitlist</label>
-          <div class="waitlist-form-row">
-            <input id="waitlist-email" name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
-            <button class="landing-button landing-button-primary" type="submit">Join Waitlist</button>
+        <form id="waitlist" class="waitlist-form" data-waitlist-form novalidate>
+          <p class="waitlist-form-title">Join the waitlist</p>
+          <div class="waitlist-form-grid">
+            <label>
+              <span>First Name</span>
+              <input name="firstName" type="text" autocomplete="given-name" required>
+            </label>
+            <label>
+              <span>Last Name</span>
+              <input name="lastName" type="text" autocomplete="family-name" required>
+            </label>
+            <label class="waitlist-form-full">
+              <span>Email Address</span>
+              <input name="email" type="email" placeholder="player@example.com" autocomplete="email" required>
+            </label>
+            <fieldset class="waitlist-sport-toggle waitlist-form-full">
+              <legend>Sport</legend>
+              <label>
+                <input type="radio" name="sport" value="baseball" required>
+                <span>Baseball</span>
+              </label>
+              <label>
+                <input type="radio" name="sport" value="softball" required>
+                <span>Softball</span>
+              </label>
+            </fieldset>
           </div>
+          <button class="landing-button landing-button-primary waitlist-submit-button" type="submit">
+            <span class="waitlist-submit-text">Join Waitlist</span>
+            <span class="waitlist-spinner" aria-hidden="true"></span>
+          </button>
           <p id="waitlist-message" class="waitlist-message" aria-live="polite"></p>
         </form>
         <p>Already have access? <a class="text-link" href="login.html">Log In</a></p>
@@ -148,37 +201,5 @@
     </section>
   </main>
 
-  <script>
-    const waitlistForms = document.querySelectorAll("[data-waitlist-form]");
-
-    waitlistForms.forEach((waitlistForm) => {
-      const waitlistEmail = waitlistForm.querySelector("input[type='email']");
-      const waitlistMessage = waitlistForm.querySelector(".waitlist-message");
-
-      if (!waitlistEmail || !waitlistMessage) {
-        return;
-      }
-
-      waitlistForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const email = waitlistEmail.value.trim().toLowerCase();
-        const savedEmails = JSON.parse(localStorage.getItem("hitting-log-waitlist") || "[]");
-        const nextEmails = Array.isArray(savedEmails) ? savedEmails : [];
-
-        if (!email) {
-          waitlistMessage.textContent = "Enter your email to join the waitlist.";
-          return;
-        }
-
-        if (!nextEmails.includes(email)) {
-          nextEmails.push(email);
-          localStorage.setItem("hitting-log-waitlist", JSON.stringify(nextEmails));
-        }
-
-        waitlistMessage.textContent = "You're on the waitlist. We'll keep you posted.";
-        waitlistForm.reset();
-      });
-    });
-  </script>
 </body>
 </html>

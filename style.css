@@ -604,7 +604,9 @@ th,
   margin: 24px auto 14px;
 }
 
-.waitlist-form label {
+.waitlist-form-title,
+.waitlist-form label,
+.waitlist-sport-toggle legend {
   display: block;
   margin-bottom: 10px;
   color: var(--bg);
@@ -612,14 +614,24 @@ th,
   font-weight: 900;
 }
 
-.waitlist-form-row {
+.waitlist-form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  text-align: left;
 }
 
-.waitlist-form input {
+.waitlist-form-full {
+  grid-column: 1 / -1;
+}
+
+.waitlist-form label span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.waitlist-form input[type="text"],
+.waitlist-form input[type="email"] {
   width: 100%;
   min-height: 46px;
   border: 1px solid rgba(243, 234, 219, 0.42);
@@ -631,11 +643,101 @@ th,
   background: #ffffff;
 }
 
+.waitlist-sport-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.waitlist-sport-toggle legend {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.waitlist-sport-toggle label {
+  margin: 0;
+}
+
+.waitlist-sport-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.waitlist-sport-toggle label span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin: 0;
+  border: 1px solid rgba(243, 234, 219, 0.42);
+  border-radius: 999px;
+  color: var(--bg);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.waitlist-sport-toggle input:checked + span {
+  border-color: #ffffff;
+  color: var(--ink);
+  background: #ffffff;
+}
+
+.waitlist-sport-toggle input:focus-visible + span {
+  outline: 3px solid rgba(243, 234, 219, 0.42);
+  outline-offset: 2px;
+}
+
+.waitlist-submit-button {
+  width: 100%;
+  margin-top: 14px;
+  position: relative;
+  gap: 10px;
+}
+
+.waitlist-submit-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.waitlist-spinner {
+  display: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(243, 234, 219, 0.42);
+  border-top-color: var(--bg);
+  border-radius: 999px;
+  animation: waitlist-spin 700ms linear infinite;
+}
+
+.waitlist-submit-button.is-loading .waitlist-spinner {
+  display: inline-block;
+}
+
+@keyframes waitlist-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .waitlist-message {
   min-height: 1.25rem;
   margin: 10px 0 0;
   color: var(--bg);
   font-weight: 800;
+}
+
+.waitlist-message[data-status="success"],
+.waitlist-message[data-status="info"] {
+  color: var(--bg);
+}
+
+.waitlist-message[data-status="error"] {
+  color: #ffd9d9;
 }
 
 @media (max-width: 980px) {
@@ -669,7 +771,8 @@ th,
     width: 100%;
   }
 
-  .waitlist-form-row {
+  .waitlist-form-grid,
+  .waitlist-sport-toggle {
     grid-template-columns: 1fr;
   }
 
@@ -885,8 +988,39 @@ body[data-page="landing"] {
   color: var(--ink);
 }
 
+.waitlist-form-hero .waitlist-form-title,
+.waitlist-form-hero .waitlist-sport-toggle legend {
+  color: var(--ink);
+}
+
+.waitlist-form-hero input[type="text"],
+.waitlist-form-hero input[type="email"],
+.waitlist-form-hero .waitlist-sport-toggle label span {
+  border-color: rgba(7, 50, 79, 0.2);
+}
+
+.waitlist-form-hero .waitlist-sport-toggle label span {
+  color: var(--ink);
+  background: rgba(7, 50, 79, 0.06);
+}
+
+.waitlist-form-hero .waitlist-sport-toggle input:checked + span {
+  border-color: var(--navy);
+  color: var(--bg);
+  background: var(--navy);
+}
+
 .waitlist-form-hero .waitlist-message {
   color: var(--muted);
+}
+
+.waitlist-form-hero .waitlist-message[data-status="success"],
+.waitlist-form-hero .waitlist-message[data-status="info"] {
+  color: var(--success);
+}
+
+.waitlist-form-hero .waitlist-message[data-status="error"] {
+  color: var(--accent);
 }
 
 @media (min-width: 900px) {
