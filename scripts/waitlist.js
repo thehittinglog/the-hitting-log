@@ -2,8 +2,9 @@
   const waitlistForms = document.querySelectorAll("[data-waitlist-form]");
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const allowedSports = new Set(["baseball", "softball"]);
-  const successMessage = "You're on the list! We'll let you know as soon as The Hitting Log is ready.";
-  const duplicateMessage = "You're already on the waitlist.";
+  const successMessage = "You're officially on the waitlist! Check your email for confirmation.";
+  const duplicateMessage = "You're already on the waitlist! Keep an eye on your inbox for updates.";
+  const emailFailureMessage = "You're on the waitlist, but we couldn't send the confirmation email. You do not need to sign up again.";
 
   function setFormMessage(form, message, type) {
     const messageNode = form.querySelector(".waitlist-message");
@@ -23,9 +24,19 @@
       return;
     }
 
+    const submitText = button.querySelector(".waitlist-submit-text");
+
+    if (submitText && !submitText.dataset.defaultText) {
+      submitText.dataset.defaultText = submitText.textContent;
+    }
+
     button.disabled = isSubmitting;
     button.classList.toggle("is-loading", isSubmitting);
     button.setAttribute("aria-busy", String(isSubmitting));
+
+    if (submitText) {
+      submitText.textContent = isSubmitting ? "Joining..." : submitText.dataset.defaultText;
+    }
   }
 
   function getPayload(form) {
@@ -78,6 +89,31 @@
     }
   }
 
+  async function sendWaitlistEmail(payload) {
+    const response = await fetch("/api/send-waitlist-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        firstName: payload.firstName,
+        email: payload.email,
+      }),
+    });
+
+    let result = {};
+
+    try {
+      result = await response.json();
+    } catch (error) {
+      result = {};
+    }
+
+    if (!response.ok || result.success !== true) {
+      throw new Error(result.error || "Unable to send confirmation email.");
+    }
+  }
+
   function isDuplicateError(error) {
     return error?.code === "23505" || /duplicate key|already exists/i.test(error?.message || "");
   }
@@ -105,6 +141,14 @@
 
       try {
         await submitWaitlist(payload);
+        try {
+          await sendWaitlistEmail(payload);
+        } catch (emailError) {
+          form.reset();
+          resetSportSelection(form);
+          setFormMessage(form, emailFailureMessage, "error");
+          return;
+        }
         form.reset();
         resetSportSelection(form);
         setFormMessage(form, successMessage, "success");
