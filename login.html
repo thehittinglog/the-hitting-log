@@ -21,12 +21,13 @@
       <p class="eyebrow">Account</p>
       <h1>Sign in to your hitting log.</h1>
       <p class="hero-copy">
-        Use your local account to get back to your saved dashboard in this browser.
+        Use your approved tester account to get back to your saved dashboard.
       </p>
     </section>
 
     <section class="panel">
       <h2>Login</h2>
+      <p class="section-copy auth-access-note">Account access is currently limited to approved testers.</p>
       <form id="login-form" class="login-form">
         <label>
           <span>Email</span>
@@ -43,6 +44,9 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/supabase-client.js"></script>
+  <script src="scripts/auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

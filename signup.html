@@ -19,22 +19,26 @@
   <main class="page-shell narrow-shell">
     <section class="hero compact-hero">
       <p class="eyebrow">Waitlist</p>
-      <h1>Registration is currently closed.</h1>
+      <h1>Private development is underway.</h1>
       <p class="hero-copy">
-        Hitting Log is not accepting public signups yet. Join the waitlist on the homepage to request access.
+        The Hitting Log is currently in private development. Join the waitlist to be among the first invited when early access opens.
       </p>
     </section>
 
     <section class="panel">
       <h2>Join the Waitlist</h2>
-      <p class="section-copy">Public account creation is disabled while Hitting Log gets ready for launch.</p>
+      <p class="section-copy">Public account creation is disabled while The Hitting Log gets ready for launch.</p>
+      <p id="signup-message" class="form-message" aria-live="polite"></p>
       <div class="button-row">
-        <a class="text-link" href="index.html#waitlist">Go to waitlist</a>
+        <a class="landing-button landing-button-primary" href="index.html#waitlist">Join the Waitlist</a>
         <a class="text-link" href="login.html">Log in</a>
       </div>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/supabase-client.js"></script>
+  <script src="scripts/auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

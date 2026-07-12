@@ -4,7 +4,9 @@ const currentUserKey = "hitting-log-current-user";
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
 const authPages = new Set(["login"]);
-const signupEnabled = false;
+// Public account creation is intentionally closed during private development.
+// Change this only when The Hitting Log is ready to launch public signup.
+const PUBLIC_SIGNUP_ENABLED = false;
 const DEFAULT_SPORT_TYPE = "baseball";
 const PITCH_TYPES_BY_SPORT = {
   baseball: [
@@ -146,11 +148,28 @@ function normalizeEmail(email) {
 
 function loadAccounts() {
   const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
-  return Array.isArray(savedAccounts) ? savedAccounts : [];
+  if (!Array.isArray(savedAccounts)) {
+    return [];
+  }
+
+  return savedAccounts.map(({ password, ...account }) => account);
 }
 
 function saveAccounts(accounts) {
-  localStorage.setItem(accountsKey, JSON.stringify(accounts));
+  const safeAccounts = accounts.map(({ password, ...account }) => account);
+  localStorage.setItem(accountsKey, JSON.stringify(safeAccounts));
+}
+
+function removeStoredAccountPasswords() {
+  const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
+
+  if (!Array.isArray(savedAccounts)) {
+    return;
+  }
+
+  if (savedAccounts.some((account) => Object.prototype.hasOwnProperty.call(account, "password"))) {
+    saveAccounts(savedAccounts);
+  }
 }
 
 function normalizeSportType(sportType) {
@@ -238,11 +257,6 @@ function redirectTo(path) {
 function guardRoute() {
   const currentUser = getCurrentUser();
 
-  if (page === "signup" && !signupEnabled) {
-    redirectTo("/#waitlist");
-    return false;
-  }
-
   if (protectedPages.has(page) && !currentUser) {
     redirectTo("/");
     return false;
@@ -267,7 +281,10 @@ function updateAuthUI() {
 
   if (logoutButton) {
     logoutButton.hidden = !currentUser;
-    logoutButton.addEventListener("click", () => {
+    logoutButton.addEventListener("click", async () => {
+      if (window.hittingLogAuth) {
+        await window.hittingLogAuth.logOut().catch(() => {});
+      }
       clearCurrentUser();
       redirectTo("login.html");
     });
@@ -4251,36 +4268,62 @@ function initLoginPage() {
     return;
   }
 
-  loginForm.addEventListener("submit", (event) => {
+  loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const email = normalizeEmail(emailInput.value);
     const password = passwordInput.value;
-    const accounts = loadAccounts();
-    const account = accounts.find((savedAccount) => savedAccount.email === email);
 
     loginMessage.classList.remove("is-success");
 
-    if (!account) {
-      loginMessage.textContent = "Hitting Log is currently in private beta. Join the waitlist for early access.";
+    if (!window.hittingLogAuth) {
+      loginMessage.textContent = "Account access is currently limited to approved testers.";
       return;
     }
 
-    if (account.password !== password) {
+    const submitButton = loginForm.querySelector("button[type='submit']");
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Signing in...";
+    }
+
+    try {
+      const { data, error } = await window.hittingLogAuth.logIn({ email, password });
+
+      if (error || !data?.user?.email) {
+        loginMessage.textContent = "Incorrect email or password.";
+        return;
+      }
+
+      setCurrentUser(data.user.email);
+      loginMessage.textContent = "Login successful. Redirecting...";
+      loginMessage.classList.add("is-success");
+      redirectTo("dashboard.html");
+    } catch (error) {
       loginMessage.textContent = "Incorrect email or password.";
-      return;
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Sign In";
+      }
     }
-
-    setCurrentUser(email);
-    loginMessage.textContent = "Login successful. Redirecting...";
-    loginMessage.classList.add("is-success");
-    redirectTo("dashboard.html");
   });
 }
 
 function initSignupPage() {
-  redirectTo("/#waitlist");
+  if (PUBLIC_SIGNUP_ENABLED && window.hittingLogAuth?.PUBLIC_SIGNUP_ENABLED) {
+    return;
+  }
+
+  const message = document.getElementById("signup-message");
+
+  if (message) {
+    message.textContent = window.hittingLogAuth?.signupClosedMessage || "Account creation is not open yet. Join the waitlist for early access.";
+  }
 }
+
+removeStoredAccountPasswords();
 
 if (guardRoute()) {
   updateAuthUI();
