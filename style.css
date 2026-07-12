@@ -884,7 +884,9 @@ body[data-page="landing"] {
 }
 
 .landing-button-primary {
-  box-shadow: 0 14px 30px rgba(169, 31, 36, 0.22);
+  background: var(--navy);
+  color: var(--bg);
+  box-shadow: 0 14px 30px rgba(7, 50, 79, 0.18);
 }
 
 .landing-button-secondary {
@@ -928,10 +930,110 @@ body[data-page="landing"] {
 
 .landing-story-section {
   padding: 72px 0;
+  background: var(--bg);
 }
 
 .landing-story-section + .landing-story-section {
-  border-top: 1px solid rgba(7, 50, 79, 0.12);
+  border-top: 1px solid rgba(7, 50, 79, 0.08);
+}
+
+.landing-section-cream {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.landing-section-navy {
+  background: var(--navy);
+  color: var(--bg);
+}
+
+.landing-section-cream .landing-copy h1,
+.landing-section-cream .landing-copy h2,
+.landing-section-cream .landing-final-cta h2 {
+  color: var(--ink);
+}
+
+.landing-section-cream .landing-copy p,
+.landing-section-cream .landing-final-cta p {
+  color: #333333;
+}
+
+.landing-section-navy .landing-copy h1,
+.landing-section-navy .landing-copy h2,
+.landing-section-navy .landing-final-cta h2 {
+  color: var(--bg);
+}
+
+.landing-section-navy .landing-copy p,
+.landing-section-navy .landing-final-cta p {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.landing-section-navy + .landing-section-cream,
+.landing-section-cream + .landing-section-navy {
+  border-top: 0;
+}
+
+.landing-section-navy .landing-device {
+  border-color: rgba(243, 234, 219, 0.38);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.26);
+}
+
+.landing-section-navy .landing-device img {
+  box-shadow: 0 0 0 1px rgba(7, 50, 79, 0.1);
+}
+
+.landing-section-cream .landing-device {
+  background: linear-gradient(180deg, rgba(7, 50, 79, 0.98), rgba(7, 50, 79, 0.9));
+}
+
+.landing-section-cream .landing-button-primary {
+  background: var(--navy);
+  color: var(--bg);
+  box-shadow: 0 14px 30px rgba(7, 50, 79, 0.18);
+}
+
+.landing-section-cream .waitlist-form-title,
+.landing-section-cream .waitlist-form label,
+.landing-section-cream .waitlist-sport-toggle legend,
+.landing-section-cream .waitlist-message {
+  color: var(--ink);
+}
+
+.landing-section-cream .waitlist-form input[type="text"],
+.landing-section-cream .waitlist-form input[type="email"],
+.landing-section-cream .waitlist-sport-toggle label span {
+  border-color: rgba(7, 50, 79, 0.2);
+}
+
+.landing-section-cream .waitlist-sport-toggle label span {
+  color: var(--ink);
+  background: rgba(7, 50, 79, 0.06);
+}
+
+.landing-section-cream .waitlist-sport-toggle input:checked + span {
+  border-color: var(--navy);
+  color: var(--bg);
+  background: var(--navy);
+}
+
+.landing-section-navy .landing-button-primary,
+.landing-section-navy .landing-button-secondary {
+  border-color: rgba(243, 234, 219, 0.5);
+  background: var(--bg);
+  color: var(--navy);
+}
+
+.landing-section-navy .text-link {
+  color: var(--bg);
+}
+
+.landing-section-navy .waitlist-form-title,
+.landing-section-navy .waitlist-form label,
+.landing-section-navy .waitlist-sport-toggle legend,
+.landing-section-navy .waitlist-message {
+  color: var(--bg);
 }
 
 .development-list {
@@ -954,20 +1056,32 @@ body[data-page="landing"] {
   font-weight: 900;
 }
 
+.landing-section-navy .development-list li {
+  border-color: rgba(169, 31, 36, 0.52);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bg);
+}
+
 .landing-final-cta {
   padding: 88px 0 100px;
+  background: var(--bg);
 }
 
 .landing-final-cta h2 {
   max-width: 760px;
-  color: var(--bg);
+  color: var(--ink);
   font-size: clamp(2.5rem, 8vw, 5.8rem);
   line-height: 0.95;
 }
 
 .landing-final-cta p {
   max-width: 560px;
-  color: rgba(243, 234, 219, 0.82);
+  color: #333333;
+}
+
+.landing-final-cta .text-link {
+  color: var(--navy);
+  text-decoration: underline;
 }
 
 .waitlist-form {
