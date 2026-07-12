@@ -1057,9 +1057,9 @@ body[data-page="landing"] {
 }
 
 .landing-section-navy .development-list li {
-  border-color: rgba(169, 31, 36, 0.52);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--bg);
+  border-color: rgba(29, 53, 87, 0.32);
+  background: #f8f4ec;
+  color: #1d3557;
 }
 
 .landing-final-cta {
