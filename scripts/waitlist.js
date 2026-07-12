@@ -2,9 +2,9 @@
   const waitlistForms = document.querySelectorAll("[data-waitlist-form]");
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const allowedSports = new Set(["baseball", "softball"]);
-  const successMessage = "You're officially on the waitlist! Check your email for confirmation.";
+  const successMessage = "You're officially on the waitlist! Check your email.";
   const duplicateMessage = "You're already on the waitlist! Keep an eye on your inbox for updates.";
-  const emailFailureMessage = "You're on the waitlist, but we couldn't send the confirmation email. You do not need to sign up again.";
+  const emailFailureMessage = "You're on the waitlist, but we couldn't send your confirmation email.";
 
   function setFormMessage(form, message, type) {
     const messageNode = form.querySelector(".waitlist-message");

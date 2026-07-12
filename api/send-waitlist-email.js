@@ -1,5 +1,5 @@
 const RESEND_EMAILS_URL = "https://api.resend.com/emails";
-const FROM_EMAIL = "The Hitting Log <hello@thehittinglog.com>";
+const FROM_EMAIL = "hello@thehittinglog.com";
 const SITE_URL = "https://thehittinglog.com";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
