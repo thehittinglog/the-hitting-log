@@ -71,6 +71,8 @@
   }
 
   async function submitWaitlist(payload) {
+    await window.hittingLogSupabaseReady;
+
     const client = window.hittingLogSupabase?.getClient();
 
     if (!client) {
