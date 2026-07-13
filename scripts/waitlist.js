@@ -158,7 +158,12 @@
           return;
         }
 
-        setFormMessage(form, "Something went wrong. Please try again in a moment.", "error");
+        console.error("Waitlist submission error:", error);
+        setFormMessage(
+          form,
+          `Something went wrong: ${error?.message || "Unknown error"}`,
+          "error"
+        );
       } finally {
         setSubmitting(form, false);
       }
