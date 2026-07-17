@@ -1,11 +1,8 @@
 (function () {
-  // Change this flag only when public account creation is ready to launch.
-  // Until then, no public form should call Supabase Auth signUp.
-  const PUBLIC_SIGNUP_ENABLED = false;
-  const signupClosedMessage = "Account creation is not open yet. Join the waitlist for early access.";
+  const PUBLIC_SIGNUP_ENABLED = true;
 
-  function getClient() {
-    const client = window.hittingLogSupabase?.getClient();
+  async function getClient() {
+    const client = await window.hittingLogSupabaseReady;
 
     if (!client) {
       throw new Error("Supabase authentication is not configured yet.");
@@ -18,11 +15,12 @@
     if (!PUBLIC_SIGNUP_ENABLED) {
       return {
         data: null,
-        error: new Error(signupClosedMessage),
+        error: new Error("Account creation is temporarily unavailable."),
       };
     }
 
-    return getClient().auth.signUp({
+    const client = await getClient();
+    return client.auth.signUp({
       email,
       password,
       options,
@@ -30,23 +28,25 @@
   }
 
   async function logIn({ email, password } = {}) {
-    return getClient().auth.signInWithPassword({
+    const client = await getClient();
+    return client.auth.signInWithPassword({
       email,
       password,
     });
   }
 
   async function logOut() {
-    return getClient().auth.signOut();
+    const client = await getClient();
+    return client.auth.signOut();
   }
 
   async function getCurrentSession() {
-    return getClient().auth.getSession();
+    const client = await getClient();
+    return client.auth.getSession();
   }
 
   window.hittingLogAuth = {
     PUBLIC_SIGNUP_ENABLED,
-    signupClosedMessage,
     signUp,
     logIn,
     logOut,

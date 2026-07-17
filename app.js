@@ -3,10 +3,8 @@ const accountsKey = "hitting-log-accounts";
 const currentUserKey = "hitting-log-current-user";
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
-const authPages = new Set(["login"]);
-// Public account creation is intentionally closed during private development.
-// Change this only when The Hitting Log is ready to launch public signup.
-const PUBLIC_SIGNUP_ENABLED = false;
+const authPages = new Set(["login", "signup"]);
+const PUBLIC_SIGNUP_ENABLED = true;
 const DEFAULT_SPORT_TYPE = "baseball";
 const PITCH_TYPES_BY_SPORT = {
   baseball: [
@@ -4277,7 +4275,7 @@ function initLoginPage() {
     loginMessage.classList.remove("is-success");
 
     if (!window.hittingLogAuth) {
-      loginMessage.textContent = "Account access is currently limited to approved testers.";
+      loginMessage.textContent = "Login is temporarily unavailable. Please try again.";
       return;
     }
 
@@ -4296,6 +4294,15 @@ function initLoginPage() {
         return;
       }
 
+      const accounts = loadAccounts();
+      if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
+        accounts.push({
+          email,
+          sportType: normalizeSportType(data.user.user_metadata?.sport_type),
+        });
+        saveAccounts(accounts);
+      }
+
       setCurrentUser(data.user.email);
       loginMessage.textContent = "Login successful. Redirecting...";
       loginMessage.classList.add("is-success");
@@ -4312,15 +4319,83 @@ function initLoginPage() {
 }
 
 function initSignupPage() {
-  if (PUBLIC_SIGNUP_ENABLED && window.hittingLogAuth?.PUBLIC_SIGNUP_ENABLED) {
+  const signupForm = document.getElementById("signup-form");
+  const emailInput = document.getElementById("signup-email");
+  const passwordInput = document.getElementById("signup-password");
+  const sportTypeInput = document.getElementById("signup-sport-type");
+  const signupMessage = document.getElementById("signup-message");
+
+  if (!signupForm || !signupMessage || !emailInput || !passwordInput || !sportTypeInput) {
     return;
   }
 
-  const message = document.getElementById("signup-message");
+  signupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-  if (message) {
-    message.textContent = window.hittingLogAuth?.signupClosedMessage || "Account creation is not open yet. Join the waitlist for early access.";
-  }
+    const email = normalizeEmail(emailInput.value);
+    const password = passwordInput.value;
+    const sportType = normalizeSportType(sportTypeInput.value);
+    const submitButton = signupForm.querySelector("button[type='submit']");
+
+    signupMessage.classList.remove("is-success");
+
+    if (!PUBLIC_SIGNUP_ENABLED || !window.hittingLogAuth?.PUBLIC_SIGNUP_ENABLED) {
+      signupMessage.textContent = "Account creation is temporarily unavailable.";
+      return;
+    }
+
+    if (password.length < 8) {
+      signupMessage.textContent = "Password must be at least 8 characters.";
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating account...";
+    }
+
+    try {
+      await window.hittingLogSupabaseReady;
+      const { data, error } = await window.hittingLogAuth.signUp({
+        email,
+        password,
+        options: {
+          data: { sport_type: sportType },
+          emailRedirectTo: `${window.location.origin}/login.html`,
+        },
+      });
+
+      if (error) {
+        signupMessage.textContent = error.message || "Unable to create your account. Please try again.";
+        return;
+      }
+
+      const accounts = loadAccounts();
+      if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
+        accounts.push({ email, sportType });
+        saveAccounts(accounts);
+      }
+
+      signupMessage.classList.add("is-success");
+
+      if (data?.session && data.user?.email) {
+        setCurrentUser(data.user.email);
+        signupMessage.textContent = "Account created. Redirecting...";
+        redirectTo("dashboard.html");
+        return;
+      }
+
+      signupMessage.textContent = "Account created! Check your email to confirm it, then log in.";
+      signupForm.reset();
+    } catch (error) {
+      signupMessage.textContent = "Unable to create your account. Please try again.";
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Create Account";
+      }
+    }
+  });
 }
 
 removeStoredAccountPasswords();

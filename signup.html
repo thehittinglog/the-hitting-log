@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>hitting log | Waitlist</title>
+  <title>hitting log | Sign Up</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="signup">
@@ -12,27 +12,42 @@
       <a class="brand" href="index.html" aria-label="hitting log home"><img src="assets/hitting-log-logo.png" alt="hitting log" class="brand-logo"></a>
       <nav class="top-nav" aria-label="Main navigation">
         <a class="nav-link" href="login.html">Login</a>
+        <a class="nav-link is-active" href="signup.html">Sign Up</a>
       </nav>
     </div>
   </header>
 
   <main class="page-shell narrow-shell">
     <section class="hero compact-hero">
-      <p class="eyebrow">Waitlist</p>
-      <h1>Private development is underway.</h1>
+      <p class="eyebrow">Create Account</p>
+      <h1>Start your hitting log.</h1>
       <p class="hero-copy">
-        The Hitting Log is currently in private development. Join the waitlist to be among the first invited when early access opens.
+        Create your account and start tracking the details that help you become a better hitter.
       </p>
     </section>
 
     <section class="panel">
-      <h2>Join the Waitlist</h2>
-      <p class="section-copy">Public account creation is disabled while The Hitting Log gets ready for launch.</p>
+      <h2>Sign Up</h2>
+      <form id="signup-form" class="login-form">
+        <label>
+          <span>Email</span>
+          <input type="email" id="signup-email" placeholder="player@example.com" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" id="signup-password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+        </label>
+        <label>
+          <span>Sport</span>
+          <select id="signup-sport-type" required>
+            <option value="baseball">Baseball</option>
+            <option value="softball">Softball</option>
+          </select>
+        </label>
+        <button type="submit">Create Account</button>
+      </form>
       <p id="signup-message" class="form-message" aria-live="polite"></p>
-      <div class="button-row">
-        <a class="landing-button landing-button-primary" href="index.html#waitlist">Join the Waitlist</a>
-        <a class="text-link" href="login.html">Log in</a>
-      </div>
+      <p class="auth-switch">Already have an account? <a class="text-link" href="login.html">Log in</a></p>
     </section>
   </main>
 
