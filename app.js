@@ -4256,6 +4256,284 @@ function initAccountPage() {
   });
 }
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function setAuthFormMessage(element, message, status = "") {
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.classList.toggle("is-success", status === "success");
+  element.classList.toggle("is-error", status === "error");
+}
+
+function initForgotPasswordPage() {
+  const form = document.getElementById("forgot-password-form");
+  const emailInput = document.getElementById("forgot-password-email");
+  const message = document.getElementById("forgot-password-message");
+
+  if (!form || !emailInput || !message) {
+    return;
+  }
+
+  let isSubmitting = false;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    const email = normalizeEmail(emailInput.value.trim());
+    const submitButton = form.querySelector("button[type='submit']");
+
+    if (!email) {
+      setAuthFormMessage(message, "Enter your email address.", "error");
+      emailInput.focus();
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setAuthFormMessage(message, "Enter a valid email address.", "error");
+      emailInput.focus();
+      return;
+    }
+
+    if (!window.hittingLogAuth?.requestPasswordReset) {
+      setAuthFormMessage(message, "Password reset is temporarily unavailable. Please try again.", "error");
+      return;
+    }
+
+    isSubmitting = true;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Sending Reset Link...";
+    }
+    setAuthFormMessage(message, "Sending your secure password-reset link...");
+
+    try {
+      // Add https://thehittinglog.com/reset-password to the Supabase Auth redirect allow list.
+      // Preview and local reset URLs must be allowed separately when they are used for testing.
+      const { error } = await window.hittingLogAuth.requestPasswordReset({
+        email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error("Supabase password-reset request failed:", error);
+        setAuthFormMessage(message, "We couldn't send the reset link. Please try again in a moment.", "error");
+        return;
+      }
+
+      form.reset();
+      setAuthFormMessage(
+        message,
+        "If an account exists for that email address, a password-reset link has been sent. Please check your inbox and spam folder.",
+        "success",
+      );
+    } catch (error) {
+      console.error("Password-reset request error:", error);
+      setAuthFormMessage(message, "We couldn't send the reset link. Please try again in a moment.", "error");
+    } finally {
+      isSubmitting = false;
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Send Reset Link";
+      }
+    }
+  });
+}
+
+function initResetPasswordPage() {
+  const form = document.getElementById("reset-password-form");
+  const passwordInput = document.getElementById("reset-password-new");
+  const confirmPasswordInput = document.getElementById("reset-password-confirm");
+  const message = document.getElementById("reset-password-message");
+  const requestLink = document.getElementById("request-new-reset-link");
+
+  if (!form || !passwordInput || !confirmPasswordInput || !message || !requestLink) {
+    return;
+  }
+
+  const submitButton = form.querySelector("button[type='submit']");
+  const queryParameters = new URLSearchParams(window.location.search);
+  const hashParameters = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const recoveryType = queryParameters.get("type") || hashParameters.get("type");
+  const hasRecoveryParameters = Boolean(
+    recoveryType === "recovery" ||
+      queryParameters.get("code") ||
+      queryParameters.get("token_hash") ||
+      (hashParameters.get("access_token") && hashParameters.get("refresh_token")),
+  );
+  const hasRecoveryError = Boolean(
+    queryParameters.get("error") ||
+      queryParameters.get("error_code") ||
+      hashParameters.get("error") ||
+      hashParameters.get("error_code"),
+  );
+  let recoveryReady = false;
+  let passwordUpdated = false;
+  let isSubmitting = false;
+  let authSubscription = null;
+
+  function setFormEnabled(isEnabled) {
+    passwordInput.disabled = !isEnabled;
+    confirmPasswordInput.disabled = !isEnabled;
+    if (submitButton) {
+      submitButton.disabled = !isEnabled;
+    }
+  }
+
+  function showInvalidLink() {
+    if (passwordUpdated) {
+      return;
+    }
+    recoveryReady = false;
+    setFormEnabled(false);
+    requestLink.hidden = false;
+    setAuthFormMessage(
+      message,
+      "This password-reset link is invalid or has expired. Please request a new reset link.",
+      "error",
+    );
+  }
+
+  function allowPasswordUpdate() {
+    if (passwordUpdated) {
+      return;
+    }
+    recoveryReady = true;
+    requestLink.hidden = true;
+    setFormEnabled(true);
+    setAuthFormMessage(message, "Your reset link is valid. Create your new password below.");
+    passwordInput.focus();
+  }
+
+  setFormEnabled(false);
+  setAuthFormMessage(message, "Validating your password-reset link...");
+
+  (async () => {
+    if (!window.hittingLogAuth?.getCurrentSession || !window.hittingLogAuth?.onAuthStateChange) {
+      showInvalidLink();
+      return;
+    }
+
+    try {
+      const listener = await window.hittingLogAuth.onAuthStateChange((event, session) => {
+        if (event === "PASSWORD_RECOVERY" && session) {
+          allowPasswordUpdate();
+        }
+      });
+      authSubscription = listener?.data?.subscription || null;
+
+      if (hasRecoveryError) {
+        showInvalidLink();
+        return;
+      }
+
+      const { data, error } = await window.hittingLogAuth.getCurrentSession();
+      if (error) {
+        console.error("Supabase recovery-session check failed:", error);
+      }
+
+      if (data?.session && hasRecoveryParameters) {
+        allowPasswordUpdate();
+        return;
+      }
+
+      if (!recoveryReady) {
+        showInvalidLink();
+      }
+    } catch (error) {
+      console.error("Password recovery initialization error:", error);
+      showInvalidLink();
+    }
+  })();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting || !recoveryReady) {
+      if (!recoveryReady) {
+        showInvalidLink();
+      }
+      return;
+    }
+
+    const newPassword = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+
+    if (newPassword.length < 8) {
+      setAuthFormMessage(message, "Password must be at least 8 characters.", "error");
+      passwordInput.focus();
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setAuthFormMessage(message, "Passwords do not match.", "error");
+      confirmPasswordInput.focus();
+      return;
+    }
+
+    isSubmitting = true;
+    setFormEnabled(false);
+    if (submitButton) {
+      submitButton.textContent = "Updating Password...";
+    }
+    setAuthFormMessage(message, "Updating your password...");
+
+    try {
+      const { data: sessionData, error: sessionError } = await window.hittingLogAuth.getCurrentSession();
+      if (sessionError || !sessionData?.session) {
+        if (sessionError) {
+          console.error("Supabase recovery session expired before update:", sessionError);
+        }
+        showInvalidLink();
+        return;
+      }
+
+      const { error } = await window.hittingLogAuth.updatePassword(newPassword);
+      if (error) {
+        console.error("Supabase password update failed:", error);
+        setAuthFormMessage(message, "We couldn't update your password. Please try again.", "error");
+        setFormEnabled(true);
+        return;
+      }
+
+      passwordUpdated = true;
+      recoveryReady = false;
+      form.reset();
+      setFormEnabled(false);
+      setAuthFormMessage(message, "Your password has been updated successfully.", "success");
+
+      try {
+        await window.hittingLogAuth.logOut();
+      } catch (error) {
+        console.error("Sign out after password reset failed:", error);
+      }
+      clearCurrentUser();
+      window.setTimeout(() => redirectTo("/login"), 2000);
+    } catch (error) {
+      console.error("Password update error:", error);
+      setAuthFormMessage(message, "We couldn't update your password. Please try again.", "error");
+      setFormEnabled(true);
+    } finally {
+      isSubmitting = false;
+      if (submitButton) {
+        submitButton.textContent = "Update Password";
+      }
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    authSubscription?.unsubscribe();
+  });
+}
+
 function initLoginPage() {
   const loginForm = document.getElementById("login-form");
   const emailInput = document.getElementById("login-email");
@@ -4431,5 +4709,13 @@ if (guardRoute()) {
 
   if (page === "signup") {
     initSignupPage();
+  }
+
+  if (page === "forgot-password") {
+    initForgotPasswordPage();
+  }
+
+  if (page === "reset-password") {
+    initResetPasswordPage();
   }
 }

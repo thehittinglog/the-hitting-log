@@ -45,11 +45,29 @@
     return client.auth.getSession();
   }
 
+  async function requestPasswordReset({ email, redirectTo } = {}) {
+    const client = await getClient();
+    return client.auth.resetPasswordForEmail(email, { redirectTo });
+  }
+
+  async function updatePassword(password) {
+    const client = await getClient();
+    return client.auth.updateUser({ password });
+  }
+
+  async function onAuthStateChange(callback) {
+    const client = await getClient();
+    return client.auth.onAuthStateChange(callback);
+  }
+
   window.hittingLogAuth = {
     PUBLIC_SIGNUP_ENABLED,
     signUp,
     logIn,
     logOut,
     getCurrentSession,
+    requestPasswordReset,
+    updatePassword,
+    onAuthStateChange,
   };
 })();
