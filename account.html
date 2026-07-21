@@ -85,11 +85,17 @@
             <p class="section-copy">Stripe checkout and customer portal links can connect here later.</p>
           </div>
         </div>
-        <button type="button">Manage Billing</button>
+        <button id="upgrade-button" type="button">
+  Upgrade to Pro – $14.99/month
+</button>
       </section>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="scripts/supabase-client.js"></script>
+  <script src="scripts/auth.js"></script>
+  <script src="scripts/stripe-checkout.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
