@@ -67,6 +67,32 @@ p {
   border-bottom: 1px solid var(--line);
 }
 
+.site-footer {
+  padding: 0 0 30px;
+}
+
+.site-footer-shell {
+  display: flex;
+  justify-content: center;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.footer-link {
+  font-weight: 700;
+}
+
+.footer-link.is-active {
+  color: var(--accent);
+}
+
 .nav-shell,
 .page-shell {
   width: min(1080px, calc(100% - 32px));
@@ -287,6 +313,83 @@ th,
 .dashboard,
 .two-column-layout {
   margin-top: 20px;
+}
+
+.faq-page-shell {
+  max-width: 920px;
+}
+
+.faq-panel {
+  padding: 22px;
+}
+
+.faq-list {
+  display: grid;
+  gap: 12px;
+}
+
+.faq-item {
+  border: 1px solid rgba(7, 50, 79, 0.14);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 18px 20px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  text-align: left;
+}
+
+.faq-question:hover,
+.faq-question:focus-visible {
+  background: rgba(7, 50, 79, 0.04);
+  box-shadow: none;
+  transform: none;
+}
+
+.faq-icon {
+  margin-left: 12px;
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.faq-answer {
+  padding: 0 20px 18px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.faq-answer ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.faq-answer p,
+.faq-answer ul {
+  margin: 0;
+}
+
+.faq-item.is-open {
+  border-color: rgba(169, 31, 36, 0.24);
+}
+
+.faq-cta-panel {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.faq-cta-panel p {
+  max-width: 44rem;
+  margin: 0 auto 8px;
 }
 
 .landing-header {
@@ -2689,6 +2792,18 @@ body,
     max-width: 100%;
     padding: 16px;
     border-radius: 18px;
+  }
+
+  .faq-panel {
+    padding: 16px;
+  }
+
+  .faq-question {
+    padding: 16px;
+  }
+
+  .faq-answer {
+    padding: 0 16px 16px;
   }
 
   .dashboard,

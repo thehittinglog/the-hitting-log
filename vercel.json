@@ -12,6 +12,7 @@
     { "source": "/charts", "destination": "/charts.html" },
     { "source": "/profile", "destination": "/account.html" },
     { "source": "/account", "destination": "/account.html" },
+    { "source": "/faq", "destination": "/faq.html" },
     { "source": "/at-bat-log", "destination": "/games.html" }
   ]
 }
