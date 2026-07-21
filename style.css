@@ -315,7 +315,8 @@ th,
   margin-top: 20px;
 }
 
-.faq-page-shell {
+.faq-page-shell,
+.privacy-page-shell {
   max-width: 920px;
 }
 
@@ -390,6 +391,60 @@ th,
 .faq-cta-panel p {
   max-width: 44rem;
   margin: 0 auto 8px;
+}
+
+.privacy-effective-date {
+  margin: 12px 0 0;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.privacy-panel {
+  padding: 32px;
+}
+
+.privacy-section + .privacy-section {
+  margin-top: 34px;
+  padding-top: 34px;
+  border-top: 1px solid rgba(7, 50, 79, 0.14);
+}
+
+.privacy-section h2 {
+  margin-bottom: 14px;
+  color: var(--ink);
+  font-size: 1.45rem;
+}
+
+.privacy-section h3 {
+  margin: 22px 0 8px;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.privacy-section p,
+.privacy-section ul {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.privacy-section p {
+  margin-bottom: 12px;
+}
+
+.privacy-section p:last-child,
+.privacy-section ul:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-section ul {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.privacy-contact-link {
+  color: var(--accent);
+  font-weight: 800;
 }
 
 .landing-header {
@@ -2796,6 +2851,15 @@ body,
 
   .faq-panel {
     padding: 16px;
+  }
+
+  .privacy-panel {
+    padding: 20px 16px;
+  }
+
+  .privacy-section + .privacy-section {
+    margin-top: 28px;
+    padding-top: 28px;
   }
 
   .faq-question {

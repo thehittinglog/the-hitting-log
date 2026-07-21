@@ -13,6 +13,7 @@
     { "source": "/profile", "destination": "/account.html" },
     { "source": "/account", "destination": "/account.html" },
     { "source": "/faq", "destination": "/faq.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/at-bat-log", "destination": "/games.html" }
   ]
 }
