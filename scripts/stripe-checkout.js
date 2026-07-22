@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let billingMode = "checkout";
+  const subscriptionStatusEndpoint = "/api/subscription-status";
 
   function setMessage(message, isError = false) {
     if (!billingMessage) {
@@ -69,18 +70,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return data.session;
   }
 
-  function renderBillingState(subscription) {
-    const isPro = subscription?.plan === "pro";
+  function isValidBillingState(billingState) {
+    return Boolean(
+      billingState &&
+      (billingState.plan === "free" || billingState.plan === "pro") &&
+      typeof billingState.status === "string" &&
+      Object.prototype.hasOwnProperty.call(billingState, "subscription") &&
+      (billingState.subscription === null || typeof billingState.subscription === "object")
+    );
+  }
+
+  function renderBillingState(billingState) {
+    const isPro = billingState?.plan === "pro";
     billingMode = isPro ? "portal" : "checkout";
 
     if (planValue) {
       planValue.textContent = isPro ? "Pro" : "Free";
     }
     if (subscriptionValue) {
-      subscriptionValue.textContent = formatStatus(subscription?.subscription_status);
+      subscriptionValue.textContent = formatStatus(billingState?.status);
     }
     if (billingValue) {
-      billingValue.textContent = subscription?.stripe_customer_id ? "Stripe Connected" : "Not Connected";
+      billingValue.textContent = billingState?.subscription?.hasStripeCustomer ? "Stripe Connected" : "Not Connected";
     }
     if (billingCopy) {
       billingCopy.textContent = isPro
@@ -100,22 +111,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const client = await window.hittingLogSupabaseReady;
+      console.info("Subscription status authenticated user ID:", session.user?.id || "unavailable");
+      console.info("Subscription status requested API endpoint:", subscriptionStatusEndpoint);
 
-      if (!client) {
-        throw new Error("Subscription data is unavailable.");
+      const response = await fetch(subscriptionStatusEndpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await readApiResult(response);
+
+      console.info("Subscription status HTTP status:", response.status);
+      console.info("Subscription status final response body:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Your subscription status could not be verified. Please try again.");
       }
 
-      const { data, error } = await client
-        .from("subscriptions")
-        .select("stripe_customer_id,subscription_status,plan")
-        .maybeSingle();
-
-      if (error) {
-        throw error;
+      if (!isValidBillingState(data)) {
+        throw new Error("Your subscription status could not be verified. Please try again.");
       }
 
-      if (checkoutResult === "success" && data?.plan !== "pro" && attempt < 4) {
+      if (checkoutResult === "success" && data.plan !== "pro" && attempt < 4) {
         setMessage("Finalizing your Stripe subscription...");
         window.setTimeout(() => loadBillingState(attempt + 1), 1500);
         return;
@@ -123,19 +141,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderBillingState(data);
 
-      if (checkoutResult === "success" && data?.plan === "pro") {
+      if (checkoutResult === "success" && data.plan === "pro") {
         setMessage("Your Pro subscription is active.");
       } else if (checkoutResult === "success") {
         setMessage("Your subscription is still syncing. Refresh this page in a moment.");
       } else if (checkoutResult === "cancelled") {
         setMessage("Checkout was cancelled. You have not been charged.");
-      } else if (!data?.stripe_customer_id) {
+      } else if (!data.subscription?.hasStripeCustomer) {
         setMessage("Online billing management is being connected. You can still upgrade using the button above.");
       }
     } catch (error) {
       console.error("Unable to load subscription status:", error);
-      renderBillingState(null);
-      setMessage("Online billing management is being connected. You can still upgrade using the button above.");
+      renderBillingState({ plan: "free", status: "inactive", subscription: null });
+      setMessage("Your subscription status could not be verified. Please try again.", true);
     }
   }
 

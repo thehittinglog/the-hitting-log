@@ -1,9 +1,9 @@
 const Stripe = require("stripe");
 const {
   getApplicationOrigin,
-  getAuthenticatedUserSubscription,
   getBearerToken,
-  requireSupabasePublicConfig,
+  getSubscriptionBy,
+  requireSupabaseServerConfig,
   verifySupabaseUser,
 } = require("../lib/supabase-server");
 
@@ -72,7 +72,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    requireSupabasePublicConfig();
+    requireSupabaseServerConfig({ requirePublicKey: true });
   } catch (error) {
     console.error("Stripe Checkout Supabase configuration error:", error);
     return res.status(500).json({
@@ -126,8 +126,12 @@ module.exports = async function handler(req, res) {
 
   let existingSubscription;
 
+  console.info("Stripe Checkout authenticated user ID:", user.id);
+
   try {
-    existingSubscription = await getAuthenticatedUserSubscription(accessToken, user.id);
+    existingSubscription = await getSubscriptionBy("user_id", user.id);
+    console.info("Stripe Checkout subscription record exists:", Boolean(existingSubscription));
+    console.info("Stripe Checkout Stripe customer ID exists:", Boolean(existingSubscription?.stripe_customer_id));
   } catch (error) {
     console.error("Stripe Checkout subscription lookup error:", error);
     return res.status(502).json({
