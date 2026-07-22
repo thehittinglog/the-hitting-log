@@ -104,8 +104,8 @@
     },
     hardHitTwoStrikePercent: {
       title: "Hard Hit Ball % w/ 2 Strikes",
-      definition: "The percentage of two-strike at-bats that produced hard contact.",
-      formula: "Hard-Hit Two-Strike At-Bats / Two-Strike At-Bats x 100",
+      definition: "The percentage of balls put in play with two strikes that were hit hard.",
+      formula: "Hard-Hit Two-Strike Balls in Play / Two-Strike Balls in Play x 100",
       explanation: "This helps track whether quality contact holds up in tougher counts.",
     },
     productiveOutPercent: {

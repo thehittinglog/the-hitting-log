@@ -949,6 +949,10 @@ function formatPerGame(value) {
 }
 
 function formatPercent(value) {
+  if (value === null || value === undefined) {
+    return "N/A";
+  }
+
   if (!Number.isFinite(value) || value <= 0) {
     return "0.0%";
   }
@@ -1266,7 +1270,7 @@ function renderGameSummaryRow(tableBody, game, options = {}) {
   dateCell.textContent = formatDisplayDate(gameStats.date);
   opponentCell.textContent = gameStats.opponent || "Opponent";
   averageCell.textContent = formatRate(gameStats.battingAverage);
-  scoreCell.textContent = String(score);
+  scoreCell.textContent = score === null || score === undefined ? "N/A" : String(score);
 
   if (typeof window.applyMetricPerformanceColor === "function") {
     window.applyMetricPerformanceColor(averageCell, "battingAverage", averageCell.textContent);
@@ -3634,8 +3638,12 @@ function getHardHitMetrics(atBats) {
       if (isTwoStrikeAtBat) {
         summary.twoStrikeAtBats += 1;
 
-        if (isHardHit && isBallInPlay) {
-          summary.hardHitTwoStrikeAtBats += 1;
+        if (isBallInPlay) {
+          summary.twoStrikeBallsInPlay += 1;
+
+          if (isHardHit) {
+            summary.twoStrikeHardHits += 1;
+          }
         }
       }
 
@@ -3646,7 +3654,8 @@ function getHardHitMetrics(atBats) {
       ballsInPlay: 0,
       hardHitBalls: 0,
       twoStrikeAtBats: 0,
-      hardHitTwoStrikeAtBats: 0,
+      twoStrikeBallsInPlay: 0,
+      twoStrikeHardHits: 0,
     }
   );
 
@@ -3654,7 +3663,12 @@ function getHardHitMetrics(atBats) {
     hardHitPercent: metrics.ballsInPlay === 0 ? 0 : metrics.hardHitBalls / metrics.ballsInPlay,
     twoStrikePercent: metrics.plateAppearances === 0 ? 0 : metrics.twoStrikeAtBats / metrics.plateAppearances,
     hardHitTwoStrikePercent:
-      metrics.twoStrikeAtBats === 0 ? 0 : metrics.hardHitTwoStrikeAtBats / metrics.twoStrikeAtBats,
+      metrics.twoStrikeBallsInPlay === 0
+        ? null
+        : metrics.twoStrikeHardHits / metrics.twoStrikeBallsInPlay,
+    twoStrikeAtBats: metrics.twoStrikeAtBats,
+    twoStrikeBallsInPlay: metrics.twoStrikeBallsInPlay,
+    twoStrikeHardHits: metrics.twoStrikeHardHits,
   };
 }
 
@@ -3698,7 +3712,7 @@ function calculateHittingLogPerformanceScore(source) {
   const atBats = Array.isArray(source?.atBats) ? source.atBats : [];
 
   if (atBats.length === 0) {
-    return 0;
+    return null;
   }
 
   const totals = source?.stats || getRateStats([{ atBats }]);
@@ -3706,9 +3720,13 @@ function calculateHittingLogPerformanceScore(source) {
   const advancedPercentMetrics = getAdvancedPercentMetrics(atBats, totals);
   const totalOuts = atBats.filter((atBat) => isOutOutcome(atBat.outcome)).length;
   const twoStrikePercent = hardHitMetrics.twoStrikePercent * 100;
-  const hardHitTwoStrikePercent = hardHitMetrics.hardHitTwoStrikePercent * 100;
-  const twoStrikeAdjustment =
-    100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100));
+  const hasHardHitTwoStrikePercent = hardHitMetrics.hardHitTwoStrikePercent !== null;
+  const hardHitTwoStrikePercent = hasHardHitTwoStrikePercent
+    ? hardHitMetrics.hardHitTwoStrikePercent * 100
+    : null;
+  const twoStrikeAdjustment = hasHardHitTwoStrikePercent
+    ? 100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100))
+    : 100 - twoStrikePercent;
   const components = [
     { value: hardHitMetrics.hardHitPercent * 100, weight: 0.45 },
     { value: advancedPercentMetrics.qualityAtBatPercent * 100, weight: 0.25 },
@@ -3722,8 +3740,14 @@ function calculateHittingLogPerformanceScore(source) {
     });
   }
 
-  const totalWeight = components.reduce((sum, component) => sum + component.weight, 0);
-  const rawScore = components.reduce((sum, component) => {
+  const availableComponents = components.filter((component) => Number.isFinite(component.value));
+
+  if (availableComponents.length === 0) {
+    return null;
+  }
+
+  const totalWeight = availableComponents.reduce((sum, component) => sum + component.weight, 0);
+  const rawScore = availableComponents.reduce((sum, component) => {
     return sum + (component.value * (component.weight / totalWeight));
   }, 0);
 
@@ -3737,10 +3761,17 @@ const performanceScoreClasses = [
 ];
 
 function getPerformanceScoreStatus(score) {
+  if (score === null || score === undefined) {
+    return null;
+  }
+
   const numericScore = Number(score);
-  const normalizedScore = Number.isFinite(numericScore)
-    ? Math.min(100, Math.max(0, Math.round(numericScore)))
-    : 0;
+
+  if (!Number.isFinite(numericScore)) {
+    return null;
+  }
+
+  const normalizedScore = Math.min(100, Math.max(0, Math.round(numericScore)));
 
   if (normalizedScore >= 65) {
     return {
@@ -3763,10 +3794,17 @@ function getPerformanceScoreStatus(score) {
 }
 
 function formatPerformanceScore(score) {
+  if (score === null || score === undefined) {
+    return "N/A";
+  }
+
   const numericScore = Number(score);
-  const normalizedScore = Number.isFinite(numericScore)
-    ? Math.min(100, Math.max(0, Math.round(numericScore)))
-    : 0;
+
+  if (!Number.isFinite(numericScore)) {
+    return "N/A";
+  }
+
+  const normalizedScore = Math.min(100, Math.max(0, Math.round(numericScore)));
   const status = getPerformanceScoreStatus(normalizedScore);
 
   return `${normalizedScore} - ${status.label}`;
@@ -3776,6 +3814,12 @@ function applyPerformanceScoreStatus(element, score) {
   const status = getPerformanceScoreStatus(score);
 
   element.classList.remove(...performanceScoreClasses);
+
+  if (!status) {
+    delete element.dataset.performanceScoreStatus;
+    return;
+  }
+
   element.classList.add(status.className);
   element.dataset.performanceScoreStatus = status.label;
 }
