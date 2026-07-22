@@ -1,9 +1,9 @@
 const Stripe = require("stripe");
 const {
   getApplicationOrigin,
+  getAuthenticatedUserSubscription,
   getBearerToken,
-  getSubscriptionBy,
-  requireSupabaseServerConfig,
+  requireSupabasePublicConfig,
   verifySupabaseUser,
 } = require("../lib/supabase-server");
 
@@ -15,19 +15,20 @@ module.exports = async function handler(req, res) {
 
   try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    requireSupabaseServerConfig({ requirePublicKey: true });
+    requireSupabasePublicConfig();
 
     if (!stripeSecretKey) {
       return res.status(500).json({ error: "Billing is temporarily unavailable." });
     }
 
-    const user = await verifySupabaseUser(getBearerToken(req));
+    const accessToken = getBearerToken(req);
+    const user = await verifySupabaseUser(accessToken);
 
     if (!user) {
       return res.status(401).json({ error: "Your login session could not be verified." });
     }
 
-    const subscription = await getSubscriptionBy("user_id", user.id);
+    const subscription = await getAuthenticatedUserSubscription(accessToken, user.id);
 
     if (!subscription?.stripe_customer_id) {
       return res.status(404).json({ error: "No Stripe billing account was found." });

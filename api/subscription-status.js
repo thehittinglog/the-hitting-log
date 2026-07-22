@@ -1,7 +1,7 @@
 const {
+  getAuthenticatedUserSubscription,
   getBearerToken,
-  getSubscriptionBy,
-  requireSupabaseServerConfig,
+  requireSupabasePublicConfig,
   verifySupabaseUser,
 } = require("../lib/supabase-server");
 
@@ -28,9 +28,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    requireSupabaseServerConfig({ requirePublicKey: true });
+    requireSupabasePublicConfig();
   } catch (error) {
-    console.error("Subscription status Supabase configuration error:", error);
+    console.error("Subscription status Supabase configuration error:", error.message);
     return sendResponse(res, 500, {
       error: "Subscription verification is not configured.",
     });
@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
   let subscription;
 
   try {
-    subscription = await getSubscriptionBy("user_id", user.id);
+    subscription = await getAuthenticatedUserSubscription(accessToken, user.id);
   } catch (error) {
     console.error("Subscription status Supabase error:", error);
     return sendResponse(res, 502, {

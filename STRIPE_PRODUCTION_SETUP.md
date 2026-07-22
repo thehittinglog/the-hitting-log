@@ -24,12 +24,17 @@ Configure these for Production and any Preview environment used for Stripe tests
 - `STRIPE_SECRET_KEY` — Stripe secret key for the matching mode.
 - `STRIPE_PRICE_ID` — existing recurring Pro Price ID for the matching mode.
 - `STRIPE_WEBHOOK_SECRET` — signing secret for the deployed webhook endpoint.
-- `HITTING_LOG_SUPABASE_URL` or `SUPABASE_URL` — Supabase project URL.
-- `HITTING_LOG_SUPABASE_ANON_KEY`, `SUPABASE_ANON_KEY`, or
-  `SUPABASE_PUBLISHABLE_KEY` — public key used to verify signed-in users.
+- `HITTING_LOG_SUPABASE_URL`, `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, or
+  `VITE_SUPABASE_URL` — Supabase project URL.
+- `HITTING_LOG_SUPABASE_ANON_KEY`, `HITTING_LOG_SUPABASE_PUBLISHABLE_KEY`,
+  `SUPABASE_ANON_KEY`, `SUPABASE_PUBLISHABLE_KEY`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+  `VITE_SUPABASE_ANON_KEY`, or `VITE_SUPABASE_PUBLISHABLE_KEY` — public key used
+  by the browser and authenticated user-facing API routes.
 - `HITTING_LOG_SUPABASE_SECRET_KEY` or `SUPABASE_SECRET_KEY` — recommended
   server-only Supabase secret key. Legacy `HITTING_LOG_SUPABASE_SERVICE_ROLE_KEY`
-  and `SUPABASE_SERVICE_ROLE_KEY` values are also supported.
+  and `SUPABASE_SERVICE_ROLE_KEY` values are also supported. These server-only
+  keys are required for webhook database writes, not Checkout authentication.
 - `APP_URL` — canonical application origin, such as `https://thehittinglog.com`.
 
 Never expose `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,

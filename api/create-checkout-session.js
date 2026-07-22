@@ -1,9 +1,9 @@
 const Stripe = require("stripe");
 const {
   getApplicationOrigin,
+  getAuthenticatedUserSubscription,
   getBearerToken,
-  getSubscriptionBy,
-  requireSupabaseServerConfig,
+  requireSupabasePublicConfig,
   verifySupabaseUser,
 } = require("../lib/supabase-server");
 
@@ -72,11 +72,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    requireSupabaseServerConfig({ requirePublicKey: true });
+    requireSupabasePublicConfig();
   } catch (error) {
-    console.error("Stripe Checkout Supabase configuration error:", error);
+    console.error("Stripe Checkout Supabase configuration error:", error.message);
     return res.status(500).json({
-      error: "Checkout authentication is not configured. Check the Supabase URL and public key in Vercel.",
+      error: "Checkout authentication is not configured. Check Vercel logs for the missing Supabase environment variable.",
     });
   }
 
@@ -129,7 +129,7 @@ module.exports = async function handler(req, res) {
   console.info("Stripe Checkout authenticated user ID:", user.id);
 
   try {
-    existingSubscription = await getSubscriptionBy("user_id", user.id);
+    existingSubscription = await getAuthenticatedUserSubscription(accessToken, user.id);
     console.info("Stripe Checkout subscription record exists:", Boolean(existingSubscription));
     console.info("Stripe Checkout Stripe customer ID exists:", Boolean(existingSubscription?.stripe_customer_id));
   } catch (error) {
