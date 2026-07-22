@@ -2241,10 +2241,6 @@ select:focus {
   max-width: none;
 }
 
-.heat-map-filter-stack > button {
-  width: fit-content;
-}
-
 .date-filter-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3283,10 +3279,6 @@ body,
     padding-right: 8px;
     padding-left: 8px;
     font-size: 0.88rem;
-  }
-
-  .heat-map-filter-stack > button {
-    width: 100%;
   }
 
   input,

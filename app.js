@@ -4313,14 +4313,13 @@ function initChartsPage(games) {
   const filterSelect = document.getElementById("chart-filter");
   const startDateInput = document.getElementById("chart-start-date");
   const endDateInput = document.getElementById("chart-end-date");
-  const generateButton = document.getElementById("generate-chart-button");
   const chartsEmpty = document.getElementById("charts-empty");
   const zoneMap = document.getElementById("chart-zone-map") || document.getElementById("zone-map");
   const filterTotal = document.getElementById("chart-filter-total");
   const chartLegend = document.getElementById("chart-legend");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartLegend || !chartZoneTitle) {
+  if (!filterSelect || !startDateInput || !endDateInput || !chartsEmpty || !zoneMap || !filterTotal || !chartLegend || !chartZoneTitle) {
     return;
   }
 
@@ -4651,10 +4650,6 @@ function initChartsPage(games) {
       },
     });
   }
-
-  generateButton.addEventListener("click", () => {
-    renderZoneMap(filterSelect.value);
-  });
 
   filterSelect.addEventListener("change", () => {
     renderZoneMap(filterSelect.value);

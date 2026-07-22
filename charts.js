@@ -354,13 +354,12 @@ function renderChartsPage() {
   const pitchTypeSelect = document.getElementById("chart-pitch-type-filter");
   const startDateInput = document.getElementById("chart-start-date");
   const endDateInput = document.getElementById("chart-end-date");
-  const generateButton = document.getElementById("generate-chart-button");
   const chartsEmpty = document.getElementById("charts-empty");
   const zoneMap = document.getElementById("chart-zone-map");
   const filterTotal = document.getElementById("chart-filter-total");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
+  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
     return;
   }
 
@@ -465,7 +464,6 @@ function renderChartsPage() {
     renderChartLegend(selectedFilter);
   }
 
-  generateButton.addEventListener("click", renderSelectedFilter);
   filterSelect.addEventListener("change", renderSelectedFilter);
   velocitySelect.addEventListener("change", renderSelectedFilter);
   handednessSelect.addEventListener("change", renderSelectedFilter);
