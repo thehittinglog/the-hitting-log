@@ -4,6 +4,10 @@
       title: "Pitcher Velocity",
       body: "Enter the pitcher's top recorded velocity if it is known. This should be the fastest pitch they are capable of throwing, not necessarily the speed of the current pitch. If the pitcher's velocity is unknown, simply leave this field blank.",
     },
+    pitchType: {
+      title: "Pitch Type",
+      body: "Pitch type is recorded to power your Heat Maps, Spray Charts, and future pitch-type analytics. If you are unsure of the pitch type, simply select Fastball or Unknown.",
+    },
     games: {
       title: "Games",
       definition: "The total number of games saved in your hitting log.",

@@ -16,6 +16,7 @@ const PITCH_TYPES_BY_SPORT = {
     { label: "Cutter", value: "cutter" },
     { label: "12-6 Curve", value: "twelve_six_curve" },
     { label: "Sweeper Curve", value: "sweeper_curve" },
+    { label: "Unknown", value: "Unknown" },
   ],
   softball: [
     { label: "Fastball", value: "fastball" },
@@ -25,6 +26,7 @@ const PITCH_TYPES_BY_SPORT = {
     { label: "Drop", value: "drop" },
     { label: "Rise", value: "rise" },
     { label: "Drop-Curve", value: "drop_curve" },
+    { label: "Unknown", value: "Unknown" },
   ],
 };
 const outcomeFields = [
@@ -352,6 +354,10 @@ function normalizePitchType(pitchType) {
   return allowedPitchTypes.has(normalizedPitchType) ? normalizedPitchType : "unknown";
 }
 
+function getStoredPitchType(pitchType) {
+  return String(pitchType || "").trim() === "Unknown" ? "Unknown" : normalizePitchType(pitchType);
+}
+
 function normalizePitch(pitch) {
   const location =
     pitch.location && typeof pitch.location === "object"
@@ -373,7 +379,7 @@ function normalizePitch(pitch) {
         : typeof pitch.swing_result === "string"
           ? pitch.swing_result
           : "";
-  const pitchType = normalizePitchType(pitch.pitchType || pitch.pitch_type);
+  const pitchType = getStoredPitchType(pitch.pitchType || pitch.pitch_type);
   const strikeType = typeof pitch.strikeType === "string" ? pitch.strikeType : "";
   const battedBallOutcome =
     typeof pitch.battedBallOutcome === "string"
@@ -2207,12 +2213,18 @@ function initGamesPage(games) {
     return state.stepHistory.length > 0 && state.step !== "at_bat_details";
   }
 
-  function renderOptionGroup(titleText, options, onClick, selectedValue = null) {
+  function renderOptionGroup(titleText, options, onClick, selectedValue = null, infoKey = "") {
     const wrap = document.createElement("div");
     wrap.className = "result-stack";
 
     const title = document.createElement("h4");
     title.textContent = titleText;
+
+    if (infoKey) {
+      title.dataset.metricInfo = infoKey;
+      window.renderMetricInfoButton?.(title, infoKey);
+    }
+
     wrap.appendChild(title);
 
     const grid = document.createElement("div");
@@ -2898,7 +2910,7 @@ function initGamesPage(games) {
     }
 
     if (state.step === "pitch_type") {
-      card.appendChild(renderOptionGroup("Pitch Type", getPitchTypeOptions(), handlePitchType, normalizePitchType(state.activePitch?.pitchType || state.activePitch?.pitch_type || "")));
+      card.appendChild(renderOptionGroup("Pitch Type", getPitchTypeOptions(), handlePitchType, getStoredPitchType(state.activePitch?.pitchType || state.activePitch?.pitch_type || ""), "pitchType"));
     }
 
     if (state.step === "pitch_result") {
@@ -3011,7 +3023,7 @@ function initGamesPage(games) {
       return;
     }
 
-    state.activePitch.pitchType = normalizePitchType(pitchType);
+    state.activePitch.pitchType = getStoredPitchType(pitchType);
     state.activePitch.pitch_type = state.activePitch.pitchType;
     goToStep("pitch_result");
   }
