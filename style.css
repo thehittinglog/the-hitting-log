@@ -2030,9 +2030,26 @@ select:focus {
 .saved-at-bat-heading,
 .review-at-bat-heading {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.saved-at-bat-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-at-bat-heading > button,
+.review-at-bat-heading > button {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .saved-at-bat-edit-link {

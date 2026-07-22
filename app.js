@@ -1657,14 +1657,18 @@ function renderAtBatList(listElement, atBats) {
     const item = document.createElement("article");
     item.className = "saved-at-bat";
 
+    const heading = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+    heading.className = "saved-at-bat-heading";
+    title.className = "saved-at-bat-title";
+    title.textContent = `At-Bat ${index + 1} • ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
 
     const sequence = document.createElement("div");
     sequence.className = "pitch-sequence";
     renderSimplePitchSequence(sequence, atBat);
 
-    item.appendChild(title);
+    heading.appendChild(title);
+    item.appendChild(heading);
     item.appendChild(sequence);
     listElement.appendChild(item);
   });
@@ -2717,7 +2721,8 @@ function initGamesPage(games) {
 
       card.className = "saved-at-bat review-at-bat-card";
       heading.className = "review-at-bat-heading";
-      title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+      title.className = "saved-at-bat-title";
+      title.textContent = `At-Bat ${index + 1} • ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
@@ -2780,7 +2785,8 @@ function initGamesPage(games) {
       const editButton = document.createElement("button");
 
       heading.className = "saved-at-bat-heading";
-      title.textContent = `At-Bat ${index + 1} - ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+      title.className = "saved-at-bat-title";
+      title.textContent = `At-Bat ${index + 1} • ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
       editButton.type = "button";
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
@@ -2814,6 +2820,7 @@ function initGamesPage(games) {
     const heading = document.createElement("div");
     const title = document.createElement("strong");
     heading.className = "saved-at-bat-heading";
+    title.className = "saved-at-bat-title";
     title.textContent = isEditingWorkflow
       ? `Editing At-Bat ${state.workflowEditAtBatIndex + 1}`
       : `At-Bat ${state.draftGame.atBats.length + 1}`;
