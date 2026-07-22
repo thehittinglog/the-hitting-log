@@ -17,6 +17,7 @@
     { "source": "/faq", "destination": "/faq.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/support", "destination": "/support.html" },
     { "source": "/at-bat-log", "destination": "/games.html" }
   ]
 }

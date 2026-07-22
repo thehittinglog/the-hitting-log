@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hitting log | Support</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="support">
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html" aria-label="hitting log home"><img src="assets/hitting-log-logo.png" alt="hitting log" class="brand-logo"></a>
+      <nav class="top-nav" aria-label="Main navigation">
+        <a class="nav-link" href="login.html">Log In</a>
+        <a class="nav-link" href="signup.html">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell support-page-shell">
+    <section class="hero compact-hero support-hero">
+      <p class="eyebrow">Help &amp; Feedback</p>
+      <h1>Support</h1>
+      <p class="hero-copy">Need help? Have a question, bug report, feature request, or feedback? We'd love to hear from you.</p>
+    </section>
+
+    <section class="panel support-card" aria-labelledby="support-form-heading">
+      <h2 id="support-form-heading">Contact Support</h2>
+      <form id="support-form" class="support-form" novalidate>
+        <label for="support-name">
+          <span>Name</span>
+          <input id="support-name" name="name" type="text" autocomplete="name" maxlength="120" required>
+        </label>
+        <label for="support-email">
+          <span>Email Address</span>
+          <input id="support-email" name="email" type="email" autocomplete="email" maxlength="254" inputmode="email" required>
+        </label>
+        <label for="support-subject">
+          <span>Subject</span>
+          <select id="support-subject" name="subject" required>
+            <option value="" selected disabled>Select a subject</option>
+            <option value="General Question">General Question</option>
+            <option value="Technical Issue">Technical Issue</option>
+            <option value="Billing">Billing</option>
+            <option value="Feature Request">Feature Request</option>
+            <option value="Bug Report">Bug Report</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label for="support-message">
+          <span>Message</span>
+          <textarea id="support-message" name="message" rows="7" maxlength="5000" required></textarea>
+        </label>
+        <label class="support-honeypot" for="support-website" aria-hidden="true">
+          <span>Website</span>
+          <input id="support-website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </label>
+        <button id="support-submit-button" class="support-submit-button" type="submit">Send Message</button>
+        <p id="support-form-message" class="form-message support-form-message" aria-live="polite"></p>
+      </form>
+
+      <div class="support-contact-info" aria-label="Support contact information">
+        <div>
+          <h3>Email</h3>
+          <a href="mailto:team@thehittinglog.com">team@thehittinglog.com</a>
+        </div>
+        <div>
+          <h3>Support Hours</h3>
+          <p>Monday–Friday<br>9:00 AM–5:00 PM Central Time</p>
+        </div>
+        <div>
+          <h3>Response Time</h3>
+          <p>Most messages receive a response within one business day.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="nav-shell site-footer-shell">
+      <div class="footer-links">
+        <a class="footer-link" href="/terms">Terms of Service</a>
+        <a class="footer-link" href="/privacy">Privacy Policy</a>
+        <a class="footer-link" href="/faq">FAQ</a>
+        <a class="footer-link is-active" href="/support" aria-current="page">Support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="scripts/support.js"></script>
+</body>
+</html>
