@@ -1205,27 +1205,23 @@ function formatCompactGameDate(dateString) {
 
 function appendRecentGameRow(tableBody, gameStats) {
   const row = document.createElement("tr");
-  const cell = document.createElement("td");
-  const summary = document.createElement("div");
-  const date = document.createElement("span");
-  const opponent = document.createElement("span");
-  const average = document.createElement("span");
-  const performanceScore = document.createElement("span");
+  const date = document.createElement("td");
+  const opponent = document.createElement("td");
+  const average = document.createElement("td");
+  const performanceScore = document.createElement("td");
   const score = calculateHittingLogPerformanceScore(gameStats);
 
   row.className = "recent-game-row clickable-game-row";
   row.tabIndex = 0;
   row.dataset.gameId = gameStats.id;
-  cell.colSpan = 1;
-  summary.className = "recent-game-summary";
   date.className = "recent-game-date";
   date.textContent = formatCompactGameDate(gameStats.date);
   opponent.className = "recent-game-opponent";
   opponent.textContent = gameStats.opponent || "Opponent";
   average.className = "recent-game-average";
-  average.textContent = `${formatRate(gameStats.battingAverage)} AVG`;
+  average.textContent = formatRate(gameStats.battingAverage);
   performanceScore.className = "recent-game-hlp";
-  performanceScore.textContent = `${score === null || score === undefined ? "N/A" : score} HLP`;
+  performanceScore.textContent = score === null || score === undefined ? "N/A" : String(score);
 
   if (typeof window.applyMetricPerformanceColor === "function") {
     window.applyMetricPerformanceColor(
@@ -1236,12 +1232,10 @@ function appendRecentGameRow(tableBody, gameStats) {
   }
   applyPerformanceScoreStatus(performanceScore, score);
 
-  summary.appendChild(date);
-  summary.appendChild(opponent);
-  summary.appendChild(average);
-  summary.appendChild(performanceScore);
-  cell.appendChild(summary);
-  row.appendChild(cell);
+  row.appendChild(date);
+  row.appendChild(opponent);
+  row.appendChild(average);
+  row.appendChild(performanceScore);
   tableBody.appendChild(row);
 }
 

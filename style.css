@@ -2809,23 +2809,37 @@ tbody td {
   table-layout: fixed;
 }
 
-.recent-game-row td {
-  padding: 0;
+.recent-games-table th {
+  overflow: hidden;
+  padding: 11px 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.recent-game-summary {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
-  gap: 10px 18px;
-  align-items: center;
-  min-width: 0;
+.recent-games-table th:first-child {
+  width: 104px;
+}
+
+.recent-games-table th:nth-child(3) {
+  width: 82px;
+}
+
+.recent-games-table th:last-child {
+  width: 68px;
+}
+
+.recent-game-row td {
   padding: 13px 8px;
   white-space: nowrap;
   transition: background-color 140ms ease;
 }
 
-.recent-game-row:hover .recent-game-summary,
-.recent-game-row:focus-visible .recent-game-summary {
+.recent-game-row:hover td,
+.recent-game-row:focus-visible td {
   background: var(--accent-soft);
 }
 
@@ -3119,11 +3133,27 @@ body[data-page="games"] #game-choice-view .choice-card-button {
     justify-content: flex-start;
   }
 
-  .recent-game-summary {
-    gap: 8px;
+  .recent-games-table th,
+  .recent-game-row td {
     padding-right: 4px;
     padding-left: 4px;
     font-size: 0.84rem;
+  }
+
+  .recent-games-table th {
+    font-size: 0.7rem;
+  }
+
+  .recent-games-table th:first-child {
+    width: 76px;
+  }
+
+  .recent-games-table th:nth-child(3) {
+    width: 58px;
+  }
+
+  .recent-games-table th:last-child {
+    width: 48px;
   }
 
   .support-card {
