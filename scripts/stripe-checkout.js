@@ -34,21 +34,38 @@ document.addEventListener("DOMContentLoaded", () => {
       .join(" ");
   }
 
-  async function readApiResult(response) {
+  async function readApiResponse(response) {
     const responseText = await response.text();
 
     if (!responseText) {
-      return {};
+      return {
+        data: {},
+        isJson: false,
+        isEmpty: true,
+      };
     }
 
     try {
-      return JSON.parse(responseText);
+      return {
+        data: JSON.parse(responseText),
+        isJson: true,
+        isEmpty: false,
+      };
     } catch (error) {
       console.error("Billing API returned a non-JSON response:", response.status, responseText.slice(0, 200));
       return {
-        error: `The billing service returned an invalid response (${response.status}). Please try again.`,
+        data: {
+          error: `The billing service returned an invalid response (${response.status}). Please try again.`,
+        },
+        isJson: false,
+        isEmpty: false,
       };
     }
+  }
+
+  async function readApiResult(response) {
+    const result = await readApiResponse(response);
+    return result.data;
   }
 
   async function getAuthenticatedSession() {
@@ -120,10 +137,22 @@ document.addEventListener("DOMContentLoaded", () => {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
-      const data = await readApiResult(response);
+      const apiResponse = await readApiResponse(response);
+      const data = apiResponse.data;
 
       console.info("Subscription status HTTP status:", response.status);
       console.info("Subscription status final response body:", data);
+      console.info("Subscription status response error code:", data.code || null);
+      console.info("Subscription status response was JSON:", apiResponse.isJson);
+
+      if (
+        response.status === 401 &&
+        (data.code === "missing_auth_token" || data.code === "invalid_auth_token")
+      ) {
+        setMessage(data.error || "Your login session has expired. Please sign in again.", true);
+        window.location.href = "/login";
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Your subscription status could not be verified. Please try again.");
