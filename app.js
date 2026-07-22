@@ -231,6 +231,29 @@ function updateCurrentAccountSportType(sportType) {
   return accounts[accountIndex];
 }
 
+function updateCurrentAccountProfile({ athleteName, sportType }) {
+  const currentUser = getCurrentUser();
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const accounts = loadAccounts();
+  const accountIndex = accounts.findIndex((account) => normalizeEmail(account.email || "") === currentUser.email);
+
+  if (accountIndex === -1) {
+    return null;
+  }
+
+  accounts[accountIndex] = {
+    ...accounts[accountIndex],
+    athleteName: String(athleteName || "").trim(),
+    sportType: normalizeSportType(sportType),
+  };
+  saveAccounts(accounts);
+  return accounts[accountIndex];
+}
+
 function createId(prefix) {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
     return `${prefix}-${window.crypto.randomUUID()}`;
@@ -4262,22 +4285,243 @@ window.renderChartsPage = function renderChartsPage() {
 };
 
 function initAccountPage() {
-  const sportTypeSelect = document.getElementById("sport-type-select");
-  const sportTypeMessage = document.getElementById("sport-type-message");
+  const sportTypeValue = document.getElementById("sport-type-value");
+  const athleteNameValue = document.getElementById("profile-athlete-name");
+  const profileEmailValue = document.getElementById("profile-email");
+  const securityEmailValue = document.getElementById("security-email");
+  const editButton = document.getElementById("edit-profile-button");
+  const profileForm = document.getElementById("profile-edit-form");
+  const emailInput = document.getElementById("profile-email-input");
+  const athleteNameInput = document.getElementById("profile-athlete-name-input");
+  const sportTypeInput = document.getElementById("profile-sport-type-input");
+  const saveButton = document.getElementById("profile-save-button");
+  const cancelButton = document.getElementById("profile-cancel-button");
+  const profileMessage = document.getElementById("profile-message");
+  const passwordResetButton = document.getElementById("password-reset-button");
+  const securityMessage = document.getElementById("security-message");
+  const accountLogoutButton = document.getElementById("account-logout-button");
+  const deleteButton = document.getElementById("delete-account-button");
+  const deleteModal = document.getElementById("delete-account-modal");
+  const deleteConfirmation = document.getElementById("delete-account-confirmation");
+  const confirmDeleteButton = document.getElementById("confirm-delete-account-button");
+  const cancelDeleteButton = document.getElementById("cancel-delete-account-button");
+  const deleteMessage = document.getElementById("delete-account-message");
 
-  if (!sportTypeSelect) {
+  if (!sportTypeValue || !editButton || !profileForm) {
     return;
   }
 
-  sportTypeSelect.value = getCurrentSportType();
-  sportTypeSelect.addEventListener("change", () => {
-    const updatedAccount = updateCurrentAccountSportType(sportTypeSelect.value);
+  const localAccount = getCurrentAccount();
+  let profile = {
+    email: getCurrentUser()?.email || "",
+    athleteName: localAccount?.athleteName || "",
+    sportType: getCurrentSportType(),
+    metadata: {},
+  };
+  let isSaving = false;
+  let lastModalFocus = null;
 
-    if (sportTypeMessage) {
-      sportTypeMessage.textContent = updatedAccount ? "Sport type saved." : "Unable to save sport type.";
-      sportTypeMessage.classList.toggle("is-success", Boolean(updatedAccount));
+  function sportLabel(sportType) {
+    return normalizeSportType(sportType) === "softball" ? "Softball" : "Baseball";
+  }
+
+  function renderProfile() {
+    sportTypeValue.textContent = sportLabel(profile.sportType);
+    athleteNameValue.textContent = profile.athleteName || "Not set";
+    profileEmailValue.textContent = profile.email || "Unavailable";
+    securityEmailValue.textContent = profile.email || "your account email";
+    emailInput.value = profile.email;
+    athleteNameInput.value = profile.athleteName;
+    sportTypeInput.value = normalizeSportType(profile.sportType);
+  }
+
+  function setProfileFormOpen(isOpen) {
+    profileForm.hidden = !isOpen;
+    editButton.setAttribute("aria-expanded", String(isOpen));
+    editButton.hidden = isOpen;
+
+    if (isOpen) {
+      athleteNameInput.focus();
+    }
+  }
+
+  function closeDeleteModal() {
+    deleteModal.hidden = true;
+    document.body.classList.remove("has-account-modal");
+    deleteConfirmation.value = "";
+    confirmDeleteButton.disabled = true;
+    lastModalFocus?.focus();
+  }
+
+  renderProfile();
+
+  editButton.addEventListener("click", () => {
+    renderProfile();
+    setAuthFormMessage(profileMessage, "");
+    setProfileFormOpen(true);
+  });
+
+  cancelButton.addEventListener("click", () => {
+    renderProfile();
+    setAuthFormMessage(profileMessage, "");
+    setProfileFormOpen(false);
+    editButton.focus();
+  });
+
+  profileForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (isSaving) {
+      return;
+    }
+
+    const athleteName = athleteNameInput.value.trim();
+    const sportType = normalizeSportType(sportTypeInput.value);
+
+    if (!athleteName) {
+      setAuthFormMessage(profileMessage, "Enter an athlete name before saving.", "error");
+      athleteNameInput.focus();
+      return;
+    }
+
+    isSaving = true;
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving...";
+    setAuthFormMessage(profileMessage, "Saving your profile...");
+
+    try {
+      if (!window.hittingLogAuth?.updateProfile) {
+        throw new Error("Profile updates are temporarily unavailable.");
+      }
+
+      const metadata = {
+        ...profile.metadata,
+        athlete_name: athleteName,
+        sport_type: sportType,
+      };
+      const { data, error } = await window.hittingLogAuth.updateProfile(metadata);
+
+      if (error) {
+        throw error;
+      }
+
+      profile = {
+        email: data?.user?.email || profile.email,
+        athleteName,
+        sportType,
+        metadata: data?.user?.user_metadata || metadata,
+      };
+      updateCurrentAccountProfile({ athleteName, sportType });
+      renderProfile();
+      setProfileFormOpen(false);
+      setAuthFormMessage(profileMessage, "Profile updated successfully.", "success");
+    } catch (error) {
+      console.error("Unable to update profile:", error);
+      setAuthFormMessage(profileMessage, error.message || "Unable to update your profile. Please try again.", "error");
+    } finally {
+      isSaving = false;
+      saveButton.disabled = false;
+      saveButton.textContent = "Save Changes";
     }
   });
+
+  passwordResetButton.addEventListener("click", async () => {
+    if (!profile.email) {
+      setAuthFormMessage(securityMessage, "Your account email is unavailable. Please sign in again.", "error");
+      return;
+    }
+
+    passwordResetButton.disabled = true;
+    passwordResetButton.textContent = "Sending...";
+    setAuthFormMessage(securityMessage, "Sending password reset email...");
+
+    try {
+      const { error } = await window.hittingLogAuth.requestPasswordReset({
+        email: profile.email,
+        redirectTo: "https://thehittinglog.com/reset-password",
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setAuthFormMessage(securityMessage, "Password reset email sent successfully.", "success");
+    } catch (error) {
+      console.error("Unable to send password reset email:", error);
+      setAuthFormMessage(securityMessage, error.message || "Unable to send the password reset email. Please try again.", "error");
+    } finally {
+      passwordResetButton.disabled = false;
+      passwordResetButton.textContent = "Send Password Reset Email";
+    }
+  });
+
+  accountLogoutButton.addEventListener("click", () => {
+    document.getElementById("logout-button")?.click();
+  });
+
+  deleteButton.addEventListener("click", () => {
+    lastModalFocus = document.activeElement;
+    deleteModal.hidden = false;
+    document.body.classList.add("has-account-modal");
+    deleteConfirmation.focus();
+  });
+
+  deleteConfirmation.addEventListener("input", () => {
+    confirmDeleteButton.disabled = deleteConfirmation.value !== "DELETE";
+  });
+
+  cancelDeleteButton.addEventListener("click", closeDeleteModal);
+  deleteModal.addEventListener("click", (event) => {
+    if (event.target === deleteModal) {
+      closeDeleteModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !deleteModal.hidden) {
+      closeDeleteModal();
+    }
+  });
+
+  confirmDeleteButton.addEventListener("click", () => {
+    if (deleteConfirmation.value !== "DELETE") {
+      return;
+    }
+
+    // TODO: Call a secure server-side account deletion endpoint here when one is available.
+    closeDeleteModal();
+    setAuthFormMessage(
+      deleteMessage,
+      "Account deletion is not available yet. Your account and data were not deleted.",
+    );
+  });
+
+  (async () => {
+    try {
+      const { data, error } = await window.hittingLogAuth.getCurrentSession();
+
+      if (error) {
+        throw error;
+      }
+
+      const user = data?.session?.user;
+      if (!user) {
+        throw new Error("Your account session could not be loaded. Please sign in again.");
+      }
+
+      const metadata = user.user_metadata || {};
+      profile = {
+        email: user.email || profile.email,
+        athleteName: metadata.athlete_name || metadata.athleteName || metadata.full_name || profile.athleteName,
+        sportType: normalizeSportType(metadata.sport_type || profile.sportType),
+        metadata,
+      };
+      updateCurrentAccountProfile(profile);
+      renderProfile();
+    } catch (error) {
+      console.error("Unable to load account profile:", error);
+      setAuthFormMessage(profileMessage, error.message || "Unable to load your profile.", "error");
+    }
+  })();
 }
 
 function isValidEmail(email) {

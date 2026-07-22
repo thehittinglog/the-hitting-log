@@ -112,11 +112,13 @@ document.addEventListener("DOMContentLoaded", () => {
         setMessage("Your subscription is still syncing. Refresh this page in a moment.");
       } else if (checkoutResult === "cancelled") {
         setMessage("Checkout was cancelled. You have not been charged.");
+      } else if (!data?.stripe_customer_id) {
+        setMessage("Online billing management is being connected. You can still upgrade using the button above.");
       }
     } catch (error) {
       console.error("Unable to load subscription status:", error);
       renderBillingState(null);
-      setMessage("Subscription details could not be loaded. You can still try again or upgrade.", true);
+      setMessage("Online billing management is being connected. You can still upgrade using the button above.");
     }
   }
 

@@ -55,6 +55,11 @@
     return client.auth.updateUser({ password });
   }
 
+  async function updateProfile(data) {
+    const client = await getClient();
+    return client.auth.updateUser({ data });
+  }
+
   async function onAuthStateChange(callback) {
     const client = await getClient();
     return client.auth.onAuthStateChange(callback);
@@ -68,6 +73,7 @@
     getCurrentSession,
     requestPasswordReset,
     updatePassword,
+    updateProfile,
     onAuthStateChange,
   };
 })();

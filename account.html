@@ -56,27 +56,63 @@
         </article>
       </div>
       <div class="account-summary-setting">
-        <label for="sport-type-select">
-          <span>Sport Type</span>
-          <select id="sport-type-select">
-            <option value="baseball">Baseball</option>
-            <option value="softball">Softball</option>
-          </select>
-        </label>
-        <p id="sport-type-message" class="form-message" aria-live="polite"></p>
+        <span class="stat-label">Sport Type</span>
+        <strong id="sport-type-value">Loading...</strong>
       </div>
     </section>
 
     <section class="two-column-layout">
-      <section class="panel">
-        <div class="section-heading">
-          <div>
-            <h2>Profile</h2>
-            <p class="section-copy">Username, display name, email, and athlete settings will live here.</p>
+      <div class="account-card-stack">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <h2>Profile</h2>
+              <p class="section-copy">Manage your athlete and account details.</p>
+            </div>
           </div>
-        </div>
-        <button type="button">Edit Profile</button>
-      </section>
+          <div class="account-profile-details" aria-live="polite">
+            <p><span>Athlete Name</span><strong id="profile-athlete-name">Loading...</strong></p>
+            <p><span>Account Email</span><strong id="profile-email">Loading...</strong></p>
+          </div>
+          <button id="edit-profile-button" type="button" aria-expanded="false" aria-controls="profile-edit-form">Edit Profile</button>
+          <form id="profile-edit-form" class="account-profile-form" hidden>
+            <label for="profile-email-input">
+              <span>Account Email</span>
+              <input id="profile-email-input" name="email" type="email" readonly>
+            </label>
+            <label for="profile-athlete-name-input">
+              <span>Athlete Name</span>
+              <input id="profile-athlete-name-input" name="athleteName" type="text" autocomplete="name" required>
+            </label>
+            <label for="profile-sport-type-input">
+              <span>Sport Type</span>
+              <select id="profile-sport-type-input" name="sportType">
+                <option value="baseball">Baseball</option>
+                <option value="softball">Softball</option>
+              </select>
+            </label>
+            <div class="account-form-actions">
+              <button id="profile-save-button" type="submit">Save Changes</button>
+              <button id="profile-cancel-button" class="secondary-button" type="button">Cancel</button>
+            </div>
+          </form>
+          <p id="profile-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <h2>Password &amp; Security</h2>
+              <p class="section-copy">Password recovery emails will be sent to <strong id="security-email">your account email</strong>.</p>
+            </div>
+          </div>
+          <div class="account-form-actions">
+            <button id="password-reset-button" type="button">Send Password Reset Email</button>
+            <button id="account-logout-button" class="secondary-button" type="button">Logout</button>
+          </div>
+          <p id="security-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+      </div>
 
       <section class="panel">
         <div class="section-heading">
@@ -89,6 +125,32 @@
         <p id="billing-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
       </section>
     </section>
+
+    <section class="panel account-delete-card">
+      <div class="section-heading">
+        <div>
+          <h2>Delete Account</h2>
+          <p class="section-copy">Permanently remove your account and all associated hitting data.</p>
+        </div>
+      </div>
+      <button id="delete-account-button" class="danger-button" type="button">Delete Account</button>
+      <p id="delete-account-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <div id="delete-account-modal" class="account-delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-modal-title" hidden>
+      <div class="account-delete-dialog">
+        <h2 id="delete-account-modal-title">Delete Account</h2>
+        <p>This permanently deletes your account, athlete profile, games, at-bats, and recorded statistics. This cannot be undone.</p>
+        <label for="delete-account-confirmation">
+          <span>Type DELETE to confirm</span>
+          <input id="delete-account-confirmation" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </label>
+        <div class="account-form-actions">
+          <button id="confirm-delete-account-button" class="danger-button" type="button" disabled>Delete Account</button>
+          <button id="cancel-delete-account-button" class="secondary-button" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
