@@ -42,6 +42,18 @@ function getCurrentPeriodEnd(subscription) {
   return subscription.current_period_end || null;
 }
 
+function getCurrentPeriodStart(subscription) {
+  const itemPeriodStarts = (subscription.items?.data || [])
+    .map((item) => item.current_period_start)
+    .filter(Number.isFinite);
+
+  if (itemPeriodStarts.length > 0) {
+    return Math.min(...itemPeriodStarts);
+  }
+
+  return subscription.current_period_start || null;
+}
+
 function getPriceId(subscription) {
   const firstItem = subscription.items?.data?.[0];
   return objectId(firstItem?.price) || firstItem?.pricing?.price_details?.price || null;
@@ -116,8 +128,10 @@ async function syncSubscription(subscription, hintedUserId) {
     stripe_subscription_id: objectId(subscription.id),
     subscription_status: status,
     stripe_price_id: priceId,
+    current_period_start: unixTimestampToIso(getCurrentPeriodStart(subscription)),
     current_period_end: unixTimestampToIso(getCurrentPeriodEnd(subscription)),
     cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+    created_at: unixTimestampToIso(subscription.created) || new Date().toISOString(),
     plan:
       PRO_SUBSCRIPTION_STATUSES.has(status) && priceId === process.env.STRIPE_PRICE_ID
         ? "pro"
@@ -180,13 +194,27 @@ async function handler(req, res) {
   try {
     requireSupabaseServerConfig();
   } catch (error) {
-    console.error("Stripe webhook configuration error:", error);
-    return res.status(500).json({ error: "Webhook configuration is incomplete." });
+    console.error("Stripe webhook Supabase configuration error:", error.message);
+    return res.status(500).json({
+      error: "Webhook configuration is incomplete.",
+      code: "missing_supabase_config",
+    });
   }
 
   if (!stripeSecretKey || !webhookSecret || !stripePriceId) {
-    console.error("Stripe webhook configuration error: Stripe secrets are missing.");
-    return res.status(500).json({ error: "Webhook configuration is incomplete." });
+    const missingVariables = [
+      ...(!stripeSecretKey ? ["STRIPE_SECRET_KEY"] : []),
+      ...(!webhookSecret ? ["STRIPE_WEBHOOK_SECRET"] : []),
+      ...(!stripePriceId ? ["STRIPE_PRICE_ID"] : []),
+    ];
+    console.error(
+      "Stripe webhook configuration error. Missing environment variables:",
+      missingVariables.join(", ")
+    );
+    return res.status(500).json({
+      error: "Webhook configuration is incomplete.",
+      code: "missing_stripe_config",
+    });
   }
 
   const signature = req.headers["stripe-signature"];

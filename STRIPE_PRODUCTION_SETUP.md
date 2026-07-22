@@ -2,7 +2,7 @@
 
 ## Database migration
 
-Run `supabase/subscriptions.sql` once in the Supabase SQL Editor. It creates the
+Run `supabase/subscriptions.sql` in the Supabase SQL Editor. It safely creates or updates the
 `public.subscriptions` table, enables Row Level Security, lets authenticated users
 read only their own subscription row, and reserves writes for the server-side
 service role.
@@ -13,6 +13,7 @@ The table stores:
 - `stripe_subscription_id`
 - `subscription_status`
 - `stripe_price_id`
+- `current_period_start`
 - `current_period_end`
 - `cancel_at_period_end`
 - `plan`

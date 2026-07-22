@@ -4,12 +4,16 @@ create table if not exists public.subscriptions (
   stripe_subscription_id text unique,
   subscription_status text not null default 'inactive',
   stripe_price_id text,
+  current_period_start timestamptz,
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,
   plan text not null default 'free' check (plan in ('free', 'pro')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.subscriptions
+add column if not exists current_period_start timestamptz;
 
 alter table public.subscriptions enable row level security;
 
