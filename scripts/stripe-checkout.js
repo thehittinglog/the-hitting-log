@@ -33,6 +33,23 @@ document.addEventListener("DOMContentLoaded", () => {
       .join(" ");
   }
 
+  async function readApiResult(response) {
+    const responseText = await response.text();
+
+    if (!responseText) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(responseText);
+    } catch (error) {
+      console.error("Billing API returned a non-JSON response:", response.status, responseText.slice(0, 200));
+      return {
+        error: `The billing service returned an invalid response (${response.status}). Please try again.`,
+      };
+    }
+  }
+
   async function getAuthenticatedSession() {
     if (!window.hittingLogAuth) {
       throw new Error("Authentication is not available.");
@@ -145,10 +162,11 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json"
-        }
+        },
+        body: JSON.stringify({}),
       });
 
-      const result = await response.json();
+      const result = await readApiResult(response);
 
       if (!response.ok) {
         throw new Error(result.error || "Unable to open Stripe billing.");
