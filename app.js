@@ -641,6 +641,30 @@ function calculateStatsFromAtBats(atBats) {
   return createCalculatedStats(stats);
 }
 
+function normalizeHardHitBallValue(value) {
+  if (value === true || value === 1) {
+    return true;
+  }
+
+  if (value === false || value === 0) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (normalizedValue === "true" || normalizedValue === "yes" || normalizedValue === "1") {
+      return true;
+    }
+
+    if (normalizedValue === "false" || normalizedValue === "no" || normalizedValue === "0") {
+      return false;
+    }
+  }
+
+  return null;
+}
+
 function normalizeAtBat(atBat) {
   const pitches = Array.isArray(atBat.pitches) ? atBat.pitches.map(normalizePitch) : [];
   const rawPitcherVelocity = atBat.pitcherVelocity;
@@ -702,7 +726,7 @@ function normalizeAtBat(atBat) {
         : rawPitcherVelocity !== "" && rawPitcherVelocity !== null && Number.isFinite(Number(rawPitcherVelocity))
           ? Number(rawPitcherVelocity)
           : "",
-    hardHitBall: typeof atBat.hardHitBall === "boolean" ? atBat.hardHitBall : null,
+    hardHitBall: normalizeHardHitBallValue(atBat.hardHitBall),
     productiveOut: atBat.productiveOut === true || isAutomaticallyProductiveOut(outcome),
     timing: normalizeTiming(atBat.timing),
     pitches,

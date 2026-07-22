@@ -279,6 +279,8 @@ const SPRAY_RESULT_FILTERS = [
   "fly_balls",
   "line_drives",
   "ground_balls",
+  "hard-hit",
+  "weak-contact",
   "hits",
   "outs",
   "singles",
@@ -396,6 +398,7 @@ function getSprayEntries(games = typeof window.getSavedGames === "function" ? wi
           battedBallType,
           outcome,
           timing: getSprayTiming(pitch, atBat),
+          hardHitBall: atBat.hardHitBall,
           x: location.x,
           y: location.y,
         });
@@ -421,6 +424,14 @@ function matchesSprayFilter(entry, filterId) {
 
   if (filterId === "ground_balls") {
     return entry.battedBallType === "ground_ball";
+  }
+
+  if (filterId === "hard-hit") {
+    return entry.hardHitBall === true;
+  }
+
+  if (filterId === "weak-contact") {
+    return entry.hardHitBall === false;
   }
 
   if (filterId === "hits") {
