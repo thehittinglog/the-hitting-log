@@ -2137,6 +2137,14 @@ select:focus {
   background: rgba(7, 50, 79, 0.8);
 }
 
+.legend-hot-cold-gradient {
+  width: min(180px, 38vw);
+  height: 18px;
+  border: 1px solid rgba(7, 50, 79, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--chart-cold) 0%, rgb(88, 41, 58) 50%, var(--chart-hot) 100%);
+}
+
 .zone-map .zone-cell {
   cursor: default;
   visibility: visible;

@@ -115,6 +115,17 @@ function renderChartStrikeZone() {
 
 window.renderChartStrikeZone = renderChartStrikeZone;
 
+const HOT_COLD_HIT_COLOR = { red: 169, green: 31, blue: 36 };
+const HOT_COLD_OUT_COLOR = { red: 7, green: 50, blue: 79 };
+
+function getHotColdColor(hitRatio, outRatio) {
+  return {
+    red: Math.round((HOT_COLD_HIT_COLOR.red * hitRatio) + (HOT_COLD_OUT_COLOR.red * outRatio)),
+    green: Math.round((HOT_COLD_HIT_COLOR.green * hitRatio) + (HOT_COLD_OUT_COLOR.green * outRatio)),
+    blue: Math.round((HOT_COLD_HIT_COLOR.blue * hitRatio) + (HOT_COLD_OUT_COLOR.blue * outRatio)),
+  };
+}
+
 function getChartCellStyle(bucket, filterName, maxCount) {
   const emptyCellStyle = "background: var(--panel-solid); color: var(--muted); border-color: var(--line);";
 
@@ -131,14 +142,10 @@ function getChartCellStyle(bucket, filterName, maxCount) {
 
     const hitShare = bucket.hits / total;
     const outShare = bucket.outs / total;
+    const color = getHotColdColor(hitShare, outShare);
+    const rgbColor = `${color.red}, ${color.green}, ${color.blue}`;
 
-    if (hitShare > outShare) {
-      const opacity = Math.max(0.2, hitShare * (total / maxCount));
-      return `background: rgba(169, 31, 36, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(169, 31, 36, 0.45);`;
-    }
-
-    const opacity = Math.max(0.2, outShare * (total / maxCount));
-    return `background: rgba(7, 50, 79, ${opacity.toFixed(2)}); color: #ffffff; border-color: rgba(7, 50, 79, 0.45);`;
+    return `background: rgb(${rgbColor}); color: #ffffff; border-color: rgba(${rgbColor}, 0.55);`;
   }
 
   if (bucket.count === 0) {
@@ -163,10 +170,8 @@ function renderChartLegend(filterName) {
 
   if (filterName === "Hot/Cold Zones") {
     chartLegend.innerHTML = `
-      <span class="legend-swatch legend-hit"></span>
-      <span>Red = Single, Double, Triple, Home Run</span>
-      <span class="legend-swatch legend-out"></span>
-      <span>Navy = Out</span>
+      <span class="legend-hot-cold-gradient" aria-hidden="true"></span>
+      <span>Blue / Outs → Purple / Mixed Results → Red / Hits. Purple changes proportionally with the hit and out ratio.</span>
     `;
     return;
   }
@@ -249,13 +254,32 @@ function renderChartsPage() {
         return;
       }
 
-      const count = selectedFilter === "Hot/Cold Zones" ? bucket.hits + bucket.outs : bucket.count;
+      const isHotColdView = selectedFilter === "Hot/Cold Zones";
+      const count = isHotColdView ? bucket.hits + bucket.outs : bucket.count;
       const countElement = cell.querySelector(".zone-count");
 
       cell.style.cssText = getChartCellStyle(bucket, selectedFilter, maxCount);
 
       if (countElement) {
-        countElement.textContent = count > 0 ? String(count) : "";
+        countElement.textContent = isHotColdView && count > 0
+          ? `${Math.round((bucket.hits / count) * 100)}%`
+          : count > 0
+            ? String(count)
+            : "";
+      }
+
+      if (isHotColdView && count > 0) {
+        const hitPercentage = Math.round((bucket.hits / count) * 100);
+        const tooltip = [
+          `Hits: ${bucket.hits}`,
+          `Outs: ${bucket.outs}`,
+          `Hit rate: ${hitPercentage}%`,
+          `Total results: ${count}`,
+        ].join("\n");
+        const locationLabel = cell.getAttribute("aria-label") || "Strike zone";
+
+        cell.title = tooltip;
+        cell.setAttribute("aria-label", `${locationLabel}. ${tooltip.replace(/\n/g, ". ")}`);
       }
     });
 
