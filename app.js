@@ -2385,6 +2385,8 @@ function initGamesPage(games) {
     const velocityText = document.createElement("span");
     const velocityInput = document.createElement("input");
     velocityText.textContent = "Pitcher Velocity";
+    velocityText.dataset.metricInfo = "pitcherVelocity";
+    window.renderMetricInfoButton?.(velocityText, "pitcherVelocity");
     velocityInput.type = "number";
     velocityInput.placeholder = "MPH";
     velocityInput.inputMode = "numeric";
@@ -2639,6 +2641,8 @@ function initGamesPage(games) {
     const velocityText = document.createElement("span");
     const velocityInput = document.createElement("input");
     velocityText.textContent = "Pitcher Velocity";
+    velocityText.dataset.metricInfo = "pitcherVelocity";
+    window.renderMetricInfoButton?.(velocityText, "pitcherVelocity");
     velocityInput.type = "number";
     velocityInput.placeholder = "MPH";
     velocityInput.inputMode = "numeric";

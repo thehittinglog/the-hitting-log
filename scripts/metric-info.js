@@ -1,5 +1,9 @@
 (function () {
   const metricDefinitions = {
+    pitcherVelocity: {
+      title: "Pitcher Velocity",
+      body: "Enter the pitcher's top recorded velocity if it is known. This should be the fastest pitch they are capable of throwing, not necessarily the speed of the current pitch. If the pitcher's velocity is unknown, simply leave this field blank.",
+    },
     games: {
       title: "Games",
       definition: "The total number of games saved in your hitting log.",
@@ -232,8 +236,32 @@
 
   let activeButton = null;
   let activePopover = null;
+  let hoverCloseTimer = null;
+  let infoButtonCount = 0;
+
+  function supportsMetricInfoHover() {
+    return typeof window.matchMedia === "function" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  }
+
+  function clearMetricInfoCloseTimer() {
+    if (hoverCloseTimer) {
+      window.clearTimeout(hoverCloseTimer);
+      hoverCloseTimer = null;
+    }
+  }
+
+  function scheduleMetricInfoClose(button) {
+    clearMetricInfoCloseTimer();
+    hoverCloseTimer = window.setTimeout(() => {
+      if (activeButton === button) {
+        closeMetricInfo();
+      }
+    }, 150);
+  }
 
   function closeMetricInfo() {
+    clearMetricInfoCloseTimer();
+
     if (activeButton) {
       activeButton.setAttribute("aria-expanded", "false");
     }
@@ -339,7 +367,9 @@
     title.textContent = definition.title;
     popover.appendChild(title);
 
-    if (Array.isArray(definition.sections)) {
+    if (definition.body) {
+      popover.appendChild(renderMetricContent(definition.body));
+    } else if (Array.isArray(definition.sections)) {
       definition.sections.forEach((sectionDefinition) => {
         popover.appendChild(createMetricInfoSection(sectionDefinition));
       });
@@ -361,9 +391,14 @@
     activePopover = popover;
     button.setAttribute("aria-expanded", "true");
     positionPopover(popover, button);
+
+    if (supportsMetricInfoHover()) {
+      popover.addEventListener("mouseenter", clearMetricInfoCloseTimer);
+      popover.addEventListener("mouseleave", () => scheduleMetricInfoClose(button));
+    }
   }
 
-  function renderMetricInfoButton(label, metricKey, index) {
+  function renderMetricInfoButton(label, metricKey) {
     const definition = metricDefinitions[metricKey];
 
     if (!definition || label.querySelector(".metric-info-button")) {
@@ -376,7 +411,8 @@
     button.textContent = "?";
     button.setAttribute("aria-label", `Learn about ${definition.title}`);
     button.setAttribute("aria-expanded", "false");
-    button.setAttribute("aria-controls", `metric-info-popover-${metricKey}-${index}`);
+    button.setAttribute("aria-controls", `metric-info-popover-${metricKey}-${infoButtonCount}`);
+    infoButtonCount += 1;
 
     button.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -389,13 +425,31 @@
       openMetricInfo(button, definition);
     });
 
+    button.addEventListener("mouseenter", () => {
+      if (!supportsMetricInfoHover()) {
+        return;
+      }
+
+      clearMetricInfoCloseTimer();
+
+      if (activeButton !== button) {
+        openMetricInfo(button, definition);
+      }
+    });
+
+    button.addEventListener("mouseleave", () => {
+      if (supportsMetricInfoHover()) {
+        scheduleMetricInfoClose(button);
+      }
+    });
+
     label.classList.add("stat-label--with-info");
     label.appendChild(button);
   }
 
   function initializeMetricInfo() {
-    document.querySelectorAll("[data-metric-info]").forEach((label, index) => {
-      renderMetricInfoButton(label, label.dataset.metricInfo, index);
+    document.querySelectorAll("[data-metric-info]").forEach((label) => {
+      renderMetricInfoButton(label, label.dataset.metricInfo);
     });
 
     document.addEventListener("click", (event) => {
@@ -431,6 +485,7 @@
 
   window.metricDefinitions = metricDefinitions;
   window.initializeMetricInfo = initializeMetricInfo;
+  window.renderMetricInfoButton = renderMetricInfoButton;
 
   document.addEventListener("DOMContentLoaded", initializeMetricInfo);
 })();
