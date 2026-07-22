@@ -2060,12 +2060,17 @@ function initGamesPage(games) {
     tournaments.forEach((tournament) => {
       const card = document.createElement("article");
       const name = document.createElement("h3");
+      const viewAllButton = document.createElement("button");
 
       card.className = "tournament-card";
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", `Open ${tournament.name} tournament details`);
       name.textContent = tournament.name;
+      viewAllButton.type = "button";
+      viewAllButton.className = "secondary-button tournament-view-all-button";
+      viewAllButton.textContent = "View All";
+      viewAllButton.setAttribute("aria-label", `View all games in ${tournament.name}`);
       card.addEventListener("click", () => {
         showTournamentDetails(tournament.id);
       });
@@ -2075,8 +2080,13 @@ function initGamesPage(games) {
           showTournamentDetails(tournament.id);
         }
       });
+      viewAllButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showTournamentDetails(tournament.id);
+      });
 
       card.appendChild(name);
+      card.appendChild(viewAllButton);
       tournamentsList.appendChild(card);
     });
 
