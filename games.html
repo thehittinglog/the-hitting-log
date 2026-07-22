@@ -76,29 +76,56 @@
       <section class="panel log-panel">
         <div class="section-heading">
           <div>
-            <h2>Logged Games</h2>
-            <p class="section-copy">Games from the last 7 days appear here after you add them.</p>
+            <h2>Recent Games</h2>
+            <p class="section-copy">Your five most recently dated standalone and tournament games.</p>
           </div>
         </div>
         <div class="table-wrap">
-          <table class="logged-games-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Opponent</th>
-                <th>Batting Average</th>
-                <th>HLP Score</th>
-              </tr>
-            </thead>
+          <table class="logged-games-table recent-games-table">
             <tbody id="games-table-body"></tbody>
           </table>
         </div>
-        <p id="empty-state" class="empty-state">No games from the last 7 days yet.</p>
+        <p id="empty-state" class="empty-state">No games logged yet.</p>
         <div class="builder-actions logged-games-actions">
           <a class="button-link" href="all-games.html">View All Games</a>
           <button id="review-games-button" type="button">Review / Edit Games</button>
         </div>
       </section>
+
+      <section class="panel active-tournaments-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Active Tournaments</h2>
+            <p class="section-copy">Return to an in-progress tournament or add its next game.</p>
+          </div>
+        </div>
+        <div id="active-tournaments-list" class="tournament-card-list"></div>
+        <p id="active-tournaments-empty" class="empty-state">No active tournaments.</p>
+      </section>
+    </section>
+
+    <section id="tournament-details-view" class="panel game-review-view tournament-details-view" hidden>
+      <div class="section-heading">
+        <div>
+          <h2 id="tournament-details-title">Tournament Details</h2>
+          <p id="tournament-details-dates" class="section-copy"></p>
+          <p id="tournament-details-count" class="tournament-details-count"></p>
+        </div>
+        <div class="builder-actions tournament-details-actions">
+          <button id="tournament-details-add-game" type="button">Add Game</button>
+          <button id="tournament-details-back" class="secondary-button" type="button">Back to Games</button>
+        </div>
+      </div>
+      <label class="tournament-completed-toggle" for="tournament-completed-toggle">
+        <input id="tournament-completed-toggle" type="checkbox">
+        <span>Completed</span>
+      </label>
+      <div class="table-wrap">
+        <table class="logged-games-table tournament-games-table">
+          <tbody id="tournament-details-games"></tbody>
+        </table>
+      </div>
+      <p id="tournament-details-empty" class="empty-state">No games logged in this tournament yet.</p>
     </section>
 
     <section id="game-review-list-view" class="panel game-review-view" hidden>

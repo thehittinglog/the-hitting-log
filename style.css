@@ -2633,6 +2633,7 @@ tbody td {
 }
 
 .logged-game-opponent,
+.logged-game-final-score,
 .logged-game-average,
 .logged-game-score {
   margin: 0;
@@ -2644,9 +2645,104 @@ tbody td {
 }
 
 .logged-game-average,
+.logged-game-final-score,
 .logged-game-score {
   color: var(--ink);
   font-weight: 800;
+}
+
+.logged-game-card-row.clickable-game-row .logged-game-card {
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.logged-game-card-row.clickable-game-row:hover .logged-game-card,
+.logged-game-card-row.clickable-game-row:focus-visible .logged-game-card {
+  border-color: rgba(169, 31, 36, 0.42);
+  box-shadow: 0 12px 24px rgba(7, 50, 79, 0.1);
+  transform: translateY(-1px);
+}
+
+.active-tournaments-panel {
+  margin-top: 20px;
+}
+
+.tournament-card-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.tournament-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-solid);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.tournament-card:hover,
+.tournament-card:focus-visible {
+  border-color: rgba(169, 31, 36, 0.42);
+  box-shadow: 0 12px 24px rgba(7, 50, 79, 0.1);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.tournament-card-content {
+  min-width: 0;
+}
+
+.tournament-card-content h3,
+.tournament-card-date,
+.tournament-card-count,
+.tournament-details-count {
+  margin: 0;
+}
+
+.tournament-card-date {
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tournament-card-count,
+.tournament-details-count {
+  margin-top: 6px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.tournament-card > button {
+  width: auto;
+  white-space: nowrap;
+}
+
+.tournament-details-actions {
+  grid-template-columns: repeat(2, max-content);
+  align-items: center;
+}
+
+.tournament-completed-toggle {
+  display: inline-flex;
+  width: max-content;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 4px;
+  cursor: pointer;
+}
+
+.tournament-completed-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
 }
 
 .pagination-controls {
@@ -2846,6 +2942,16 @@ body[data-page="games"] #game-choice-view .choice-card-button {
 
   .pitch-type-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tournament-card,
+  .tournament-details-actions {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .tournament-card > button {
+    width: 100%;
   }
 
   body[data-page="dashboard"] .dashboard-snapshot-grid {

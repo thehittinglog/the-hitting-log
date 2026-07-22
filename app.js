@@ -773,9 +773,11 @@ function normalizeGame(game) {
     id: typeof game.id === "string" ? game.id : createId("game"),
     date: game.date || "",
     opponent: game.opponent || "",
+    finalScore: typeof game.finalScore === "string" ? game.finalScore : "",
     tournamentId: typeof game.tournamentId === "string" && game.tournamentId ? game.tournamentId : null,
     tournamentName: typeof game.tournamentName === "string" && game.tournamentName ? game.tournamentName : null,
     tournamentGameNumber: Number.isFinite(tournamentGameNumber) && tournamentGameNumber > 0 ? tournamentGameNumber : null,
+    tournamentCompleted: game.tournamentCompleted === true,
   };
 
   if (Array.isArray(game.atBats)) {
@@ -1120,7 +1122,7 @@ function formatDisplayDate(dateValue) {
   });
 }
 
-function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opponent) {
+function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opponent, options = {}) {
   const row = document.createElement("tr");
   const cell = document.createElement("td");
   const card = document.createElement("article");
@@ -1132,6 +1134,11 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   const score = calculateHittingLogPerformanceScore(gameStats);
 
   row.className = "logged-game-card-row";
+  if (options.clickable) {
+    row.classList.add("clickable-game-row");
+    row.tabIndex = 0;
+    row.dataset.gameId = gameStats.id;
+  }
   cell.colSpan = 1;
   card.className = "logged-game-card";
   date.className = "logged-game-date";
@@ -1151,6 +1158,12 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
 
   card.appendChild(date);
   card.appendChild(opponent);
+  if (gameStats.finalScore) {
+    const finalScore = document.createElement("p");
+    finalScore.className = "logged-game-final-score";
+    finalScore.textContent = `Final Score: ${gameStats.finalScore}`;
+    card.appendChild(finalScore);
+  }
   card.appendChild(average);
   card.appendChild(performanceScore);
   cell.appendChild(card);
@@ -1164,6 +1177,55 @@ function hasTournamentGame(game) {
 
 function getTournamentKey(game) {
   return game.tournamentId || game.tournamentName || "";
+}
+
+function getTournamentGroups(games) {
+  const groups = new Map();
+
+  games.forEach((game) => {
+    if (!hasTournamentGame(game)) {
+      return;
+    }
+
+    const tournamentKey = getTournamentKey(game);
+
+    if (!groups.has(tournamentKey)) {
+      groups.set(tournamentKey, {
+        id: game.tournamentId || tournamentKey,
+        name: game.tournamentName || "Tournament",
+        completed: false,
+        startDate: game.date || "",
+        endDate: game.date || "",
+        games: [],
+      });
+    }
+
+    const group = groups.get(tournamentKey);
+    group.completed = group.completed || game.tournamentCompleted === true;
+    group.games.push(game);
+
+    if (game.date && (!group.startDate || game.date < group.startDate)) {
+      group.startDate = game.date;
+    }
+
+    if (game.date && (!group.endDate || game.date > group.endDate)) {
+      group.endDate = game.date;
+    }
+  });
+
+  return Array.from(groups.values()).sort((a, b) => b.endDate.localeCompare(a.endDate));
+}
+
+function formatTournamentDateRange(tournament) {
+  if (!tournament?.startDate) {
+    return "Dates unavailable";
+  }
+
+  if (!tournament.endDate || tournament.startDate === tournament.endDate) {
+    return formatDisplayDate(tournament.startDate);
+  }
+
+  return `${formatDisplayDate(tournament.startDate)} – ${formatDisplayDate(tournament.endDate)}`;
 }
 
 function appendGroupHeader(tableBody, label, columnCount) {
@@ -1258,9 +1320,10 @@ function renderGroupedGamesTable(tableBody, games, options = {}) {
   }
 }
 
-function renderSimpleGamesTable(tableBody, games) {
+function renderSimpleGamesTable(tableBody, games, options = {}) {
   games.forEach((game) => {
-    appendSimpleGameRow(tableBody, getGameStats(game));
+    const gameStats = getGameStats(game);
+    appendSimpleGameRow(tableBody, gameStats, gameStats.opponent, options);
   });
 }
 
@@ -1685,9 +1748,6 @@ function renderAtBatList(listElement, atBats) {
 }
 
 function initGamesPage(games) {
-  updateSummaryCards(games);
-  renderGamesTable(games, "games-table-body", "empty-state");
-
   const homeView = document.getElementById("games-home-view");
   const reviewListView = document.getElementById("game-review-list-view");
   const reviewGamesButton = document.getElementById("review-games-button");
@@ -1700,6 +1760,18 @@ function initGamesPage(games) {
   const reviewMessage = document.getElementById("review-message");
   const reviewAtBatList = document.getElementById("review-at-bat-list");
   const gamesTableBody = document.getElementById("games-table-body");
+  const gamesEmpty = document.getElementById("empty-state");
+  const activeTournamentsList = document.getElementById("active-tournaments-list");
+  const activeTournamentsEmpty = document.getElementById("active-tournaments-empty");
+  const tournamentDetailsView = document.getElementById("tournament-details-view");
+  const tournamentDetailsTitle = document.getElementById("tournament-details-title");
+  const tournamentDetailsDates = document.getElementById("tournament-details-dates");
+  const tournamentDetailsCount = document.getElementById("tournament-details-count");
+  const tournamentDetailsGames = document.getElementById("tournament-details-games");
+  const tournamentDetailsEmpty = document.getElementById("tournament-details-empty");
+  const tournamentDetailsAddGame = document.getElementById("tournament-details-add-game");
+  const tournamentDetailsBack = document.getElementById("tournament-details-back");
+  const tournamentCompletedToggle = document.getElementById("tournament-completed-toggle");
   const choiceView = document.getElementById("game-choice-view");
   const tournamentNameView = document.getElementById("tournament-name-view");
   const newGameView = document.getElementById("new-game-view");
@@ -1739,6 +1811,18 @@ function initGamesPage(games) {
     !reviewMessage ||
     !reviewAtBatList ||
     !gamesTableBody ||
+    !gamesEmpty ||
+    !activeTournamentsList ||
+    !activeTournamentsEmpty ||
+    !tournamentDetailsView ||
+    !tournamentDetailsTitle ||
+    !tournamentDetailsDates ||
+    !tournamentDetailsCount ||
+    !tournamentDetailsGames ||
+    !tournamentDetailsEmpty ||
+    !tournamentDetailsAddGame ||
+    !tournamentDetailsBack ||
+    !tournamentCompletedToggle ||
     !choiceView ||
     !tournamentNameView ||
     !newGameView ||
@@ -1773,6 +1857,8 @@ function initGamesPage(games) {
     activeAtBat: null,
     activePitch: null,
     activeTournament: null,
+    selectedTournamentId: "",
+    reviewReturnView: "home",
     reviewGameId: "",
     editingAtBatIndex: null,
     editingAtBatDraft: null,
@@ -1859,7 +1945,7 @@ function initGamesPage(games) {
   }
 
   function getNextTournamentGameNumber(tournamentId) {
-    const tournamentGames = games.filter((game) => game.tournamentId === tournamentId);
+    const tournamentGames = games.filter((game) => getTournamentKey(game) === tournamentId);
     const highestGameNumber = tournamentGames.reduce((highest, game) => {
       return Math.max(highest, Number(game.tournamentGameNumber) || 0);
     }, 0);
@@ -1871,7 +1957,139 @@ function initGamesPage(games) {
     return {
       id: createId("tournament"),
       name,
+      completed: false,
     };
+  }
+
+  function getTournamentById(tournamentId) {
+    return getTournamentGroups(games).find((tournament) => tournament.id === tournamentId) || null;
+  }
+
+  function getTournamentGameCountText(gameCount) {
+    return `${gameCount} ${gameCount === 1 ? "Game" : "Games"} Logged`;
+  }
+
+  function renderRecentGames() {
+    gamesTableBody.innerHTML = "";
+    sortGamesByDateDesc(games)
+      .slice(0, 5)
+      .forEach((game) => appendSimpleGameRow(gamesTableBody, getGameStats(game), game.opponent, { clickable: true }));
+    gamesEmpty.hidden = gamesTableBody.children.length > 0;
+  }
+
+  function openTournamentGame(tournament) {
+    showNewGameView({
+      id: tournament.id,
+      name: tournament.name,
+      completed: tournament.completed === true,
+    });
+  }
+
+  function renderActiveTournaments() {
+    const activeTournaments = getTournamentGroups(games).filter((tournament) => !tournament.completed);
+    activeTournamentsList.innerHTML = "";
+
+    activeTournaments.forEach((tournament) => {
+      const card = document.createElement("article");
+      const content = document.createElement("div");
+      const name = document.createElement("h3");
+      const date = document.createElement("p");
+      const gameCount = document.createElement("p");
+      const addGame = document.createElement("button");
+
+      card.className = "tournament-card";
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", `Open ${tournament.name} tournament details`);
+      content.className = "tournament-card-content";
+      name.textContent = tournament.name;
+      date.className = "tournament-card-date";
+      date.textContent = `Starts ${formatDisplayDate(tournament.startDate)}`;
+      gameCount.className = "tournament-card-count";
+      gameCount.textContent = getTournamentGameCountText(tournament.games.length);
+      addGame.type = "button";
+      addGame.textContent = "Add Game";
+
+      addGame.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openTournamentGame(tournament);
+      });
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest("button")) {
+          showTournamentDetails(tournament.id);
+        }
+      });
+      card.addEventListener("keydown", (event) => {
+        if ((event.key === "Enter" || event.key === " ") && event.target === card) {
+          event.preventDefault();
+          showTournamentDetails(tournament.id);
+        }
+      });
+
+      content.appendChild(name);
+      content.appendChild(date);
+      content.appendChild(gameCount);
+      card.appendChild(content);
+      card.appendChild(addGame);
+      activeTournamentsList.appendChild(card);
+    });
+
+    activeTournamentsEmpty.hidden = activeTournaments.length > 0;
+  }
+
+  function renderGamesHome() {
+    updateSummaryCards(games);
+    renderRecentGames();
+    renderActiveTournaments();
+  }
+
+  function renderTournamentDetails() {
+    const tournament = getTournamentById(state.selectedTournamentId);
+
+    if (!tournament) {
+      showHomeView();
+      return;
+    }
+
+    tournamentDetailsTitle.textContent = tournament.name;
+    tournamentDetailsDates.textContent = formatTournamentDateRange(tournament);
+    tournamentDetailsCount.textContent = getTournamentGameCountText(tournament.games.length);
+    tournamentCompletedToggle.checked = tournament.completed;
+    tournamentDetailsGames.innerHTML = "";
+    sortTournamentGames(tournament.games).forEach((game) => {
+      appendSimpleGameRow(tournamentDetailsGames, getGameStats(game), game.opponent, { clickable: true });
+    });
+    tournamentDetailsEmpty.hidden = tournamentDetailsGames.children.length > 0;
+  }
+
+  function showTournamentDetails(tournamentId) {
+    state.selectedTournamentId = tournamentId;
+    homeView.hidden = true;
+    reviewListView.hidden = true;
+    reviewView.hidden = true;
+    tournamentDetailsView.hidden = false;
+    choiceView.hidden = true;
+    tournamentNameView.hidden = true;
+    newGameView.hidden = true;
+    renderTournamentDetails();
+  }
+
+  function setTournamentCompletion(tournamentId, completed) {
+    games
+      .filter((game) => getTournamentKey(game) === tournamentId)
+      .slice()
+      .forEach((game) => {
+        upsertSavedGame(games, {
+          ...game,
+          tournamentCompleted: completed,
+        });
+      });
+
+    if (state.activeTournament?.id === tournamentId) {
+      state.activeTournament.completed = completed;
+    }
+
+    renderActiveTournaments();
   }
 
   function createDraftGame() {
@@ -1884,6 +2102,7 @@ function initGamesPage(games) {
       tournamentId: tournament ? tournament.id : null,
       tournamentName: tournament ? tournament.name : null,
       tournamentGameNumber: tournament ? getNextTournamentGameNumber(tournament.id) : null,
+      tournamentCompleted: tournament ? tournament.completed === true : false,
     };
   }
 
@@ -1919,21 +2138,23 @@ function initGamesPage(games) {
     homeView.hidden = false;
     reviewListView.hidden = true;
     reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = true;
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
     state.reviewGameId = "";
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
+    state.selectedTournamentId = "";
     reviewMessage.textContent = "";
-    updateSummaryCards(games);
-    renderGamesTable(games, "games-table-body", "empty-state");
+    renderGamesHome();
   }
 
   function showReviewListView() {
     homeView.hidden = true;
     reviewListView.hidden = false;
     reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = true;
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
@@ -1949,6 +2170,7 @@ function initGamesPage(games) {
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = false;
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
@@ -1958,6 +2180,7 @@ function initGamesPage(games) {
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = true;
     tournamentNameView.hidden = false;
     newGameView.hidden = true;
@@ -1999,6 +2222,7 @@ function initGamesPage(games) {
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = true;
     tournamentNameView.hidden = true;
     newGameView.hidden = false;
@@ -2029,10 +2253,12 @@ function initGamesPage(games) {
       state.draftGame.tournamentId = state.activeTournament.id;
       state.draftGame.tournamentName = state.activeTournament.name;
       state.draftGame.tournamentGameNumber = state.draftGame.tournamentGameNumber || getNextTournamentGameNumber(state.activeTournament.id);
+      state.draftGame.tournamentCompleted = state.activeTournament.completed === true;
     } else {
       state.draftGame.tournamentId = null;
       state.draftGame.tournamentName = null;
       state.draftGame.tournamentGameNumber = null;
+      state.draftGame.tournamentCompleted = false;
     }
   }
 
@@ -2684,8 +2910,7 @@ function initGamesPage(games) {
       state.editingAtBatDraft = null;
       reviewMessage.textContent = "At-bat updated.";
       reviewMessage.classList.add("is-success");
-      updateSummaryCards(games);
-      renderGamesTable(games, "games-table-body", "empty-state");
+      renderGamesHome();
       renderGamesTable(games, "review-games-table-body", "review-games-empty");
       renderReviewGame();
     });
@@ -2770,13 +2995,15 @@ function initGamesPage(games) {
     });
   }
 
-  function showGameReview(gameId) {
+  function showGameReview(gameId, returnView = "review-list") {
     state.reviewGameId = gameId;
+    state.reviewReturnView = returnView;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = false;
+    tournamentDetailsView.hidden = true;
     choiceView.hidden = true;
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
@@ -3251,8 +3478,7 @@ function initGamesPage(games) {
     syncDraftFields();
     if (state.draftGame.date && state.draftGame.opponent) {
       state.draftGame = upsertSavedGame(games, state.draftGame);
-      updateSummaryCards(games);
-      renderGamesTable(games, "games-table-body", "empty-state");
+      renderGamesHome();
     }
 
     state.activeAtBat = null;
@@ -3273,7 +3499,7 @@ function initGamesPage(games) {
     const gameId = actionButton?.dataset.gameId || row?.dataset.gameId || "";
 
     if (gameId) {
-      showGameReview(gameId);
+      showGameReview(gameId, "review-list");
     }
   });
 
@@ -3286,13 +3512,55 @@ function initGamesPage(games) {
 
     if (row?.dataset.gameId) {
       event.preventDefault();
-      showGameReview(row.dataset.gameId);
+      showGameReview(row.dataset.gameId, "review-list");
+    }
+  });
+
+  gamesTableBody.addEventListener("click", (event) => {
+    const row = event.target.closest(".clickable-game-row");
+
+    if (row?.dataset.gameId) {
+      showGameReview(row.dataset.gameId, "home");
+    }
+  });
+
+  gamesTableBody.addEventListener("keydown", (event) => {
+    const row = event.target.closest(".clickable-game-row");
+
+    if ((event.key === "Enter" || event.key === " ") && row?.dataset.gameId) {
+      event.preventDefault();
+      showGameReview(row.dataset.gameId, "home");
+    }
+  });
+
+  tournamentDetailsGames.addEventListener("click", (event) => {
+    const row = event.target.closest(".clickable-game-row");
+
+    if (row?.dataset.gameId) {
+      showGameReview(row.dataset.gameId, "tournament");
+    }
+  });
+
+  tournamentDetailsGames.addEventListener("keydown", (event) => {
+    const row = event.target.closest(".clickable-game-row");
+
+    if ((event.key === "Enter" || event.key === " ") && row?.dataset.gameId) {
+      event.preventDefault();
+      showGameReview(row.dataset.gameId, "tournament");
     }
   });
 
   reviewGamesButton.addEventListener("click", showReviewListView);
   reviewListBackButton.addEventListener("click", showHomeView);
-  reviewBackButton.addEventListener("click", showReviewListView);
+  reviewBackButton.addEventListener("click", () => {
+    if (state.reviewReturnView === "tournament" && state.selectedTournamentId) {
+      showTournamentDetails(state.selectedTournamentId);
+    } else if (state.reviewReturnView === "home") {
+      showHomeView();
+    } else {
+      showReviewListView();
+    }
+  });
   addGameButton.addEventListener("click", showChoiceView);
   choiceBackButton.addEventListener("click", showHomeView);
   startTournamentButton.addEventListener("click", showTournamentNameView);
@@ -3301,6 +3569,24 @@ function initGamesPage(games) {
     showNewGameView(null);
   });
   backButton.addEventListener("click", showHomeView);
+  tournamentDetailsBack.addEventListener("click", showHomeView);
+  tournamentDetailsAddGame.addEventListener("click", () => {
+    const tournament = getTournamentById(state.selectedTournamentId);
+
+    if (tournament) {
+      openTournamentGame(tournament);
+    }
+  });
+  tournamentCompletedToggle.addEventListener("change", () => {
+    const tournamentId = state.selectedTournamentId;
+
+    if (!tournamentId) {
+      return;
+    }
+
+    setTournamentCompletion(tournamentId, tournamentCompletedToggle.checked);
+    renderTournamentDetails();
+  });
 
   tournamentNameForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -3333,6 +3619,7 @@ function initGamesPage(games) {
       return;
     }
 
+    setTournamentCompletion(state.activeTournament.id, true);
     state.activeTournament = null;
     showHomeView();
   });
@@ -3351,8 +3638,7 @@ function initGamesPage(games) {
     }
 
     state.draftGame = upsertSavedGame(games, state.draftGame);
-    updateSummaryCards(games);
-    renderGamesTable(games, "games-table-body", "empty-state");
+    renderGamesHome();
     setMessage(message, true);
     return true;
   }
@@ -3406,7 +3692,7 @@ function initGamesPage(games) {
 
   const requestedReviewGameId = new URLSearchParams(window.location.search).get("reviewGameId");
   if (requestedReviewGameId && games.some((game) => getGameStats(game).id === requestedReviewGameId)) {
-    showGameReview(requestedReviewGameId);
+    showGameReview(requestedReviewGameId, "home");
   } else {
     showHomeView();
   }
