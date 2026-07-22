@@ -44,6 +44,82 @@ function populateVelocityRangeOptions(select) {
   select.value = ranges.includes(previousValue) ? previousValue : "all";
 }
 
+function populatePitchTypeOptions(select) {
+  const previousValue = select.value || "all";
+  const pitchTypes =
+    typeof window.getPitchTypesForSport === "function"
+      ? window.getPitchTypesForSport(getSavedChartSportType())
+      : [];
+
+  select.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "All Pitch Types";
+  select.appendChild(allOption);
+
+  pitchTypes.forEach((pitchType) => {
+    const option = document.createElement("option");
+    option.value = pitchType.value;
+    option.textContent = pitchType.filterLabel || pitchType.label;
+    select.appendChild(option);
+  });
+
+  select.value = pitchTypes.some((pitchType) => pitchType.value === previousValue)
+    ? previousValue
+    : "all";
+}
+
+function normalizePitcherHandedness(value) {
+  const normalizedValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+
+  if (["r", "rh", "rhp", "right", "righthanded"].includes(normalizedValue)) {
+    return "right";
+  }
+
+  if (["l", "lh", "lhp", "left", "lefthanded"].includes(normalizedValue)) {
+    return "left";
+  }
+
+  return "";
+}
+
+function matchesPitcherHandedness(pitch, selectedHandedness) {
+  if (!selectedHandedness || selectedHandedness === "all") {
+    return true;
+  }
+
+  const savedHandedness =
+    pitch?.pitcherHandedness ||
+    pitch?.pitcher_handedness ||
+    pitch?.atBat?.pitcherHandedness ||
+    pitch?.atBat?.pitcher_handedness ||
+    "";
+
+  return normalizePitcherHandedness(savedHandedness) === selectedHandedness;
+}
+
+function matchesPitchType(pitch, selectedPitchType) {
+  if (!selectedPitchType || selectedPitchType === "all") {
+    return true;
+  }
+
+  const savedPitchType = pitch?.pitchType || pitch?.pitch_type || "";
+
+  if (!String(savedPitchType).trim()) {
+    return false;
+  }
+
+  const normalize =
+    typeof window.normalizePitchType === "function"
+      ? window.normalizePitchType
+      : (value) => String(value || "").trim().toLowerCase();
+
+  return normalize(savedPitchType) === normalize(selectedPitchType);
+}
+
 function getRecordedPitchVelocity(pitch, atBat = pitch?.atBat) {
   const possibleValues = [
     pitch?.pitchVelocity,
@@ -274,6 +350,8 @@ function renderChartLegend(filterName) {
 function renderChartsPage() {
   const filterSelect = document.getElementById("chart-filter");
   const velocitySelect = document.getElementById("chart-velocity-filter");
+  const handednessSelect = document.getElementById("chart-handedness-filter");
+  const pitchTypeSelect = document.getElementById("chart-pitch-type-filter");
   const startDateInput = document.getElementById("chart-start-date");
   const endDateInput = document.getElementById("chart-end-date");
   const generateButton = document.getElementById("generate-chart-button");
@@ -282,12 +360,13 @@ function renderChartsPage() {
   const filterTotal = document.getElementById("chart-filter-total");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !velocitySelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
+  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
     return;
   }
 
   removeHiddenChartFilterOptions(filterSelect);
   populateVelocityRangeOptions(velocitySelect);
+  populatePitchTypeOptions(pitchTypeSelect);
 
   function renderSelectedFilter() {
     const selectedFilter =
@@ -299,12 +378,16 @@ function renderChartsPage() {
     const allAtBats = typeof window.getAllAtBats === "function" ? window.getAllAtBats(filteredGames) : [];
     const allPitches = typeof window.getAllPitches === "function" ? window.getAllPitches(filteredGames) : [];
     const selectedVelocityRange = velocitySelect.value;
-    const velocityMatches = (pitch) =>
-      matchesVelocityRange(getRecordedPitchVelocity(pitch, pitch.atBat), selectedVelocityRange);
-    const velocityMatchedPitches = allPitches.filter(velocityMatches);
+    const selectedHandedness = handednessSelect.value;
+    const selectedPitchType = pitchTypeSelect.value;
+    const matchesActiveFilters = (pitch) =>
+      matchesVelocityRange(getRecordedPitchVelocity(pitch, pitch.atBat), selectedVelocityRange) &&
+      matchesPitcherHandedness(pitch, selectedHandedness) &&
+      matchesPitchType(pitch, selectedPitchType);
+    const filterMatchedPitches = allPitches.filter(matchesActiveFilters);
     const chartData =
       typeof window.getChartDataForFilter === "function"
-        ? window.getChartDataForFilter(selectedFilter, filteredGames, velocityMatches)
+        ? window.getChartDataForFilter(selectedFilter, filteredGames, matchesActiveFilters)
         : { buckets: {}, totalMatches: 0, matchingPitches: [] };
     const zoneCounts = Object.entries(chartData.buckets || {}).reduce((counts, [locationId, bucket]) => {
       const count =
@@ -372,16 +455,21 @@ function renderChartsPage() {
 
     filterTotal.textContent = String(chartData.totalMatches || 0);
     chartZoneTitle.textContent = selectedFilter;
-    chartsEmpty.hidden =
-      selectedVelocityRange === "all"
-        ? allPitches.length > 0 || allAtBats.length > 0
-        : velocityMatchedPitches.length > 0;
+    const hasActivePitchFilter =
+      selectedVelocityRange !== "all" ||
+      selectedHandedness !== "all" ||
+      selectedPitchType !== "all";
+    chartsEmpty.hidden = hasActivePitchFilter
+      ? filterMatchedPitches.length > 0
+      : allPitches.length > 0 || allAtBats.length > 0;
     renderChartLegend(selectedFilter);
   }
 
   generateButton.addEventListener("click", renderSelectedFilter);
   filterSelect.addEventListener("change", renderSelectedFilter);
   velocitySelect.addEventListener("change", renderSelectedFilter);
+  handednessSelect.addEventListener("change", renderSelectedFilter);
+  pitchTypeSelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();

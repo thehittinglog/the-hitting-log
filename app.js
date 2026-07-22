@@ -8,25 +8,25 @@ const PUBLIC_SIGNUP_ENABLED = true;
 const DEFAULT_SPORT_TYPE = "baseball";
 const PITCH_TYPES_BY_SPORT = {
   baseball: [
-    { label: "4 Seam Fastball", value: "four_seam_fastball" },
-    { label: "2 Seam Fastball", value: "two_seam_fastball" },
-    { label: "Changeup", value: "changeup" },
-    { label: "Sinker", value: "sinker" },
-    { label: "Slider", value: "slider" },
-    { label: "Cutter", value: "cutter" },
-    { label: "12-6 Curve", value: "twelve_six_curve" },
-    { label: "Sweeper Curve", value: "sweeper_curve" },
-    { label: "Unknown", value: "Unknown" },
+    { label: "4 Seam Fastball", filterLabel: "4-Seam Fastball", value: "four_seam_fastball" },
+    { label: "2 Seam Fastball", filterLabel: "2-Seam Fastball", value: "two_seam_fastball" },
+    { label: "Changeup", filterLabel: "Changeup", value: "changeup" },
+    { label: "Sinker", filterLabel: "Sinker", value: "sinker" },
+    { label: "Slider", filterLabel: "Slider", value: "slider" },
+    { label: "Cutter", filterLabel: "Cutter", value: "cutter" },
+    { label: "12-6 Curve", filterLabel: "Curveball", value: "twelve_six_curve" },
+    { label: "Sweeper Curve", filterLabel: "Sweeper", value: "sweeper_curve" },
+    { label: "Unknown", filterLabel: "Unknown", value: "Unknown" },
   ],
   softball: [
-    { label: "Fastball", value: "fastball" },
-    { label: "Changeup", value: "changeup" },
-    { label: "Curve", value: "curve" },
-    { label: "Screw", value: "screwball" },
-    { label: "Drop", value: "drop" },
-    { label: "Rise", value: "rise" },
-    { label: "Drop-Curve", value: "drop_curve" },
-    { label: "Unknown", value: "Unknown" },
+    { label: "Fastball", filterLabel: "Fastball", value: "fastball" },
+    { label: "Changeup", filterLabel: "Changeup", value: "changeup" },
+    { label: "Curve", filterLabel: "Curveball", value: "curve" },
+    { label: "Screw", filterLabel: "Screwball", value: "screwball" },
+    { label: "Drop", filterLabel: "Drop Ball", value: "drop" },
+    { label: "Rise", filterLabel: "Rise Ball", value: "rise" },
+    { label: "Drop-Curve", filterLabel: "Drop Curve", value: "drop_curve" },
+    { label: "Unknown", filterLabel: "Unknown", value: "Unknown" },
   ],
 };
 const outcomeFields = [
@@ -211,6 +211,13 @@ function getCurrentSportType() {
   return normalizeSportType(getCurrentAccount()?.sportType);
 }
 
+function getPitchTypesForSport(sportType = getCurrentSportType()) {
+  const normalizedSportType = normalizeSportType(sportType);
+  return PITCH_TYPES_BY_SPORT[normalizedSportType] || PITCH_TYPES_BY_SPORT[DEFAULT_SPORT_TYPE];
+}
+
+window.getPitchTypesForSport = getPitchTypesForSport;
+
 function updateCurrentAccountSportType(sportType) {
   const currentUser = getCurrentUser();
 
@@ -357,6 +364,8 @@ function normalizePitchType(pitchType) {
 function getStoredPitchType(pitchType) {
   return String(pitchType || "").trim() === "Unknown" ? "Unknown" : normalizePitchType(pitchType);
 }
+
+window.normalizePitchType = normalizePitchType;
 
 function normalizePitch(pitch) {
   const location =
@@ -1943,7 +1952,7 @@ function initGamesPage(games) {
     { label: "HBP", value: "hit_by_pitch" },
   ];
   function getPitchTypeOptions() {
-    return PITCH_TYPES_BY_SPORT[getCurrentSportType()] || PITCH_TYPES_BY_SPORT[DEFAULT_SPORT_TYPE];
+    return getPitchTypesForSport();
   }
   const strikeOptions = [
     { label: "Called Strike", value: "called_strike" },

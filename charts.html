@@ -68,53 +68,67 @@
       </section>
 
       <section class="panel">
-        <div class="section-heading">
-          <div>
-            <h2>Strike Zone Map</h2>
-            <p class="section-copy">The map uses your saved pitch locations from localStorage.</p>
-          </div>
+        <div class="heat-map-header">
+          <h2>Strikes on Map</h2>
           <a class="back-link" href="charts.html">Back to Charts</a>
         </div>
-        <div class="chart-controls">
-          <div class="date-filter-group" aria-label="Heat map date range">
-            <label class="filter-label" for="chart-start-date">
-              <span>Start Date</span>
-              <input id="chart-start-date" type="date">
+        <div class="heat-map-filters">
+          <h3>Filters</h3>
+          <div class="chart-controls heat-map-filter-stack">
+            <div class="date-filter-group heat-map-date-row" aria-label="Heat map date range">
+              <label class="filter-label" for="chart-start-date">
+                <span>Start Date</span>
+                <input id="chart-start-date" type="date">
+              </label>
+              <label class="filter-label" for="chart-end-date">
+                <span>End Date</span>
+                <input id="chart-end-date" type="date">
+              </label>
+            </div>
+            <label class="filter-label" for="chart-filter">
+              <span>Outcome</span>
+              <select id="chart-filter">
+                <option value="Hot/Cold Zones">Hot/Cold Zones</option>
+                <option value="Called Strike">Called Strike</option>
+                <option value="Swinging Strike">Swinging Strike</option>
+                <option value="Foul Ball">Foul Ball</option>
+                <option value="Ground Ball">Ground Ball</option>
+                <option value="Line Drive">Line Drive</option>
+                <option value="Fly Ball">Fly Ball</option>
+                <option value="Single">Single</option>
+                <option value="Double">Double</option>
+                <option value="Triple">Triple</option>
+                <option value="Home Run">Home Run</option>
+                <option value="Out">Out</option>
+                <option value="On Time">On Time</option>
+                <option value="Early">Early</option>
+                <option value="Late">Late</option>
+                <option value="Sac Fly">Sac Fly</option>
+                <option value="Strikeout">Strikeout</option>
+              </select>
             </label>
-            <label class="filter-label" for="chart-end-date">
-              <span>End Date</span>
-              <input id="chart-end-date" type="date">
+            <label class="filter-label" for="chart-velocity-filter">
+              <span>Pitch Velocity</span>
+              <select id="chart-velocity-filter">
+                <option value="all">All Velocities</option>
+              </select>
             </label>
+            <label class="filter-label" for="chart-handedness-filter">
+              <span>Pitcher Handedness</span>
+              <select id="chart-handedness-filter">
+                <option value="all">All Pitchers</option>
+                <option value="right">Right-Handed</option>
+                <option value="left">Left-Handed</option>
+              </select>
+            </label>
+            <label class="filter-label" for="chart-pitch-type-filter">
+              <span>Pitch Type</span>
+              <select id="chart-pitch-type-filter">
+                <option value="all">All Pitch Types</option>
+              </select>
+            </label>
+            <button id="generate-chart-button" type="button">Generate</button>
           </div>
-          <label class="filter-label" for="chart-filter">
-            <span>Filter</span>
-            <select id="chart-filter">
-              <option value="Hot/Cold Zones">Hot/Cold Zones</option>
-              <option value="Called Strike">Called Strike</option>
-              <option value="Swinging Strike">Swinging Strike</option>
-              <option value="Foul Ball">Foul Ball</option>
-              <option value="Ground Ball">Ground Ball</option>
-              <option value="Line Drive">Line Drive</option>
-              <option value="Fly Ball">Fly Ball</option>
-              <option value="Single">Single</option>
-              <option value="Double">Double</option>
-              <option value="Triple">Triple</option>
-              <option value="Home Run">Home Run</option>
-              <option value="Out">Out</option>
-              <option value="On Time">On Time</option>
-              <option value="Early">Early</option>
-              <option value="Late">Late</option>
-              <option value="Sac Fly">Sac Fly</option>
-              <option value="Strikeout">Strikeout</option>
-            </select>
-          </label>
-          <label class="filter-label" for="chart-velocity-filter">
-            <span>Filter by Pitch Velocity</span>
-            <select id="chart-velocity-filter">
-              <option value="all">All Velocities</option>
-            </select>
-          </label>
-          <button id="generate-chart-button" type="button">Generate</button>
         </div>
 
         <div class="chart-overview">
