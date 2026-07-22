@@ -2407,6 +2407,10 @@ select:focus {
   min-width: 0;
 }
 
+.spray-chart-velocity-filter-field {
+  margin-top: 14px;
+}
+
 .spray-chart-filter-field label {
   margin: 0;
   font-size: 0.92rem;

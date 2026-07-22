@@ -346,12 +346,16 @@
     }, {});
   }
 
-  function getChartDataForFilter(filterName, games = getSavedGames()) {
+  function getChartDataForFilter(filterName, games = getSavedGames(), pitchPredicate) {
     const selectedFilter = normalizeResultName(filterName || "Hot/Cold Zones");
     const buckets = createLocationBuckets();
     const matchingPitches = [];
 
     getAllPitches(games).forEach((pitch) => {
+      if (typeof pitchPredicate === "function" && !pitchPredicate(pitch)) {
+        return;
+      }
+
       if (!pitch.locationId || !buckets[pitch.locationId]) {
         return;
       }

@@ -9,6 +9,87 @@ const HIDDEN_CHART_FILTER_OPTIONS = new Set([
   "HBP",
 ]);
 
+const VELOCITY_RANGES_BY_SPORT = {
+  softball: ["30-39", "40-49", "50-59", "60-69", "70-79"],
+  baseball: ["60-69", "70-79", "80-89", "90-99", "100-109"],
+};
+
+function getSavedChartSportType() {
+  const sportType =
+    typeof window.getCurrentSportType === "function"
+      ? window.getCurrentSportType()
+      : "baseball";
+
+  return sportType === "softball" ? "softball" : "baseball";
+}
+
+function getVelocityRangeOptions(sportType = getSavedChartSportType()) {
+  const normalizedSportType = sportType === "softball" ? "softball" : "baseball";
+
+  return VELOCITY_RANGES_BY_SPORT[normalizedSportType];
+}
+
+function populateVelocityRangeOptions(select) {
+  const previousValue = select.value || "all";
+  const ranges = getVelocityRangeOptions();
+
+  select.innerHTML = "";
+  ["all", ...ranges].forEach((range) => {
+    const option = document.createElement("option");
+    option.value = range;
+    option.textContent = range === "all" ? "All Velocities" : `${range.replace("-", "–")} mph`;
+    select.appendChild(option);
+  });
+
+  select.value = ranges.includes(previousValue) ? previousValue : "all";
+}
+
+function getRecordedPitchVelocity(pitch, atBat = pitch?.atBat) {
+  const possibleValues = [
+    pitch?.pitchVelocity,
+    pitch?.pitch_velocity,
+    pitch?.velocity,
+    atBat?.pitcherVelocity,
+    atBat?.pitchVelocity,
+    atBat?.pitch_velocity,
+  ];
+
+  for (const value of possibleValues) {
+    if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+      continue;
+    }
+
+    const velocity = Number(value);
+
+    if (Number.isFinite(velocity)) {
+      return velocity;
+    }
+  }
+
+  return null;
+}
+
+function matchesVelocityRange(value, selectedRange) {
+  if (!selectedRange || selectedRange === "all") {
+    return true;
+  }
+
+  if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
+    return false;
+  }
+
+  const velocity = Number(value);
+  const [min, max, ...extraParts] = String(selectedRange).split("-").map(Number);
+
+  if (!Number.isFinite(velocity) || !Number.isFinite(min) || !Number.isFinite(max) || extraParts.length > 0) {
+    return false;
+  }
+
+  return velocity >= min && velocity <= max;
+}
+
+window.matchesVelocityRange = matchesVelocityRange;
+
 function removeHiddenChartFilterOptions(filterSelect) {
   Array.from(filterSelect.options).forEach((option) => {
     if (HIDDEN_CHART_FILTER_OPTIONS.has(option.value)) {
@@ -192,6 +273,7 @@ function renderChartLegend(filterName) {
 
 function renderChartsPage() {
   const filterSelect = document.getElementById("chart-filter");
+  const velocitySelect = document.getElementById("chart-velocity-filter");
   const startDateInput = document.getElementById("chart-start-date");
   const endDateInput = document.getElementById("chart-end-date");
   const generateButton = document.getElementById("generate-chart-button");
@@ -200,11 +282,12 @@ function renderChartsPage() {
   const filterTotal = document.getElementById("chart-filter-total");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
+  if (!filterSelect || !velocitySelect || !startDateInput || !endDateInput || !generateButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
     return;
   }
 
   removeHiddenChartFilterOptions(filterSelect);
+  populateVelocityRangeOptions(velocitySelect);
 
   function renderSelectedFilter() {
     const selectedFilter =
@@ -215,9 +298,13 @@ function renderChartsPage() {
     const filteredGames = filterGamesByChartDateRange(savedGames, getChartDateRange(startDateInput, endDateInput));
     const allAtBats = typeof window.getAllAtBats === "function" ? window.getAllAtBats(filteredGames) : [];
     const allPitches = typeof window.getAllPitches === "function" ? window.getAllPitches(filteredGames) : [];
+    const selectedVelocityRange = velocitySelect.value;
+    const velocityMatches = (pitch) =>
+      matchesVelocityRange(getRecordedPitchVelocity(pitch, pitch.atBat), selectedVelocityRange);
+    const velocityMatchedPitches = allPitches.filter(velocityMatches);
     const chartData =
       typeof window.getChartDataForFilter === "function"
-        ? window.getChartDataForFilter(selectedFilter, filteredGames)
+        ? window.getChartDataForFilter(selectedFilter, filteredGames, velocityMatches)
         : { buckets: {}, totalMatches: 0, matchingPitches: [] };
     const zoneCounts = Object.entries(chartData.buckets || {}).reduce((counts, [locationId, bucket]) => {
       const count =
@@ -285,12 +372,16 @@ function renderChartsPage() {
 
     filterTotal.textContent = String(chartData.totalMatches || 0);
     chartZoneTitle.textContent = selectedFilter;
-    chartsEmpty.hidden = allPitches.length > 0 || allAtBats.length > 0;
+    chartsEmpty.hidden =
+      selectedVelocityRange === "all"
+        ? allPitches.length > 0 || allAtBats.length > 0
+        : velocityMatchedPitches.length > 0;
     renderChartLegend(selectedFilter);
   }
 
   generateButton.addEventListener("click", renderSelectedFilter);
   filterSelect.addEventListener("change", renderSelectedFilter);
+  velocitySelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();
@@ -423,6 +514,7 @@ function getSprayEntries(games = typeof window.getSavedGames === "function" ? wi
           outcome,
           timing: getSprayTiming(pitch, atBat),
           hardHitBall: atBat.hardHitBall,
+          velocity: getRecordedPitchVelocity(pitch, atBat),
           x: location.x,
           y: location.y,
         });
@@ -539,21 +631,29 @@ function renderSprayLegend(legendList, filterId) {
 
 function renderSprayChartsPage() {
   const filterSelect = document.getElementById("spray-result-filter");
+  const velocitySelect = document.getElementById("spray-velocity-filter");
   const startDateInput = document.getElementById("spray-start-date");
   const endDateInput = document.getElementById("spray-end-date");
   const markerLayer = document.getElementById("spray-marker-layer");
   const emptyState = document.getElementById("spray-empty-state");
   const legendList = document.getElementById("spray-legend-list");
 
-  if (!filterSelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
+  if (!filterSelect || !velocitySelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
     return;
   }
+
+  populateVelocityRangeOptions(velocitySelect);
 
   function renderSelectedFilter() {
     const filterId = SPRAY_RESULT_FILTERS.includes(filterSelect.value) ? filterSelect.value : "all";
     const savedGames = typeof window.getSavedGames === "function" ? window.getSavedGames() : [];
     const filteredGames = filterGamesByChartDateRange(savedGames, getChartDateRange(startDateInput, endDateInput));
-    const matches = getSprayEntries(filteredGames).filter((entry) => matchesSprayFilter(entry, filterId));
+    const selectedVelocityRange = velocitySelect.value;
+    const matches = getSprayEntries(filteredGames).filter(
+      (entry) =>
+        matchesSprayFilter(entry, filterId) &&
+        matchesVelocityRange(entry.velocity, selectedVelocityRange)
+    );
 
     markerLayer.innerHTML = "";
     matches.forEach((entry) => {
@@ -571,6 +671,7 @@ function renderSprayChartsPage() {
 
   filterSelect.value = "all";
   filterSelect.addEventListener("change", renderSelectedFilter);
+  velocitySelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();
