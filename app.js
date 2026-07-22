@@ -1068,11 +1068,18 @@ function appendCells(row, values) {
     const cell = document.createElement("td");
     const text = typeof value === "object" && value !== null ? value.text : value;
     const metricKey = typeof value === "object" && value !== null ? value.metricKey : "";
+    const performanceScore = typeof value === "object" && value !== null
+      ? value.performanceScore
+      : undefined;
 
     cell.textContent = String(text);
 
     if (metricKey && typeof window.applyMetricPerformanceColor === "function") {
       window.applyMetricPerformanceColor(cell, metricKey, text);
+    }
+
+    if (performanceScore !== undefined) {
+      applyPerformanceScoreStatus(cell, performanceScore);
     }
 
     row.appendChild(cell);
@@ -1081,13 +1088,19 @@ function appendCells(row, values) {
 
 function appendGameCells(row, gameStats, options = {}) {
   const opponentLabel = options.opponentLabel || gameStats.opponent;
+  const performanceScore = options.compact
+    ? calculateHittingLogPerformanceScore(gameStats)
+    : undefined;
   const values = options.compact
     ? [
         gameStats.date,
         opponentLabel,
         getGameAtBatCount(gameStats),
         gameStats.hits,
-        { text: formatRate(gameStats.ops), metricKey: "ops" },
+        {
+          text: performanceScore === null ? "N/A" : performanceScore,
+          performanceScore,
+        },
       ]
     : [
         gameStats.date,
