@@ -40,11 +40,11 @@
       <div class="summary-grid dashboard-snapshot-grid dashboard-stat-grid snapshot-stat-grid stats-grid stat-grid">
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
           <span class="stat-label">Current Plan</span>
-          <strong class="stat-value">Free</strong>
+          <strong id="account-plan-value" class="stat-value">Loading...</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
           <span class="stat-label">Subscription</span>
-          <strong class="stat-value">Active</strong>
+          <strong id="account-subscription-value" class="stat-value">Loading...</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
           <span class="stat-label">Free Games</span>
@@ -52,7 +52,7 @@
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
           <span class="stat-label">Billing</span>
-          <strong class="stat-value">Not Connected</strong>
+          <strong id="account-billing-value" class="stat-value">Loading...</strong>
         </article>
       </div>
       <div class="account-summary-setting">
@@ -82,12 +82,11 @@
         <div class="section-heading">
           <div>
             <h2>Plan &amp; Billing</h2>
-            <p class="section-copy">Stripe checkout and customer portal links can connect here later.</p>
+            <p id="billing-section-copy" class="section-copy">Loading your subscription details...</p>
           </div>
         </div>
-        <button id="upgrade-button" type="button">
-  Upgrade to Pro – $14.99/month
-</button>
+        <button id="upgrade-button" type="button" disabled>Loading Billing...</button>
+        <p id="billing-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
       </section>
     </section>
   </main>

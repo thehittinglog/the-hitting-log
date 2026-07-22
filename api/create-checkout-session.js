@@ -1,17 +1,18 @@
 const Stripe = require("stripe");
+const {
+  getApplicationOrigin,
+  getBearerToken,
+  getSubscriptionBy,
+  verifySupabaseUser,
+} = require("../lib/supabase-server");
 
-function getSupabaseConfig() {
-  return {
-    url:
-      process.env.HITTING_LOG_SUPABASE_URL ||
-      process.env.SUPABASE_URL ||
-      "",
-    anonKey:
-      process.env.HITTING_LOG_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      "",
-  };
-}
+const MANAGED_SUBSCRIPTION_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "paused",
+]);
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -22,7 +23,6 @@ module.exports = async function handler(req, res) {
   try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     const stripePriceId = process.env.STRIPE_PRICE_ID;
-    const { url: supabaseUrl, anonKey } = getSupabaseConfig();
 
     if (!stripeSecretKey || !stripePriceId) {
       return res.status(500).json({
@@ -30,16 +30,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (!supabaseUrl || !anonKey) {
-      return res.status(500).json({
-        error: "Supabase environment variables are missing.",
-      });
-    }
-
-    const authorization = req.headers.authorization || "";
-    const accessToken = authorization.startsWith("Bearer ")
-      ? authorization.slice(7)
-      : "";
+    const accessToken = getBearerToken(req);
 
     if (!accessToken) {
       return res.status(401).json({
@@ -47,29 +38,31 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: anonKey,
-      },
-    });
+    const user = await verifySupabaseUser(accessToken);
 
-    if (!userResponse.ok) {
+    if (!user) {
       return res.status(401).json({
         error: "Your login session could not be verified.",
       });
     }
 
-    const user = await userResponse.json();
+    const existingSubscription = await getSubscriptionBy("user_id", user.id);
+
+    if (MANAGED_SUBSCRIPTION_STATUSES.has(existingSubscription?.subscription_status)) {
+      return res.status(409).json({
+        error: "You already have a subscription. Use Manage Billing from your account page.",
+      });
+    }
+
     const stripe = new Stripe(stripeSecretKey);
 
-    const origin =
-      req.headers.origin ||
-      `https://${req.headers.host}`;
+    const origin = getApplicationOrigin();
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer_email: user.email,
+      ...(existingSubscription?.stripe_customer_id
+        ? { customer: existingSubscription.stripe_customer_id }
+        : { customer_email: user.email }),
       client_reference_id: user.id,
       line_items: [
         {
@@ -96,7 +89,7 @@ module.exports = async function handler(req, res) {
     console.error("Stripe Checkout error:", error);
 
     return res.status(500).json({
-      error: error.message || "Unable to start Stripe Checkout.",
+      error: "Unable to start Stripe Checkout. Please try again.",
     });
   }
 };
