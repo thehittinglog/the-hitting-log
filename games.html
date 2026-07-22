@@ -79,6 +79,10 @@
             <h2>Recent Games</h2>
             <p class="section-copy">Your five most recently dated standalone and tournament games.</p>
           </div>
+          <div class="builder-actions logged-games-actions recent-games-heading-actions">
+            <a class="button-link" href="all-games.html">View All Games</a>
+            <button id="review-games-button" type="button">Review and Edit Games</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table class="logged-games-table recent-games-table">
@@ -86,21 +90,17 @@
           </table>
         </div>
         <p id="empty-state" class="empty-state">No games logged yet.</p>
-        <div class="builder-actions logged-games-actions">
-          <a class="button-link" href="all-games.html">View All Games</a>
-          <button id="review-games-button" type="button">Review / Edit Games</button>
-        </div>
       </section>
 
-      <section class="panel active-tournaments-panel">
+      <section class="panel tournaments-panel">
         <div class="section-heading">
           <div>
-            <h2>Active Tournaments</h2>
-            <p class="section-copy">Return to an in-progress tournament or add its next game.</p>
+            <h2>Tournaments</h2>
+            <p class="section-copy">Open a tournament to view its games or add another game.</p>
           </div>
         </div>
-        <div id="active-tournaments-list" class="tournament-card-list"></div>
-        <p id="active-tournaments-empty" class="empty-state">No active tournaments.</p>
+        <div id="tournaments-list" class="tournament-card-list"></div>
+        <p id="tournaments-empty" class="empty-state">No tournaments yet.</p>
       </section>
     </section>
 

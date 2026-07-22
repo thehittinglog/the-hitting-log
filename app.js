@@ -1171,6 +1171,58 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   tableBody.appendChild(row);
 }
 
+function formatCompactGameDate(dateString) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString || "");
+
+  if (!match) {
+    return formatDisplayDate(dateString);
+  }
+
+  return `${match[2]}/${match[3]}/${match[1].slice(-2)}`;
+}
+
+function appendRecentGameRow(tableBody, gameStats) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  const summary = document.createElement("div");
+  const date = document.createElement("span");
+  const opponent = document.createElement("span");
+  const average = document.createElement("span");
+  const performanceScore = document.createElement("span");
+  const score = calculateHittingLogPerformanceScore(gameStats);
+
+  row.className = "recent-game-row clickable-game-row";
+  row.tabIndex = 0;
+  row.dataset.gameId = gameStats.id;
+  cell.colSpan = 1;
+  summary.className = "recent-game-summary";
+  date.className = "recent-game-date";
+  date.textContent = formatCompactGameDate(gameStats.date);
+  opponent.className = "recent-game-opponent";
+  opponent.textContent = gameStats.opponent || "Opponent";
+  average.className = "recent-game-average";
+  average.textContent = `${formatRate(gameStats.battingAverage)} AVG`;
+  performanceScore.className = "recent-game-hlp";
+  performanceScore.textContent = `${score === null || score === undefined ? "N/A" : score} HLP`;
+
+  if (typeof window.applyMetricPerformanceColor === "function") {
+    window.applyMetricPerformanceColor(
+      average,
+      "battingAverage",
+      formatRate(gameStats.battingAverage)
+    );
+  }
+  applyPerformanceScoreStatus(performanceScore, score);
+
+  summary.appendChild(date);
+  summary.appendChild(opponent);
+  summary.appendChild(average);
+  summary.appendChild(performanceScore);
+  cell.appendChild(summary);
+  row.appendChild(cell);
+  tableBody.appendChild(row);
+}
+
 function hasTournamentGame(game) {
   return Boolean(game.tournamentId || game.tournamentName);
 }
@@ -1761,8 +1813,8 @@ function initGamesPage(games) {
   const reviewAtBatList = document.getElementById("review-at-bat-list");
   const gamesTableBody = document.getElementById("games-table-body");
   const gamesEmpty = document.getElementById("empty-state");
-  const activeTournamentsList = document.getElementById("active-tournaments-list");
-  const activeTournamentsEmpty = document.getElementById("active-tournaments-empty");
+  const tournamentsList = document.getElementById("tournaments-list");
+  const tournamentsEmpty = document.getElementById("tournaments-empty");
   const tournamentDetailsView = document.getElementById("tournament-details-view");
   const tournamentDetailsTitle = document.getElementById("tournament-details-title");
   const tournamentDetailsDates = document.getElementById("tournament-details-dates");
@@ -1812,8 +1864,8 @@ function initGamesPage(games) {
     !reviewAtBatList ||
     !gamesTableBody ||
     !gamesEmpty ||
-    !activeTournamentsList ||
-    !activeTournamentsEmpty ||
+    !tournamentsList ||
+    !tournamentsEmpty ||
     !tournamentDetailsView ||
     !tournamentDetailsTitle ||
     !tournamentDetailsDates ||
@@ -1973,7 +2025,7 @@ function initGamesPage(games) {
     gamesTableBody.innerHTML = "";
     sortGamesByDateDesc(games)
       .slice(0, 5)
-      .forEach((game) => appendSimpleGameRow(gamesTableBody, getGameStats(game), game.opponent, { clickable: true }));
+      .forEach((game) => appendRecentGameRow(gamesTableBody, getGameStats(game)));
     gamesEmpty.hidden = gamesTableBody.children.length > 0;
   }
 
@@ -1985,39 +2037,21 @@ function initGamesPage(games) {
     });
   }
 
-  function renderActiveTournaments() {
-    const activeTournaments = getTournamentGroups(games).filter((tournament) => !tournament.completed);
-    activeTournamentsList.innerHTML = "";
+  function renderTournaments() {
+    const tournaments = getTournamentGroups(games);
+    tournamentsList.innerHTML = "";
 
-    activeTournaments.forEach((tournament) => {
+    tournaments.forEach((tournament) => {
       const card = document.createElement("article");
-      const content = document.createElement("div");
       const name = document.createElement("h3");
-      const date = document.createElement("p");
-      const gameCount = document.createElement("p");
-      const addGame = document.createElement("button");
 
       card.className = "tournament-card";
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", `Open ${tournament.name} tournament details`);
-      content.className = "tournament-card-content";
       name.textContent = tournament.name;
-      date.className = "tournament-card-date";
-      date.textContent = `Starts ${formatDisplayDate(tournament.startDate)}`;
-      gameCount.className = "tournament-card-count";
-      gameCount.textContent = getTournamentGameCountText(tournament.games.length);
-      addGame.type = "button";
-      addGame.textContent = "Add Game";
-
-      addGame.addEventListener("click", (event) => {
-        event.stopPropagation();
-        openTournamentGame(tournament);
-      });
-      card.addEventListener("click", (event) => {
-        if (!event.target.closest("button")) {
-          showTournamentDetails(tournament.id);
-        }
+      card.addEventListener("click", () => {
+        showTournamentDetails(tournament.id);
       });
       card.addEventListener("keydown", (event) => {
         if ((event.key === "Enter" || event.key === " ") && event.target === card) {
@@ -2026,21 +2060,17 @@ function initGamesPage(games) {
         }
       });
 
-      content.appendChild(name);
-      content.appendChild(date);
-      content.appendChild(gameCount);
-      card.appendChild(content);
-      card.appendChild(addGame);
-      activeTournamentsList.appendChild(card);
+      card.appendChild(name);
+      tournamentsList.appendChild(card);
     });
 
-    activeTournamentsEmpty.hidden = activeTournaments.length > 0;
+    tournamentsEmpty.hidden = tournaments.length > 0;
   }
 
   function renderGamesHome() {
     updateSummaryCards(games);
     renderRecentGames();
-    renderActiveTournaments();
+    renderTournaments();
   }
 
   function renderTournamentDetails() {
@@ -2089,7 +2119,7 @@ function initGamesPage(games) {
       state.activeTournament.completed = completed;
     }
 
-    renderActiveTournaments();
+    renderTournaments();
   }
 
   function createDraftGame() {
