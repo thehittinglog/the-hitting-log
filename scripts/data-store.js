@@ -135,18 +135,7 @@
   }
 
   function getReadableGameKeys() {
-    const currentKey = getGamesStorageKey();
-    const keys = new Set([currentKey, storageKey]);
-
-    try {
-      Object.keys(localStorage)
-        .filter((key) => key === storageKey || key.startsWith(`${storageKey}-`))
-        .forEach((key) => keys.add(key));
-    } catch (error) {
-      return Array.from(keys);
-    }
-
-    return Array.from(keys);
+    return [getGamesStorageKey()];
   }
 
   function getGameIdentity(game) {

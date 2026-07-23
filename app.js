@@ -423,6 +423,8 @@ function normalizePitch(pitch) {
     "hitLocation",
     "hit_location",
     "outcome",
+    "foulDirection",
+    "chartResult",
   ].forEach((field) => {
     if (typeof pitch[field] === "string") {
       normalizedPitch[field] = pitch[field];
@@ -475,6 +477,7 @@ function normalizePitch(pitch) {
 
   if (battedBallOutcome) {
     normalizedPitch.battedBallOutcome = battedBallOutcome;
+    normalizedPitch.batted_ball_outcome = battedBallOutcome;
     normalizedPitch.outcome = battedBallOutcome;
   }
 
@@ -1968,6 +1971,12 @@ function initGamesPage(games) {
     reviewGameId: "",
     editingAtBatIndex: null,
     editingAtBatDraft: null,
+    editingPitchAtBatIndex: null,
+    editingPitchIndex: null,
+    editingPitchDraft: null,
+    deletingPitchAtBatIndex: null,
+    deletingPitchIndex: null,
+    pitchEditSaving: false,
     workflowEditAtBatIndex: null,
     workflowEditOriginalAtBat: null,
     activePitchIndex: null,
@@ -2002,6 +2011,11 @@ function initGamesPage(games) {
   const strikeOptions = [
     { label: "Called Strike", value: "called_strike" },
     { label: "Swinging Strike", value: "swinging_strike" },
+  ];
+  const editablePitchResultOptions = [
+    ...pitchResultOptions.slice(0, 1),
+    ...strikeOptions,
+    ...pitchResultOptions.slice(2),
   ];
   const battedBallTypeOptions = [
     { label: "Ground Ball", value: "ground_ball" },
@@ -2253,6 +2267,7 @@ function initGamesPage(games) {
     state.reviewGameId = "";
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
+    resetPitchReviewState();
     state.selectedTournamentId = "";
     reviewMessage.textContent = "";
     renderGamesHome();
@@ -2269,6 +2284,7 @@ function initGamesPage(games) {
     state.reviewGameId = "";
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
+    resetPitchReviewState();
     reviewMessage.textContent = "";
     reviewMessage.classList.remove("is-success");
     renderGamesTable(games, "review-games-table-body", "review-games-empty");
@@ -2405,7 +2421,7 @@ function initGamesPage(games) {
     }
   }
 
-  function getPitchLocationFromSavedPitch(pitch) {
+  function findPitchLocationFromSavedPitch(pitch) {
     const locationId =
       (pitch && pitch.location && typeof pitch.location === "object" ? pitch.location.id : "") ||
       pitch?.locationId ||
@@ -2424,7 +2440,13 @@ function initGamesPage(games) {
       );
     });
 
-    return matchingLocation || pitchLocations.find((location) => location.id === "zone-5") || pitchLocations[0];
+    return matchingLocation || null;
+  }
+
+  function getPitchLocationFromSavedPitch(pitch) {
+    return findPitchLocationFromSavedPitch(pitch) ||
+      pitchLocations.find((location) => location.id === "zone-5") ||
+      pitchLocations[0];
   }
 
   function setActivePitchFromIndex(index) {
@@ -2919,6 +2941,501 @@ function initGamesPage(games) {
     return label;
   }
 
+  function resetPitchReviewState() {
+    state.editingPitchAtBatIndex = null;
+    state.editingPitchIndex = null;
+    state.editingPitchDraft = null;
+    state.deletingPitchAtBatIndex = null;
+    state.deletingPitchIndex = null;
+    state.pitchEditSaving = false;
+  }
+
+  function cloneSavedPitch(pitch) {
+    return {
+      ...pitch,
+      location: pitch.location && typeof pitch.location === "object"
+        ? { ...pitch.location }
+        : pitch.location,
+    };
+  }
+
+  function getEditablePitchResult(pitch) {
+    const strikeResult = pitch?.strikeType || pitch?.strikeDetail;
+
+    if (strikeResult === "called_strike" || strikeResult === "swinging_strike") {
+      return strikeResult;
+    }
+
+    const savedResult =
+      pitch?.primaryResult ||
+      pitch?.result ||
+      pitch?.pitch_result ||
+      pitch?.swing_result ||
+      "";
+
+    if (savedResult === "hit_by_pitch") {
+      return "hit_by_pitch";
+    }
+
+    if (
+      savedResult === "batted_ball" ||
+      pitch?.battedBallType ||
+      pitch?.batted_ball_type ||
+      (
+        !savedResult &&
+        (pitch?.battedBallOutcome || pitch?.batted_ball_outcome)
+      )
+    ) {
+      return "batted_ball";
+    }
+
+    return editablePitchResultOptions.some((option) => option.value === savedResult)
+      ? savedResult
+      : "";
+  }
+
+  function isInPlayPitch(pitch) {
+    return getEditablePitchResult(pitch) === "batted_ball";
+  }
+
+  function createPitchEditDraft(pitch) {
+    const location = findPitchLocationFromSavedPitch(pitch);
+
+    return {
+      locationId: location?.id || "",
+      result: getEditablePitchResult(pitch),
+      error: "",
+    };
+  }
+
+  function applyPitchEdit(originalPitch, draft) {
+    const location = pitchLocations.find((option) => option.id === draft.locationId);
+    const editedPitch = cloneSavedPitch(originalPitch);
+    const selectedResult = draft.result;
+
+    editedPitch.location = {
+      id: location.id,
+      label: location.label,
+      isZone: location.isZone,
+    };
+    editedPitch.locationId = location.id;
+    editedPitch.locationLabel = location.label;
+    editedPitch.pitch_location = location.id;
+    editedPitch.result = selectedResult;
+    editedPitch.primaryResult = selectedResult;
+    editedPitch.pitch_result = selectedResult;
+    editedPitch.swing_result = selectedResult;
+
+    delete editedPitch.strikeType;
+    delete editedPitch.strikeDetail;
+
+    if (selectedResult === "called_strike" || selectedResult === "swinging_strike") {
+      editedPitch.strikeType = selectedResult;
+      editedPitch.strikeDetail = selectedResult;
+    }
+
+    if (selectedResult !== "foul_ball") {
+      delete editedPitch.foulDirection;
+    }
+
+    if (selectedResult !== "batted_ball") {
+      [
+        "battedBallType",
+        "batted_ball_type",
+        "contact_type",
+        "hitLocation",
+        "hit_location",
+        "hitLocationX",
+        "hitLocationY",
+        "hit_location_x",
+        "hit_location_y",
+        "battedBallOutcome",
+        "batted_ball_outcome",
+        "outcome",
+        "chartResult",
+      ].forEach((field) => delete editedPitch[field]);
+    }
+
+    if (selectedResult === "hit_by_pitch") {
+      editedPitch.battedBallOutcome = "hit_by_pitch";
+      editedPitch.batted_ball_outcome = "hit_by_pitch";
+      editedPitch.outcome = "hit_by_pitch";
+    }
+
+    return editedPitch;
+  }
+
+  function pitchesSupportSavedAtBatResult(atBat, pitches) {
+    if (!atBat.finalOutcome && !atBat.outcome) {
+      return true;
+    }
+
+    const savedOutcome = getEditOutcomeValue(atBat);
+
+    if (isBattedEditOutcome(savedOutcome)) {
+      return pitches.some(isInPlayPitch);
+    }
+
+    if (savedOutcome === "hit_by_pitch") {
+      return pitches.some((pitch) => getEditablePitchResult(pitch) === "hit_by_pitch");
+    }
+
+    if (savedOutcome === "strikeout") {
+      return pitches.some((pitch) => {
+        const result = getEditablePitchResult(pitch);
+        return result === "strike" || result === "called_strike" || result === "swinging_strike";
+      });
+    }
+
+    if (savedOutcome === "walk") {
+      return pitches.some((pitch) => getEditablePitchResult(pitch) === "ball");
+    }
+
+    return true;
+  }
+
+  function pitchResultConflictsWithSavedAtBat(atBat, pitchResult) {
+    if (!atBat.finalOutcome && !atBat.outcome) {
+      return false;
+    }
+
+    const savedOutcome = getEditOutcomeValue(atBat);
+
+    if (pitchResult === "hit_by_pitch") {
+      return savedOutcome !== "hit_by_pitch";
+    }
+
+    if (pitchResult === "batted_ball") {
+      return !isBattedEditOutcome(savedOutcome);
+    }
+
+    return false;
+  }
+
+  function saveReviewPitchChange(game, atBatIndex, pitches, successMessage) {
+    const updatedAtBat = normalizeAtBat({
+      ...game.atBats[atBatIndex],
+      balls: undefined,
+      strikes: undefined,
+      pitches,
+    });
+    const updatedGame = {
+      ...game,
+      atBats: game.atBats.map((atBat, index) => index === atBatIndex ? updatedAtBat : atBat),
+    };
+    const existingGameIndex = games.findIndex((savedGame) => savedGame.id === game.id);
+    let savedGame;
+
+    try {
+      savedGame = upsertSavedGame(games, updatedGame);
+    } catch (saveError) {
+      if (existingGameIndex >= 0) {
+        games[existingGameIndex] = game;
+      }
+      throw saveError;
+    }
+
+    state.reviewGameId = savedGame.id;
+    resetPitchReviewState();
+    reviewMessage.textContent = successMessage;
+    reviewMessage.classList.remove("is-error");
+    reviewMessage.classList.add("is-success");
+    renderGamesHome();
+    renderGamesTable(games, "review-games-table-body", "review-games-empty");
+    renderReviewGame();
+  }
+
+  function showPitchEditError(message) {
+    if (state.editingPitchDraft) {
+      state.editingPitchDraft.error = message;
+    }
+    reviewMessage.textContent = message;
+    reviewMessage.classList.remove("is-success");
+    reviewMessage.classList.add("is-error");
+    renderReviewGame();
+  }
+
+  function renderPitchEditor(atBat, atBatIndex, pitch, pitchIndex) {
+    const draft = state.editingPitchDraft;
+    const editor = document.createElement("div");
+    const title = document.createElement("h4");
+    const zone = document.createElement("div");
+    const helper = document.createElement("p");
+    const resultLabel = document.createElement("label");
+    const resultText = document.createElement("span");
+    const resultSelect = document.createElement("select");
+    const error = document.createElement("p");
+    const actions = document.createElement("div");
+    const updateButton = document.createElement("button");
+    const cancelButton = document.createElement("button");
+
+    editor.className = "review-pitch-editor";
+    title.textContent = `Edit Pitch ${pitchIndex + 1}`;
+    zone.className = "location-grid review-pitch-location-grid";
+    renderStrikeZoneLayout(zone, {
+      interactive: true,
+      selectedLocationId: draft.locationId,
+      onSelectLocation(location) {
+        draft.locationId = location.id;
+        draft.error = "";
+        renderReviewGame();
+      },
+    });
+    helper.className = "pitch-location-helper";
+    helper.textContent = "This is the catcher's perspective of the pitch location.";
+
+    resultText.textContent = "Pitch Result";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select Pitch Result";
+    resultSelect.appendChild(placeholder);
+    editablePitchResultOptions.forEach((option) => {
+      const optionElement = document.createElement("option");
+      optionElement.value = option.value;
+      optionElement.textContent = option.label;
+      resultSelect.appendChild(optionElement);
+    });
+    resultSelect.value = draft.result;
+    resultSelect.addEventListener("change", () => {
+      draft.result = resultSelect.value;
+      draft.error = "";
+    });
+    resultLabel.appendChild(resultText);
+    resultLabel.appendChild(resultSelect);
+
+    error.className = "form-message is-error review-pitch-error";
+    error.setAttribute("aria-live", "polite");
+    error.textContent = draft.error;
+
+    actions.className = "builder-actions review-pitch-editor-actions";
+    updateButton.type = "button";
+    updateButton.textContent = state.pitchEditSaving ? "Updating..." : "Update Pitch";
+    updateButton.disabled = state.pitchEditSaving;
+    updateButton.addEventListener("click", () => {
+      if (state.pitchEditSaving) {
+        return;
+      }
+
+      if (!draft.locationId) {
+        showPitchEditError("Select a strike-zone location before updating the pitch.");
+        return;
+      }
+
+      if (!draft.result) {
+        showPitchEditError("Select a pitch result before updating the pitch.");
+        return;
+      }
+
+      if (draft.result === "batted_ball" && !isInPlayPitch(pitch)) {
+        showPitchEditError("Update the at-bat result first before changing this pitch to Batted Ball.");
+        return;
+      }
+
+      if (pitchResultConflictsWithSavedAtBat(atBat, draft.result)) {
+        showPitchEditError("This pitch result conflicts with the saved at-bat result. Update the at-bat result first, then edit this pitch.");
+        return;
+      }
+
+      const game = getReviewGame();
+
+      if (!game?.atBats?.[atBatIndex]?.pitches?.[pitchIndex]) {
+        showPitchEditError("We couldn't find that pitch. Please reopen the game and try again.");
+        return;
+      }
+
+      const pitches = game.atBats[atBatIndex].pitches.map(cloneSavedPitch);
+      pitches[pitchIndex] = applyPitchEdit(pitches[pitchIndex], draft);
+
+      if (!pitchesSupportSavedAtBatResult(game.atBats[atBatIndex], pitches)) {
+        showPitchEditError("This change conflicts with the saved at-bat result. Update the at-bat result first, then edit this pitch.");
+        return;
+      }
+
+      state.pitchEditSaving = true;
+      updateButton.disabled = true;
+      updateButton.textContent = "Updating...";
+
+      try {
+        saveReviewPitchChange(game, atBatIndex, pitches, "Pitch updated.");
+      } catch (saveError) {
+        state.pitchEditSaving = false;
+        showPitchEditError("We couldn't update this pitch. Please try again.");
+      }
+    });
+
+    cancelButton.type = "button";
+    cancelButton.className = "secondary-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.addEventListener("click", () => {
+      resetPitchReviewState();
+      reviewMessage.textContent = "";
+      reviewMessage.classList.remove("is-error");
+      renderReviewGame();
+    });
+
+    actions.appendChild(updateButton);
+    actions.appendChild(cancelButton);
+    editor.appendChild(title);
+    editor.appendChild(zone);
+    editor.appendChild(helper);
+    editor.appendChild(resultLabel);
+    editor.appendChild(error);
+    editor.appendChild(actions);
+    return editor;
+  }
+
+  function renderPitchDeleteConfirmation(atBatIndex, pitchIndex) {
+    const confirmation = document.createElement("div");
+    const copy = document.createElement("p");
+    const actions = document.createElement("div");
+    const confirmButton = document.createElement("button");
+    const cancelButton = document.createElement("button");
+
+    confirmation.className = "review-pitch-delete-confirmation";
+    copy.innerHTML = "<strong>Delete this pitch?</strong><br>This cannot be undone.";
+    actions.className = "builder-actions review-pitch-delete-actions";
+    confirmButton.type = "button";
+    confirmButton.className = "danger-button";
+    confirmButton.textContent = "Delete Pitch";
+    confirmButton.addEventListener("click", () => {
+      if (state.pitchEditSaving) {
+        return;
+      }
+
+      const game = getReviewGame();
+      const atBat = game?.atBats?.[atBatIndex];
+
+      if (!Array.isArray(atBat?.pitches) || !atBat.pitches[pitchIndex]) {
+        reviewMessage.textContent = "We couldn't find that pitch. Please reopen the game and try again.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+        return;
+      }
+
+      const pitches = atBat.pitches
+        .filter((unusedPitch, index) => index !== pitchIndex)
+        .map(cloneSavedPitch);
+
+      if (!pitchesSupportSavedAtBatResult(atBat, pitches)) {
+        reviewMessage.textContent = "Deleting this pitch conflicts with the saved at-bat result. Update the at-bat result first, then delete the pitch.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+        renderReviewGame();
+        return;
+      }
+
+      state.pitchEditSaving = true;
+      confirmButton.disabled = true;
+      confirmButton.textContent = "Deleting...";
+
+      try {
+        saveReviewPitchChange(game, atBatIndex, pitches, "Pitch deleted.");
+      } catch (deleteError) {
+        state.pitchEditSaving = false;
+        confirmButton.disabled = false;
+        confirmButton.textContent = "Delete Pitch";
+        reviewMessage.textContent = "We couldn't delete this pitch. Please try again.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+      }
+    });
+
+    cancelButton.type = "button";
+    cancelButton.className = "secondary-button";
+    cancelButton.textContent = "Cancel";
+    cancelButton.addEventListener("click", () => {
+      state.deletingPitchAtBatIndex = null;
+      state.deletingPitchIndex = null;
+      reviewMessage.textContent = "";
+      reviewMessage.classList.remove("is-error");
+      renderReviewGame();
+    });
+
+    actions.appendChild(confirmButton);
+    actions.appendChild(cancelButton);
+    confirmation.appendChild(copy);
+    confirmation.appendChild(actions);
+    return confirmation;
+  }
+
+  function renderEditablePitchSequence(sequenceElement, atBat, atBatIndex) {
+    sequenceElement.innerHTML = "";
+
+    if (!Array.isArray(atBat.pitches) || atBat.pitches.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state compact-empty";
+      empty.textContent = "No pitches logged yet.";
+      sequenceElement.appendChild(empty);
+      return;
+    }
+
+    atBat.pitches.forEach((pitch, pitchIndex) => {
+      const item = document.createElement("article");
+      const row = document.createElement("div");
+      const editButton = document.createElement("button");
+      const pitchLabel = document.createElement("strong");
+      const summary = document.createElement("span");
+      const deleteButton = document.createElement("button");
+
+      item.className = "review-pitch-item";
+      row.className = "review-pitch-row";
+      editButton.type = "button";
+      editButton.className = "review-pitch-edit-button";
+      editButton.setAttribute("aria-label", `Edit Pitch ${pitchIndex + 1}`);
+      pitchLabel.textContent = `Pitch ${pitchIndex + 1}`;
+      summary.textContent = getSimplePitchResultLabel(pitch);
+      editButton.appendChild(pitchLabel);
+      editButton.appendChild(summary);
+      editButton.addEventListener("click", () => {
+        state.editingPitchAtBatIndex = atBatIndex;
+        state.editingPitchIndex = pitchIndex;
+        state.editingPitchDraft = createPitchEditDraft(pitch);
+        state.deletingPitchAtBatIndex = null;
+        state.deletingPitchIndex = null;
+        reviewMessage.textContent = "";
+        reviewMessage.classList.remove("is-success", "is-error");
+        renderReviewGame();
+      });
+
+      deleteButton.type = "button";
+      deleteButton.className = "review-pitch-delete-button";
+      deleteButton.textContent = "Delete";
+      deleteButton.setAttribute("aria-label", `Delete Pitch ${pitchIndex + 1}`);
+      deleteButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.deletingPitchAtBatIndex = atBatIndex;
+        state.deletingPitchIndex = pitchIndex;
+        state.editingPitchAtBatIndex = null;
+        state.editingPitchIndex = null;
+        state.editingPitchDraft = null;
+        reviewMessage.textContent = "";
+        reviewMessage.classList.remove("is-success", "is-error");
+        renderReviewGame();
+      });
+
+      row.appendChild(editButton);
+      row.appendChild(deleteButton);
+      item.appendChild(row);
+
+      if (
+        state.editingPitchAtBatIndex === atBatIndex &&
+        state.editingPitchIndex === pitchIndex &&
+        state.editingPitchDraft
+      ) {
+        item.appendChild(renderPitchEditor(atBat, atBatIndex, pitch, pitchIndex));
+      }
+
+      if (
+        state.deletingPitchAtBatIndex === atBatIndex &&
+        state.deletingPitchIndex === pitchIndex
+      ) {
+        item.appendChild(renderPitchDeleteConfirmation(atBatIndex, pitchIndex));
+      }
+
+      sequenceElement.appendChild(item);
+    });
+  }
+
   function renderEditAtBatForm(atBat, index) {
     const draft = state.editingAtBatDraft;
     const form = document.createElement("div");
@@ -3017,6 +3534,7 @@ function initGamesPage(games) {
       state.editingAtBatIndex = null;
       state.editingAtBatDraft = null;
       reviewMessage.textContent = "At-bat updated.";
+      reviewMessage.classList.remove("is-error");
       reviewMessage.classList.add("is-success");
       renderGamesHome();
       renderGamesTable(games, "review-games-table-body", "review-games-empty");
@@ -3080,17 +3598,18 @@ function initGamesPage(games) {
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
       editButton.addEventListener("click", () => {
+        resetPitchReviewState();
         state.editingAtBatIndex = index;
         state.editingAtBatDraft = createEditDraft(atBat);
         reviewMessage.textContent = "";
-        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.remove("is-success", "is-error");
         renderReviewGame();
       });
       heading.appendChild(title);
       heading.appendChild(editButton);
 
       sequence.className = "pitch-sequence";
-      renderSimplePitchSequence(sequence, atBat);
+      renderEditablePitchSequence(sequence, atBat, index);
 
       card.appendChild(heading);
       card.appendChild(sequence);
@@ -3108,6 +3627,7 @@ function initGamesPage(games) {
     state.reviewReturnView = returnView;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
+    resetPitchReviewState();
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = false;
@@ -3116,7 +3636,7 @@ function initGamesPage(games) {
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
     reviewMessage.textContent = "";
-    reviewMessage.classList.remove("is-success");
+    reviewMessage.classList.remove("is-success", "is-error");
     renderReviewGame();
   }
 
