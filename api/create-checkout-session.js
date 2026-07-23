@@ -167,6 +167,7 @@ module.exports = async function handler(req, res) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      allow_promotion_codes: true,
       ...(existingSubscription?.stripe_customer_id
         ? { customer: existingSubscription.stripe_customer_id }
         : { customer_email: customerEmail }),
