@@ -148,9 +148,14 @@
           <p id="charts-empty" class="empty-state">No pitch location data logged yet. The zone map is ready when you log pitches.</p>
         </div>
 
-        <div class="chart-legend" id="chart-legend">
-          <span class="legend-hot-cold-gradient" aria-hidden="true"></span>
-          <span>Blue / Outs → Purple / Mixed Results → Red / Hits. Purple changes proportionally with the hit and out ratio.</span>
+        <div class="chart-legend chart-legend--hot-cold" id="chart-legend">
+          <div class="legend-hot-cold-scale">
+            <div class="legend-hot-cold-labels">
+              <span>Outs</span>
+              <span>Hits</span>
+            </div>
+            <span class="legend-hot-cold-gradient" aria-hidden="true"></span>
+          </div>
         </div>
       </section>
     </section>

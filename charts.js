@@ -325,10 +325,18 @@ function renderChartLegend(filterName) {
     return;
   }
 
-  if (filterName === "Hot/Cold Zones") {
+  const isHotColdView = filterName === "Hot/Cold Zones";
+  chartLegend.classList.toggle("chart-legend--hot-cold", isHotColdView);
+
+  if (isHotColdView) {
     chartLegend.innerHTML = `
-      <span class="legend-hot-cold-gradient" aria-hidden="true"></span>
-      <span>Blue / Outs → Purple / Mixed Results → Red / Hits. Purple changes proportionally with the hit and out ratio.</span>
+      <div class="legend-hot-cold-scale">
+        <div class="legend-hot-cold-labels">
+          <span>Outs</span>
+          <span>Hits</span>
+        </div>
+        <span class="legend-hot-cold-gradient" aria-hidden="true"></span>
+      </div>
     `;
     return;
   }
@@ -430,19 +438,13 @@ function renderChartsPage() {
       cell.style.cssText = getChartCellStyle(bucket, selectedFilter, maxCount);
 
       if (countElement) {
-        countElement.textContent = isHotColdView && count > 0
-          ? `${Math.round((bucket.hits / count) * 100)}%`
-          : count > 0
-            ? String(count)
-            : "";
+        countElement.textContent = count > 0 ? String(count) : "";
       }
 
       if (isHotColdView && count > 0) {
-        const hitPercentage = Math.round((bucket.hits / count) * 100);
         const tooltip = [
           `Hits: ${bucket.hits}`,
           `Outs: ${bucket.outs}`,
-          `Hit rate: ${hitPercentage}%`,
           `Total results: ${count}`,
         ].join("\n");
         const locationLabel = cell.getAttribute("aria-label") || "Strike zone";
