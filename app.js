@@ -1239,6 +1239,46 @@ function appendRecentGameRow(tableBody, gameStats) {
   tableBody.appendChild(row);
 }
 
+function appendTournamentGameRow(tableBody, gameStats, index) {
+  const row = document.createElement("tr");
+  const gameNumber = document.createElement("td");
+  const date = document.createElement("td");
+  const opponent = document.createElement("td");
+  const average = document.createElement("td");
+  const performanceScore = document.createElement("td");
+  const score = calculateHittingLogPerformanceScore(gameStats);
+
+  row.className = "tournament-game-row clickable-game-row";
+  row.tabIndex = 0;
+  row.dataset.gameId = gameStats.id;
+  gameNumber.className = "tournament-game-number";
+  gameNumber.textContent = `Game ${index + 1}`;
+  date.className = "tournament-game-date";
+  date.textContent = formatCompactGameDate(gameStats.date);
+  opponent.className = "tournament-game-opponent";
+  opponent.textContent = gameStats.opponent || "Opponent";
+  average.className = "tournament-game-average";
+  average.textContent = formatRate(gameStats.battingAverage);
+  performanceScore.className = "tournament-game-hlp";
+  performanceScore.textContent = score === null || score === undefined ? "—" : String(score);
+
+  if (typeof window.applyMetricPerformanceColor === "function") {
+    window.applyMetricPerformanceColor(
+      average,
+      "battingAverage",
+      formatRate(gameStats.battingAverage)
+    );
+  }
+  applyPerformanceScoreStatus(performanceScore, score);
+
+  row.appendChild(gameNumber);
+  row.appendChild(date);
+  row.appendChild(opponent);
+  row.appendChild(average);
+  row.appendChild(performanceScore);
+  tableBody.appendChild(row);
+}
+
 function hasTournamentGame(game) {
   return Boolean(game.tournamentId || game.tournamentName);
 }
@@ -1839,7 +1879,6 @@ function initGamesPage(games) {
   const tournamentDetailsEmpty = document.getElementById("tournament-details-empty");
   const tournamentDetailsAddGame = document.getElementById("tournament-details-add-game");
   const tournamentDetailsBack = document.getElementById("tournament-details-back");
-  const tournamentCompletedToggle = document.getElementById("tournament-completed-toggle");
   const choiceView = document.getElementById("game-choice-view");
   const tournamentNameView = document.getElementById("tournament-name-view");
   const newGameView = document.getElementById("new-game-view");
@@ -1890,7 +1929,6 @@ function initGamesPage(games) {
     !tournamentDetailsEmpty ||
     !tournamentDetailsAddGame ||
     !tournamentDetailsBack ||
-    !tournamentCompletedToggle ||
     !choiceView ||
     !tournamentNameView ||
     !newGameView ||
@@ -2125,10 +2163,9 @@ function initGamesPage(games) {
     tournamentDetailsTitle.textContent = tournament.name;
     tournamentDetailsDates.textContent = formatTournamentDateRange(tournament);
     tournamentDetailsCount.textContent = getTournamentGameCountText(tournament.games.length);
-    tournamentCompletedToggle.checked = tournament.completed;
     tournamentDetailsGames.innerHTML = "";
-    sortTournamentGames(tournament.games).forEach((game) => {
-      appendSimpleGameRow(tournamentDetailsGames, getGameStats(game), game.opponent, { clickable: true });
+    sortTournamentGames(tournament.games).forEach((game, index) => {
+      appendTournamentGameRow(tournamentDetailsGames, getGameStats(game), index);
     });
     tournamentDetailsEmpty.hidden = tournamentDetailsGames.children.length > 0;
   }
@@ -3648,17 +3685,6 @@ function initGamesPage(games) {
       openTournamentGame(tournament);
     }
   });
-  tournamentCompletedToggle.addEventListener("change", () => {
-    const tournamentId = state.selectedTournamentId;
-
-    if (!tournamentId) {
-      return;
-    }
-
-    setTournamentCompletion(tournamentId, tournamentCompletedToggle.checked);
-    renderTournamentDetails();
-  });
-
   tournamentNameForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const tournamentName = tournamentNameInput.value.trim();

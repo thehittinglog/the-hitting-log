@@ -2948,22 +2948,65 @@ tbody td {
   align-items: center;
 }
 
-.tournament-completed-toggle {
-  display: inline-flex;
-  width: max-content;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  margin: 18px 0 4px;
-  cursor: pointer;
+.tournament-games-table {
+  margin-top: 18px;
+  table-layout: fixed;
 }
 
-.tournament-completed-toggle input {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--accent);
+.tournament-games-table th {
+  overflow: hidden;
+  padding: 11px 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tournament-games-table th:first-child {
+  width: 92px;
+}
+
+.tournament-games-table th:nth-child(2) {
+  width: 104px;
+}
+
+.tournament-games-table th:nth-child(4),
+.tournament-games-table th:last-child {
+  width: 68px;
+  text-align: right;
+}
+
+.tournament-game-row td {
+  padding: 13px 8px;
+  white-space: nowrap;
+  transition: background-color 140ms ease;
+}
+
+.tournament-game-row:hover td,
+.tournament-game-row:focus-visible td {
+  background: var(--accent-soft);
+}
+
+.tournament-game-number,
+.tournament-game-date,
+.tournament-game-average,
+.tournament-game-hlp {
+  font-weight: 800;
+}
+
+.tournament-game-opponent {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.tournament-game-average,
+.tournament-game-hlp {
+  text-align: right;
 }
 
 .pagination-controls {
@@ -3219,6 +3262,31 @@ body[data-page="games"] #game-choice-view .choice-card-button {
 
   .recent-tournaments-table th:last-child {
     width: 40px;
+  }
+
+  .tournament-games-table th,
+  .tournament-game-row td {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 0.8rem;
+  }
+
+  .tournament-games-table th {
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+  }
+
+  .tournament-games-table th:first-child {
+    width: 56px;
+  }
+
+  .tournament-games-table th:nth-child(2) {
+    width: 72px;
+  }
+
+  .tournament-games-table th:nth-child(4),
+  .tournament-games-table th:last-child {
+    width: 42px;
   }
 
   .support-card {

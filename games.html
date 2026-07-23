@@ -136,12 +136,17 @@
           <button id="tournament-details-back" class="secondary-button" type="button">Back to Games</button>
         </div>
       </div>
-      <label class="tournament-completed-toggle" for="tournament-completed-toggle">
-        <input id="tournament-completed-toggle" type="checkbox">
-        <span>Completed</span>
-      </label>
       <div class="table-wrap">
         <table class="logged-games-table tournament-games-table">
+          <thead>
+            <tr>
+              <th>Game</th>
+              <th>Date</th>
+              <th>Opponent</th>
+              <th>AVG</th>
+              <th>HLP</th>
+            </tr>
+          </thead>
           <tbody id="tournament-details-games"></tbody>
         </table>
       </div>
