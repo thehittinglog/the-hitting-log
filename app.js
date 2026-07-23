@@ -146,6 +146,54 @@ function normalizeEmail(email) {
   return email.trim().toLowerCase();
 }
 
+function getErrorMessage(error, fallbackMessage = "Something went wrong. Please try again.") {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message
+  ) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error) {
+    return error;
+  }
+
+  return fallbackMessage;
+}
+
+function getSignupErrorMessage(error) {
+  const message = getErrorMessage(error, "");
+
+  if (/already (?:been )?registered|already exists|user already registered|identity already exists/i.test(message)) {
+    return "An account with this email already exists. Try signing in instead.";
+  }
+
+  if (/invalid email|email.*invalid|unable to validate email/i.test(message)) {
+    return "Enter a valid email address.";
+  }
+
+  if (/password.*(?:weak|short)|weak password|at least \d+ characters/i.test(message)) {
+    return "Password must be at least 8 characters.";
+  }
+
+  if (/rate limit|too many requests|email rate limit|over_email_send_rate_limit/i.test(message)) {
+    return "Too many signup attempts. Please wait a few minutes and try again.";
+  }
+
+  if (/failed to fetch|network|load failed|fetch.*failed|connection/i.test(message)) {
+    return "We couldn’t reach the signup service. Check your connection and try again.";
+  }
+
+  return "We couldn’t create your account. Please try again.";
+}
+
 function loadAccounts() {
   const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
   if (!Array.isArray(savedAccounts)) {
@@ -6127,8 +6175,14 @@ function initSignupPage() {
     return;
   }
 
+  let isSubmitting = false;
+
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     const email = normalizeEmail(emailInput.value);
     const password = passwordInput.value;
@@ -6136,9 +6190,16 @@ function initSignupPage() {
     const submitButton = signupForm.querySelector("button[type='submit']");
 
     signupMessage.classList.remove("is-success");
+    signupMessage.textContent = "";
 
     if (!PUBLIC_SIGNUP_ENABLED || !window.hittingLogAuth?.PUBLIC_SIGNUP_ENABLED) {
       signupMessage.textContent = "Account creation is temporarily unavailable.";
+      return;
+    }
+
+    emailInput.value = email;
+    if (!email || !emailInput.checkValidity()) {
+      signupMessage.textContent = "Enter a valid email address.";
       return;
     }
 
@@ -6147,10 +6208,13 @@ function initSignupPage() {
       return;
     }
 
+    isSubmitting = true;
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.textContent = "Creating account...";
     }
+
+    let accountCreated = false;
 
     try {
       await window.hittingLogSupabaseReady;
@@ -6164,8 +6228,15 @@ function initSignupPage() {
       });
 
       if (error) {
-        signupMessage.textContent = error.message || "Unable to create your account. Please try again.";
-        return;
+        throw error;
+      }
+
+      if (Array.isArray(data?.user?.identities) && data.user.identities.length === 0) {
+        throw new Error("User already registered");
+      }
+
+      if (!data?.user) {
+        throw new Error("Signup completed without returning a user.");
       }
 
       const accounts = loadAccounts();
@@ -6174,6 +6245,7 @@ function initSignupPage() {
         saveAccounts(accounts);
       }
 
+      accountCreated = true;
       signupMessage.classList.add("is-success");
 
       if (data?.session && data.user?.email) {
@@ -6183,14 +6255,19 @@ function initSignupPage() {
         return;
       }
 
-      signupMessage.textContent = "Account created! Check your email to confirm it, then log in.";
+      signupMessage.textContent = "Account created! Check your email to confirm your account, then log in.";
       signupForm.reset();
     } catch (error) {
-      signupMessage.textContent = "Unable to create your account. Please try again.";
+      console.error("Account creation failed:", error);
+      signupMessage.textContent = getSignupErrorMessage(error);
     } finally {
-      if (submitButton) {
+      isSubmitting = false;
+
+      if (submitButton && !accountCreated) {
         submitButton.disabled = false;
         submitButton.textContent = "Create Account";
+      } else if (submitButton) {
+        submitButton.textContent = "Account Created";
       }
     }
   });
