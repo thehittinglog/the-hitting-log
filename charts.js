@@ -274,6 +274,84 @@ window.renderChartStrikeZone = renderChartStrikeZone;
 
 const HOT_COLD_HIT_COLOR = { red: 169, green: 31, blue: 36 };
 const HOT_COLD_OUT_COLOR = { red: 7, green: 50, blue: 79 };
+const HEAT_MAP_DARK_LUMINANCE_THRESHOLD = 0.22;
+
+function parseCssRgbColor(value) {
+  const color = String(value || "").trim();
+  const hexMatch = /^#([\da-f]{3}|[\da-f]{6})$/i.exec(color);
+
+  if (hexMatch) {
+    const expandedHex = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map((character) => character + character).join("")
+      : hexMatch[1];
+
+    return {
+      red: Number.parseInt(expandedHex.slice(0, 2), 16),
+      green: Number.parseInt(expandedHex.slice(2, 4), 16),
+      blue: Number.parseInt(expandedHex.slice(4, 6), 16),
+      alpha: 1,
+    };
+  }
+
+  const components = color.match(/[\d.]+/g)?.map(Number) || [];
+
+  if (components.length < 3 || components.slice(0, 3).some((component) => !Number.isFinite(component))) {
+    return null;
+  }
+
+  return {
+    red: components[0],
+    green: components[1],
+    blue: components[2],
+    alpha: Number.isFinite(components[3]) ? Math.min(1, Math.max(0, components[3])) : 1,
+  };
+}
+
+function compositeRgbColor(foreground, background) {
+  const alpha = foreground.alpha;
+
+  return {
+    red: (foreground.red * alpha) + (background.red * (1 - alpha)),
+    green: (foreground.green * alpha) + (background.green * (1 - alpha)),
+    blue: (foreground.blue * alpha) + (background.blue * (1 - alpha)),
+  };
+}
+
+function getRelativeLuminance(color) {
+  const channels = [color.red, color.green, color.blue].map((channel) => {
+    const normalized = Math.min(255, Math.max(0, channel)) / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  return (channels[0] * 0.2126) + (channels[1] * 0.7152) + (channels[2] * 0.0722);
+}
+
+function getHeatMapCountTextColor(backgroundColor) {
+  const rootStyles = window.getComputedStyle(document.documentElement);
+  const panelColor = parseCssRgbColor(rootStyles.getPropertyValue("--panel-solid")) || {
+    red: 255,
+    green: 255,
+    blue: 255,
+    alpha: 1,
+  };
+  const parsedBackground = parseCssRgbColor(backgroundColor);
+
+  if (!parsedBackground) {
+    return "var(--navy)";
+  }
+
+  const renderedBackground = compositeRgbColor(parsedBackground, panelColor);
+  return getRelativeLuminance(renderedBackground) < HEAT_MAP_DARK_LUMINANCE_THRESHOLD
+    ? "var(--bg)"
+    : "var(--navy)";
+}
+
+function applyHeatMapCountContrast(cell, countElement) {
+  const backgroundColor = window.getComputedStyle(cell).backgroundColor;
+  countElement.style.color = getHeatMapCountTextColor(backgroundColor);
+}
 
 function getHotColdColor(hitRatio, outRatio) {
   return {
@@ -439,6 +517,7 @@ function renderChartsPage() {
 
       if (countElement) {
         countElement.textContent = count > 0 ? String(count) : "";
+        applyHeatMapCountContrast(cell, countElement);
       }
 
       if (isHotColdView && count > 0) {
