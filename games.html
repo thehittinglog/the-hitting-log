@@ -38,6 +38,7 @@
         </div>
         <button id="add-game-button" type="button">Add Game</button>
       </div>
+      <p id="games-message" class="form-message" aria-live="polite"></p>
 
       <section class="panel">
         <h2>Season Snapshot</h2>
@@ -183,13 +184,64 @@
     <section id="game-review-view" class="panel game-review-view" hidden>
       <div class="section-heading">
         <div>
-          <h2 id="review-game-title">Review Game</h2>
+          <h2 id="review-game-title">Game Details</h2>
+          <div id="review-game-details" class="review-game-details">
+            <p>
+              <span>Date</span>
+              <strong id="review-game-date"></strong>
+            </p>
+            <p>
+              <span>Opponent</span>
+              <strong id="review-game-opponent"></strong>
+            </p>
+          </div>
           <p id="review-game-meta" class="section-copy"></p>
         </div>
-        <button id="review-back-button" class="secondary-button" type="button">Back to Games</button>
+        <div class="builder-actions review-game-heading-actions">
+          <button id="edit-game-details-button" type="button" aria-expanded="false" aria-controls="review-game-details-form">Edit Game Details</button>
+          <button id="review-back-button" class="secondary-button" type="button">Back to Games</button>
+        </div>
       </div>
+      <form id="review-game-details-form" class="review-game-details-form" hidden novalidate>
+        <label>
+          <span>Date</span>
+          <input id="review-game-date-input" name="date" type="date" required>
+        </label>
+        <label>
+          <span>Opponent Name</span>
+          <input id="review-game-opponent-input" name="opponent" type="text" required>
+        </label>
+        <div class="builder-actions review-game-edit-actions">
+          <button id="save-game-details-button" type="submit">Save Changes</button>
+          <button id="cancel-game-details-button" class="secondary-button" type="button">Cancel</button>
+        </div>
+      </form>
       <p id="review-message" class="form-message" aria-live="polite"></p>
       <div id="review-at-bat-list" class="saved-at-bats"></div>
+      <section class="game-danger-zone" aria-labelledby="game-danger-zone-title">
+        <h3 id="game-danger-zone-title">Danger Zone</h3>
+        <p>Deleting a game permanently removes all at-bats and pitches recorded in it.</p>
+        <button id="delete-game-button" class="danger-button" type="button">Delete Game</button>
+      </section>
+      <div id="delete-game-modal" class="account-delete-modal" hidden>
+        <section
+          class="account-delete-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-game-modal-title"
+          aria-describedby="delete-game-modal-description"
+        >
+          <h2 id="delete-game-modal-title">Delete this game?</h2>
+          <p id="delete-game-modal-description">
+            This will permanently delete the game and all at-bats and pitches recorded within it. This action cannot be undone.
+          </p>
+          <p id="delete-game-message" class="form-message" aria-live="polite"></p>
+          <div class="builder-actions game-delete-modal-actions">
+            <button id="confirm-delete-game-button" class="danger-button" type="button">Delete Game</button>
+            <button id="cancel-delete-game-button" class="secondary-button" type="button">Cancel</button>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section id="game-choice-view" class="panel game-choice-view" hidden>

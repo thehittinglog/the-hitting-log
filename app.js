@@ -1866,12 +1866,27 @@ function initGamesPage(games) {
   const reviewGamesTableBody = document.getElementById("review-games-table-body");
   const reviewView = document.getElementById("game-review-view");
   const reviewTitle = document.getElementById("review-game-title");
+  const reviewDetails = document.getElementById("review-game-details");
+  const reviewDate = document.getElementById("review-game-date");
+  const reviewOpponent = document.getElementById("review-game-opponent");
   const reviewMeta = document.getElementById("review-game-meta");
+  const editGameDetailsButton = document.getElementById("edit-game-details-button");
+  const gameDetailsForm = document.getElementById("review-game-details-form");
+  const gameDateInput = document.getElementById("review-game-date-input");
+  const gameOpponentInput = document.getElementById("review-game-opponent-input");
+  const saveGameDetailsButton = document.getElementById("save-game-details-button");
+  const cancelGameDetailsButton = document.getElementById("cancel-game-details-button");
   const reviewBackButton = document.getElementById("review-back-button");
   const reviewMessage = document.getElementById("review-message");
   const reviewAtBatList = document.getElementById("review-at-bat-list");
+  const deleteGameButton = document.getElementById("delete-game-button");
+  const deleteGameModal = document.getElementById("delete-game-modal");
+  const confirmDeleteGameButton = document.getElementById("confirm-delete-game-button");
+  const cancelDeleteGameButton = document.getElementById("cancel-delete-game-button");
+  const deleteGameMessage = document.getElementById("delete-game-message");
   const gamesTableBody = document.getElementById("games-table-body");
   const gamesEmpty = document.getElementById("empty-state");
+  const gamesMessage = document.getElementById("games-message");
   const tournamentsList = document.getElementById("tournaments-list");
   const tournamentsEmpty = document.getElementById("tournaments-empty");
   const tournamentDetailsView = document.getElementById("tournament-details-view");
@@ -1916,12 +1931,27 @@ function initGamesPage(games) {
     !reviewGamesTableBody ||
     !reviewView ||
     !reviewTitle ||
+    !reviewDetails ||
+    !reviewDate ||
+    !reviewOpponent ||
     !reviewMeta ||
+    !editGameDetailsButton ||
+    !gameDetailsForm ||
+    !gameDateInput ||
+    !gameOpponentInput ||
+    !saveGameDetailsButton ||
+    !cancelGameDetailsButton ||
     !reviewBackButton ||
     !reviewMessage ||
     !reviewAtBatList ||
+    !deleteGameButton ||
+    !deleteGameModal ||
+    !confirmDeleteGameButton ||
+    !cancelDeleteGameButton ||
+    !deleteGameMessage ||
     !gamesTableBody ||
     !gamesEmpty ||
+    !gamesMessage ||
     !tournamentsList ||
     !tournamentsEmpty ||
     !tournamentDetailsView ||
@@ -1961,6 +1991,7 @@ function initGamesPage(games) {
     return;
   }
 
+  const gamesOwnerEmail = getCurrentUser()?.email || "";
   const state = {
     draftGame: null,
     activeAtBat: null,
@@ -1977,6 +2008,9 @@ function initGamesPage(games) {
     deletingPitchAtBatIndex: null,
     deletingPitchIndex: null,
     pitchEditSaving: false,
+    gameDetailsEditing: false,
+    gameDetailsSaving: false,
+    gameDeleting: false,
     workflowEditAtBatIndex: null,
     workflowEditOriginalAtBat: null,
     activePitchIndex: null,
@@ -1985,6 +2019,7 @@ function initGamesPage(games) {
     step: "at_bat_details",
     activePitchCompleted: false,
   };
+  let lastDeleteGameModalFocus = null;
 
   const pitcherHandednessOptions = [
     { label: "Right-handed", value: "Right-handed" },
@@ -2265,6 +2300,9 @@ function initGamesPage(games) {
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
     state.reviewGameId = "";
+    state.gameDetailsEditing = false;
+    state.gameDetailsSaving = false;
+    state.gameDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -2282,6 +2320,9 @@ function initGamesPage(games) {
     tournamentNameView.hidden = true;
     newGameView.hidden = true;
     state.reviewGameId = "";
+    state.gameDetailsEditing = false;
+    state.gameDetailsSaving = false;
+    state.gameDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -2783,6 +2824,46 @@ function initGamesPage(games) {
 
   function getReviewGame() {
     return games.find((game) => game.id === state.reviewGameId) || null;
+  }
+
+  function currentUserOwnsLoadedGames() {
+    return Boolean(gamesOwnerEmail && getCurrentUser()?.email === gamesOwnerEmail);
+  }
+
+  function setGameDetailsEditing(isEditing) {
+    const game = getReviewGame();
+
+    state.gameDetailsEditing = isEditing;
+    reviewDetails.hidden = isEditing;
+    gameDetailsForm.hidden = !isEditing;
+    editGameDetailsButton.hidden = isEditing;
+    editGameDetailsButton.setAttribute("aria-expanded", String(isEditing));
+
+    if (isEditing && game) {
+      gameDateInput.value = game.date || "";
+      gameOpponentInput.value = game.opponent || "";
+      gameDateInput.focus();
+    }
+  }
+
+  function closeDeleteGameModal({ restoreFocus = true } = {}) {
+    deleteGameModal.hidden = true;
+    document.body.classList.remove("has-game-modal");
+    deleteGameMessage.textContent = "";
+    deleteGameMessage.classList.remove("is-error");
+
+    if (restoreFocus) {
+      lastDeleteGameModalFocus?.focus();
+    }
+  }
+
+  function openDeleteGameModal() {
+    lastDeleteGameModalFocus = document.activeElement;
+    deleteGameMessage.textContent = "";
+    deleteGameMessage.classList.remove("is-error");
+    deleteGameModal.hidden = false;
+    document.body.classList.add("has-game-modal");
+    confirmDeleteGameButton.focus();
   }
 
   function getEditOutcomeValue(atBat) {
@@ -3570,9 +3651,14 @@ function initGamesPage(games) {
     }
 
     const gameStats = getGameStats(game);
-    reviewTitle.textContent = `Review Game vs ${gameStats.opponent || "Opponent"}`;
-    reviewMeta.textContent =
-      `${gameStats.date || "No date"} | ${getGameAtBatCount(gameStats)} at-bats | ${gameStats.hits} hits`;
+    reviewTitle.textContent = "Game Details";
+    reviewDate.textContent = formatDisplayDate(gameStats.date);
+    reviewOpponent.textContent = gameStats.opponent || "Opponent";
+    reviewMeta.textContent = `${getGameAtBatCount(gameStats)} at-bats | ${gameStats.hits} hits`;
+    reviewDetails.hidden = state.gameDetailsEditing;
+    gameDetailsForm.hidden = !state.gameDetailsEditing;
+    editGameDetailsButton.hidden = state.gameDetailsEditing;
+    editGameDetailsButton.setAttribute("aria-expanded", String(state.gameDetailsEditing));
     reviewAtBatList.innerHTML = "";
 
     if (!Array.isArray(gameStats.atBats) || gameStats.atBats.length === 0) {
@@ -3625,6 +3711,9 @@ function initGamesPage(games) {
   function showGameReview(gameId, returnView = "review-list") {
     state.reviewGameId = gameId;
     state.reviewReturnView = returnView;
+    state.gameDetailsEditing = false;
+    state.gameDetailsSaving = false;
+    state.gameDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -4120,6 +4209,204 @@ function initGamesPage(games) {
     setMessage(wasEditingWorkflow ? "At-bat updated." : "At-bat saved to this game.", true);
     renderAtBats();
   }
+
+  editGameDetailsButton.addEventListener("click", () => {
+    reviewMessage.textContent = "";
+    reviewMessage.classList.remove("is-success", "is-error");
+    setGameDetailsEditing(true);
+  });
+
+  cancelGameDetailsButton.addEventListener("click", () => {
+    if (state.gameDetailsSaving) {
+      return;
+    }
+
+    reviewMessage.textContent = "";
+    reviewMessage.classList.remove("is-success", "is-error");
+    setGameDetailsEditing(false);
+    editGameDetailsButton.focus();
+  });
+
+  gameDetailsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (state.gameDetailsSaving) {
+      return;
+    }
+
+    if (!currentUserOwnsLoadedGames()) {
+      reviewMessage.textContent = "Your session changed. Please reload the page before editing this game.";
+      reviewMessage.classList.remove("is-success");
+      reviewMessage.classList.add("is-error");
+      return;
+    }
+
+    const game = getReviewGame();
+    const date = gameDateInput.value;
+    const opponent = gameOpponentInput.value.trim();
+
+    if (!date) {
+      reviewMessage.textContent = "Enter a game date before saving.";
+      reviewMessage.classList.remove("is-success");
+      reviewMessage.classList.add("is-error");
+      gameDateInput.focus();
+      return;
+    }
+
+    if (!opponent) {
+      reviewMessage.textContent = "Enter an opponent name before saving.";
+      reviewMessage.classList.remove("is-success");
+      reviewMessage.classList.add("is-error");
+      gameOpponentInput.focus();
+      return;
+    }
+
+    if (!game) {
+      reviewMessage.textContent = "We couldn't find that game. Please return to Games and try again.";
+      reviewMessage.classList.remove("is-success");
+      reviewMessage.classList.add("is-error");
+      return;
+    }
+
+    const gameIndex = games.findIndex((savedGame) => savedGame.id === game.id);
+    const originalGame = gameIndex >= 0 ? games[gameIndex] : null;
+
+    state.gameDetailsSaving = true;
+    saveGameDetailsButton.disabled = true;
+    saveGameDetailsButton.textContent = "Saving...";
+    reviewMessage.textContent = "";
+    reviewMessage.classList.remove("is-success", "is-error");
+
+    try {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      const savedGame = upsertSavedGame(games, {
+        ...game,
+        date,
+        opponent,
+      });
+
+      state.reviewGameId = savedGame.id;
+      state.gameDetailsEditing = false;
+      renderGamesHome();
+      renderGamesTable(games, "review-games-table-body", "review-games-empty");
+      renderReviewGame();
+      reviewMessage.textContent = "Game details updated successfully.";
+      reviewMessage.classList.remove("is-error");
+      reviewMessage.classList.add("is-success");
+    } catch (saveError) {
+      if (gameIndex >= 0 && originalGame) {
+        games[gameIndex] = originalGame;
+      }
+
+      console.error("Unable to update game details:", saveError);
+      reviewMessage.textContent = "We couldn't update the game details. Please try again.";
+      reviewMessage.classList.remove("is-success");
+      reviewMessage.classList.add("is-error");
+    } finally {
+      state.gameDetailsSaving = false;
+      saveGameDetailsButton.disabled = false;
+      saveGameDetailsButton.textContent = "Save Changes";
+    }
+  });
+
+  deleteGameButton.addEventListener("click", openDeleteGameModal);
+  cancelDeleteGameButton.addEventListener("click", () => {
+    if (!state.gameDeleting) {
+      closeDeleteGameModal();
+    }
+  });
+  deleteGameModal.addEventListener("click", (event) => {
+    if (event.target === deleteGameModal && !state.gameDeleting) {
+      closeDeleteGameModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (deleteGameModal.hidden) {
+      return;
+    }
+
+    if (event.key === "Escape" && !state.gameDeleting) {
+      event.preventDefault();
+      closeDeleteGameModal();
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusableElements = Array.from(
+      deleteGameModal.querySelectorAll("button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])")
+    );
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    if (!firstFocusable || !lastFocusable) {
+      return;
+    }
+
+    if (event.shiftKey && document.activeElement === firstFocusable) {
+      event.preventDefault();
+      lastFocusable.focus();
+    } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+      event.preventDefault();
+      firstFocusable.focus();
+    }
+  });
+
+  confirmDeleteGameButton.addEventListener("click", async () => {
+    if (state.gameDeleting) {
+      return;
+    }
+
+    if (!currentUserOwnsLoadedGames()) {
+      deleteGameMessage.textContent = "Your session changed. Please reload the page before deleting this game.";
+      deleteGameMessage.classList.add("is-error");
+      return;
+    }
+
+    const game = getReviewGame();
+    const gameIndex = game ? games.findIndex((savedGame) => savedGame.id === game.id) : -1;
+
+    if (!game || gameIndex < 0) {
+      deleteGameMessage.textContent = "We couldn't find that game. Please close this message and try again.";
+      deleteGameMessage.classList.add("is-error");
+      return;
+    }
+
+    state.gameDeleting = true;
+    confirmDeleteGameButton.disabled = true;
+    cancelDeleteGameButton.disabled = true;
+    confirmDeleteGameButton.textContent = "Deleting...";
+    deleteGameMessage.textContent = "";
+    deleteGameMessage.classList.remove("is-error");
+    const deletedGame = games[gameIndex];
+
+    try {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      games.splice(gameIndex, 1);
+      saveGames(games);
+      closeDeleteGameModal({ restoreFocus: false });
+      window.history.replaceState(null, "", "games.html");
+      showHomeView();
+      gamesMessage.textContent = "Game deleted successfully.";
+      gamesMessage.classList.remove("is-error");
+      gamesMessage.classList.add("is-success");
+    } catch (deleteError) {
+      if (!games.some((savedGame) => savedGame.id === deletedGame.id)) {
+        games.splice(gameIndex, 0, deletedGame);
+      }
+
+      console.error("Unable to delete game:", deleteError);
+      deleteGameMessage.textContent = "We couldn't delete this game. Please try again.";
+      deleteGameMessage.classList.add("is-error");
+    } finally {
+      state.gameDeleting = false;
+      confirmDeleteGameButton.disabled = false;
+      cancelDeleteGameButton.disabled = false;
+      confirmDeleteGameButton.textContent = "Delete Game";
+    }
+  });
 
   reviewGamesTableBody.addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-game-id]");

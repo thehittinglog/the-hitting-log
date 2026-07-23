@@ -2077,6 +2077,106 @@ body.has-account-modal {
   margin-top: 20px;
 }
 
+.review-game-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+  margin-top: 12px;
+}
+
+.review-game-details p {
+  margin: 0;
+}
+
+.review-game-details span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.review-game-details strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.review-game-details[hidden] {
+  display: none;
+}
+
+.review-game-heading-actions,
+.review-game-edit-actions,
+.game-delete-modal-actions {
+  grid-template-columns: repeat(2, max-content);
+  align-items: center;
+}
+
+.review-game-details-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.review-game-details-form[hidden] {
+  display: none;
+}
+
+.review-game-edit-actions {
+  grid-column: 1 / -1;
+}
+
+.game-danger-zone {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.game-danger-zone p {
+  margin: 8px 0 16px;
+  color: var(--muted);
+}
+
+body.has-game-modal {
+  overflow: hidden;
+}
+
+.review-game-details-form button:disabled,
+.game-delete-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .review-game-details,
+  .review-game-details-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-game-edit-actions {
+    grid-column: 1;
+  }
+
+  .review-game-heading-actions,
+  .review-game-edit-actions,
+  .game-delete-modal-actions {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-game-heading-actions button,
+  .review-game-edit-actions button,
+  .game-delete-modal-actions button,
+  .game-danger-zone .danger-button {
+    width: 100%;
+  }
+}
+
 .review-at-bat-card {
   display: grid;
   gap: 10px;
