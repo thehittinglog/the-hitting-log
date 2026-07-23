@@ -2451,6 +2451,11 @@ select:focus {
   color: var(--ink);
 }
 
+.chart-zone-map .zone-count {
+  margin-top: 0;
+  color: var(--bg);
+}
+
 .spray-chart-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
