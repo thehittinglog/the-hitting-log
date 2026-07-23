@@ -2054,30 +2054,55 @@ function initGamesPage(games) {
   }
 
   function renderTournaments() {
-    const tournaments = getTournamentGroups(games);
+    const tournaments = getTournamentGroups(games)
+      .slice()
+      .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""))
+      .slice(0, 3);
     tournamentsList.innerHTML = "";
 
     tournaments.forEach((tournament) => {
-      const card = document.createElement("article");
-      const name = document.createElement("h3");
+      const row = document.createElement("tr");
+      const date = document.createElement("td");
+      const name = document.createElement("td");
+      const totalGames = document.createElement("td");
+      const performanceScore = document.createElement("td");
+      const tournamentAtBats = tournament.games.flatMap((game) => (
+        Array.isArray(game.atBats) ? game.atBats : []
+      ));
+      const score = calculateHittingLogPerformanceScore({
+        atBats: tournamentAtBats,
+        stats: getRateStats(tournament.games),
+      });
 
-      card.className = "tournament-card";
-      card.tabIndex = 0;
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-label", `Open ${tournament.name} tournament details`);
+      row.className = "recent-tournament-row";
+      row.tabIndex = 0;
+      row.dataset.tournamentId = tournament.id;
+      row.setAttribute("aria-label", `Open ${tournament.name} tournament details`);
+      date.className = "recent-tournament-date";
+      date.textContent = formatCompactGameDate(tournament.startDate);
+      name.className = "recent-tournament-name";
       name.textContent = tournament.name;
-      card.addEventListener("click", () => {
+      totalGames.className = "recent-tournament-games";
+      totalGames.textContent = String(tournament.games.length);
+      performanceScore.className = "recent-tournament-hlp";
+      performanceScore.textContent = score === null || score === undefined ? "—" : String(score);
+      applyPerformanceScoreStatus(performanceScore, score);
+
+      row.addEventListener("click", () => {
         showTournamentDetails(tournament.id);
       });
-      card.addEventListener("keydown", (event) => {
-        if ((event.key === "Enter" || event.key === " ") && event.target === card) {
+      row.addEventListener("keydown", (event) => {
+        if ((event.key === "Enter" || event.key === " ") && event.target === row) {
           event.preventDefault();
           showTournamentDetails(tournament.id);
         }
       });
 
-      card.appendChild(name);
-      tournamentsList.appendChild(card);
+      row.appendChild(date);
+      row.appendChild(name);
+      row.appendChild(totalGames);
+      row.appendChild(performanceScore);
+      tournamentsList.appendChild(row);
     });
 
     tournamentsEmpty.hidden = tournaments.length > 0;

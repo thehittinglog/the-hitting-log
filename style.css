@@ -2866,34 +2866,75 @@ tbody td {
   margin-top: 20px;
 }
 
-.tournament-card-list {
-  border-top: 1px solid var(--line);
-  margin-top: 18px;
+.recent-tournaments-table {
+  table-layout: fixed;
 }
 
-.tournament-card {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding: 14px 10px;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
-.tournament-card:hover,
-.tournament-card:focus-visible {
-  background: var(--accent-soft);
-  outline: none;
-}
-
-.tournament-card h3 {
-  margin: 0;
-  min-width: 0;
-  white-space: nowrap;
+.recent-tournaments-table th {
   overflow: hidden;
+  padding: 11px 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recent-tournaments-table th:first-child {
+  width: 104px;
+}
+
+.recent-tournaments-table th:nth-child(3) {
+  width: 112px;
+  text-align: center;
+}
+
+.recent-tournaments-table th:last-child {
+  width: 68px;
+  text-align: right;
+}
+
+.recent-tournament-row {
+  cursor: pointer;
+}
+
+.recent-tournament-row td {
+  padding: 13px 8px;
+  white-space: nowrap;
+  transition: background-color 140ms ease;
+}
+
+.recent-tournament-row:hover td,
+.recent-tournament-row:focus-visible td {
+  background: var(--accent-soft);
+}
+
+.recent-tournament-row:focus-visible {
+  outline: 2px solid rgba(169, 31, 36, 0.42);
+  outline-offset: -2px;
+}
+
+.recent-tournament-date,
+.recent-tournament-games,
+.recent-tournament-hlp {
+  font-weight: 800;
+}
+
+.recent-tournament-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.recent-tournament-games {
+  text-align: center;
+}
+
+.recent-tournament-hlp {
+  text-align: right;
 }
 
 .tournament-details-count {
@@ -3154,6 +3195,30 @@ body[data-page="games"] #game-choice-view .choice-card-button {
 
   .recent-games-table th:last-child {
     width: 48px;
+  }
+
+  .recent-tournaments-table th,
+  .recent-tournament-row td {
+    padding-right: 4px;
+    padding-left: 4px;
+    font-size: 0.84rem;
+  }
+
+  .recent-tournaments-table th {
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+  }
+
+  .recent-tournaments-table th:first-child {
+    width: 72px;
+  }
+
+  .recent-tournaments-table th:nth-child(3) {
+    width: 74px;
+  }
+
+  .recent-tournaments-table th:last-child {
+    width: 40px;
   }
 
   .support-card {
