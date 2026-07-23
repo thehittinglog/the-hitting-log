@@ -2965,7 +2965,7 @@ tbody td {
 }
 
 .tournament-games-table th:first-child {
-  width: 92px;
+  width: 58px;
 }
 
 .tournament-games-table th:nth-child(2) {
@@ -3277,7 +3277,7 @@ body[data-page="games"] #game-choice-view .choice-card-button {
   }
 
   .tournament-games-table th:first-child {
-    width: 56px;
+    width: 44px;
   }
 
   .tournament-games-table th:nth-child(2) {
