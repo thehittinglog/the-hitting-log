@@ -1252,7 +1252,7 @@ function appendTournamentGameRow(tableBody, gameStats, index) {
   row.tabIndex = 0;
   row.dataset.gameId = gameStats.id;
   gameNumber.className = "tournament-game-number";
-  gameNumber.textContent = `Game ${index + 1}`;
+  gameNumber.textContent = String(index + 1);
   date.className = "tournament-game-date";
   date.textContent = formatCompactGameDate(gameStats.date);
   opponent.className = "tournament-game-opponent";
