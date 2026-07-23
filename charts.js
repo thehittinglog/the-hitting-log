@@ -601,6 +601,11 @@ function getSprayEntries(games = typeof window.getSavedGames === "function" ? wi
           timing: getSprayTiming(pitch, atBat),
           hardHitBall: atBat.hardHitBall,
           velocity: getRecordedPitchVelocity(pitch, atBat),
+          pitcherHandedness: pitch.pitcherHandedness,
+          pitcher_handedness: pitch.pitcher_handedness,
+          pitchType: pitch.pitchType,
+          pitch_type: pitch.pitch_type,
+          atBat,
           x: location.x,
           y: location.y,
         });
@@ -718,27 +723,34 @@ function renderSprayLegend(legendList, filterId) {
 function renderSprayChartsPage() {
   const filterSelect = document.getElementById("spray-result-filter");
   const velocitySelect = document.getElementById("spray-velocity-filter");
+  const handednessSelect = document.getElementById("spray-handedness-filter");
+  const pitchTypeSelect = document.getElementById("spray-pitch-type-filter");
   const startDateInput = document.getElementById("spray-start-date");
   const endDateInput = document.getElementById("spray-end-date");
   const markerLayer = document.getElementById("spray-marker-layer");
   const emptyState = document.getElementById("spray-empty-state");
   const legendList = document.getElementById("spray-legend-list");
 
-  if (!filterSelect || !velocitySelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
+  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
     return;
   }
 
   populateVelocityRangeOptions(velocitySelect);
+  populatePitchTypeOptions(pitchTypeSelect);
 
   function renderSelectedFilter() {
     const filterId = SPRAY_RESULT_FILTERS.includes(filterSelect.value) ? filterSelect.value : "all";
     const savedGames = typeof window.getSavedGames === "function" ? window.getSavedGames() : [];
     const filteredGames = filterGamesByChartDateRange(savedGames, getChartDateRange(startDateInput, endDateInput));
     const selectedVelocityRange = velocitySelect.value;
+    const selectedHandedness = handednessSelect.value;
+    const selectedPitchType = pitchTypeSelect.value;
     const matches = getSprayEntries(filteredGames).filter(
       (entry) =>
         matchesSprayFilter(entry, filterId) &&
-        matchesVelocityRange(entry.velocity, selectedVelocityRange)
+        matchesVelocityRange(entry.velocity, selectedVelocityRange) &&
+        matchesPitcherHandedness(entry, selectedHandedness) &&
+        matchesPitchType(entry, selectedPitchType)
     );
 
     markerLayer.innerHTML = "";
@@ -758,6 +770,8 @@ function renderSprayChartsPage() {
   filterSelect.value = "all";
   filterSelect.addEventListener("change", renderSelectedFilter);
   velocitySelect.addEventListener("change", renderSelectedFilter);
+  handednessSelect.addEventListener("change", renderSelectedFilter);
+  pitchTypeSelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
   renderSelectedFilter();

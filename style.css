@@ -2550,7 +2550,8 @@ select:focus {
   min-width: 0;
 }
 
-.spray-chart-velocity-filter-field {
+.spray-chart-velocity-filter-field,
+.spray-chart-additional-filter-field {
   margin-top: 14px;
 }
 
