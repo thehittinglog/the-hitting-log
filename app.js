@@ -172,26 +172,34 @@ function getSignupErrorMessage(error) {
   const message = getErrorMessage(error, "");
 
   if (/already (?:been )?registered|already exists|user already registered|identity already exists/i.test(message)) {
-    return "An account with this email already exists. Try signing in instead.";
+    return "An account already exists with this email. Please sign in instead.";
   }
 
   if (/invalid email|email.*invalid|unable to validate email/i.test(message)) {
-    return "Enter a valid email address.";
+    return "Please enter a valid email address.";
   }
 
-  if (/password.*(?:weak|short)|weak password|at least \d+ characters/i.test(message)) {
-    return "Password must be at least 8 characters.";
+  if (/password.*(?:weak|short|least|characters)|weak password/i.test(message)) {
+    return "Your password does not meet the security requirements.";
   }
 
   if (/rate limit|too many requests|email rate limit|over_email_send_rate_limit/i.test(message)) {
-    return "Too many signup attempts. Please wait a few minutes and try again.";
+    return "Too many account attempts were made. Please wait a few minutes and try again.";
+  }
+
+  if (/error sending confirmation email|confirmation email.*(?:failed|error)|email.*send.*(?:failed|error)/i.test(message)) {
+    return "We couldn’t send your confirmation email, so the account was not created. Please try again later or contact support.";
+  }
+
+  if (/database error|saving new user/i.test(message)) {
+    return "Your login was created, but we could not finish setting up your account. Please contact support.";
   }
 
   if (/failed to fetch|network|load failed|fetch.*failed|connection/i.test(message)) {
-    return "We couldn’t reach the signup service. Check your connection and try again.";
+    return "We could not connect to the server. Please check your connection and try again.";
   }
 
-  return "We couldn’t create your account. Please try again.";
+  return "We couldn’t create your account. Please try again or contact support.";
 }
 
 function loadAccounts() {
@@ -6214,9 +6222,10 @@ function initSignupPage() {
       submitButton.textContent = "Creating account...";
     }
 
-    let accountCreated = false;
+    let authUserCreated = false;
 
     try {
+      console.info("[Signup][Stage 1: Auth] Started");
       await window.hittingLogSupabaseReady;
       const { data, error } = await window.hittingLogAuth.signUp({
         email,
@@ -6225,6 +6234,19 @@ function initSignupPage() {
           data: { sport_type: sportType },
           emailRedirectTo: `${window.location.origin}/login.html`,
         },
+      });
+
+      console.info("[Signup][Stage 1: Auth] Response received", {
+        userId: data?.user?.id || null,
+        hasSession: Boolean(data?.session),
+        authError: error
+          ? {
+              message: error.message,
+              status: error.status,
+              code: error.code,
+              name: error.name,
+            }
+          : null,
       });
 
       if (error) {
@@ -6239,31 +6261,58 @@ function initSignupPage() {
         throw new Error("Signup completed without returning a user.");
       }
 
-      const accounts = loadAccounts();
-      if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
-        accounts.push({ email, sportType });
-        saveAccounts(accounts);
+      authUserCreated = true;
+      console.info("[Signup][Stage 1: Auth] Completed", {
+        userId: data.user.id,
+        hasSession: Boolean(data.session),
+      });
+
+      console.info("[Signup][Stage 2: Account setup] Started");
+      try {
+        const accounts = loadAccounts();
+        if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
+          accounts.push({ email, sportType });
+          saveAccounts(accounts);
+        }
+        console.info("[Signup][Stage 2: Account setup] Completed");
+      } catch (setupError) {
+        console.error("[Signup][Stage 2: Account setup] Failed", {
+          message: getErrorMessage(setupError),
+          name: setupError?.name,
+          error: setupError,
+        });
+        signupMessage.textContent =
+          "Your login was created, but local account setup could not be completed. Confirm your email, then sign in to retry setup.";
+        return;
       }
 
-      accountCreated = true;
+      console.info("[Signup][Stage 3: Athlete setup] Skipped; no athlete database record is created during signup");
       signupMessage.classList.add("is-success");
 
       if (data?.session && data.user?.email) {
+        console.info("[Signup][Stage 4: Redirect] Active session found; redirecting to dashboard");
         setCurrentUser(data.user.email);
         signupMessage.textContent = "Account created. Redirecting...";
         redirectTo("dashboard.html");
         return;
       }
 
+      console.info("[Signup][Stage 4: Redirect] Waiting for email confirmation; no active session returned");
       signupMessage.textContent = "Account created! Check your email to confirm your account, then log in.";
       signupForm.reset();
     } catch (error) {
-      console.error("Account creation failed:", error);
+      console.error("[Signup][Stage 1: Auth] Failed", {
+        message: getErrorMessage(error),
+        status: error?.status,
+        code: error?.code,
+        name: error?.name,
+        error,
+      });
       signupMessage.textContent = getSignupErrorMessage(error);
     } finally {
       isSubmitting = false;
 
-      if (submitButton && !accountCreated) {
+      if (submitButton && !authUserCreated) {
         submitButton.disabled = false;
         submitButton.textContent = "Create Account";
       } else if (submitButton) {

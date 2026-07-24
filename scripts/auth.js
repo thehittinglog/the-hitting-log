@@ -20,11 +20,38 @@
     }
 
     const client = await getClient();
-    return client.auth.signUp({
+    console.info("[Signup][Auth] Supabase signUp request started");
+
+    const result = await client.auth.signUp({
       email,
       password,
       options,
     });
+
+    console.info("[Signup][Auth] Supabase signUp response", {
+      userId: result.data?.user?.id || null,
+      hasSession: Boolean(result.data?.session),
+      authError: result.error
+        ? {
+            message: result.error.message,
+            status: result.error.status,
+            code: result.error.code,
+            name: result.error.name,
+          }
+        : null,
+    });
+
+    if (result.error) {
+      console.error("[Signup][Auth] Supabase signUp failed", {
+        message: result.error.message,
+        status: result.error.status,
+        code: result.error.code,
+        name: result.error.name,
+        error: result.error,
+      });
+    }
+
+    return result;
   }
 
   async function logIn({ email, password } = {}) {
