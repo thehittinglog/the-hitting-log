@@ -100,8 +100,8 @@
     },
     hardHitBallPercent: {
       title: "Hard Hit Ball %",
-      definition: "The percentage of batted balls that are classified as hard hit.",
-      formula: "Hard Hit Balls / Total Batted Balls x 100",
+      definition: "The percentage of eligible batted balls that are classified as hard hit. Sacrifice bunts and drag bunts are excluded.",
+      formula: "Hard Hit Balls / Eligible Batted Balls x 100",
       explanation: "A higher percentage generally indicates stronger quality of contact and better offensive production.",
     },
     twoStrikePercent: {
@@ -112,8 +112,8 @@
     },
     hardHitTwoStrikePercent: {
       title: "Hard Hit Ball % w/ 2 Strikes",
-      definition: "The percentage of balls put in play with two strikes that were hit hard.",
-      formula: "Hard-Hit Two-Strike Balls in Play / Two-Strike Balls in Play x 100",
+      definition: "The percentage of eligible balls put in play with two strikes that were hit hard. Sacrifice bunts and drag bunts are excluded.",
+      formula: "Hard-Hit Eligible Two-Strike Balls in Play / Eligible Two-Strike Balls in Play x 100",
       explanation: "This helps track whether quality contact holds up in tougher counts.",
     },
     productiveOutPercent: {

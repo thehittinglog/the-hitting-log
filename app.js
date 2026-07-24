@@ -58,6 +58,21 @@ const outOutcomeFields = new Set([
   "line_out",
   "fly_out",
 ]);
+const ballInPlayOutcomeFields = new Set([
+  "single",
+  "double",
+  "triple",
+  "home_run",
+  "reached_on_error",
+  "fielders_choice",
+  "ground_out",
+  "line_out",
+  "fly_out",
+  "sac_fly",
+  "sac_bunt",
+  "drag_bunt",
+]);
+const hardHitIneligibleOutcomeFields = new Set(["sac_bunt", "drag_bunt"]);
 const timingOptions = [
   { label: "On Time", value: "on_time" },
   { label: "Early", value: "early" },
@@ -665,6 +680,47 @@ function normalizeLegacyOutcome(outcome, battedBallType) {
   return outcome;
 }
 
+function isHardHitEligible(atBat) {
+  if (!atBat || typeof atBat !== "object") {
+    return false;
+  }
+
+  const pitches = Array.isArray(atBat.pitches) ? atBat.pitches : [];
+  const battedBallPitch = pitches.slice().reverse().find((pitch) => {
+    return (
+      pitch?.result === "batted_ball" ||
+      pitch?.primaryResult === "batted_ball" ||
+      pitch?.battedBallOutcome ||
+      pitch?.batted_ball_outcome
+    );
+  });
+  const rawOutcome =
+    atBat.finalOutcome ||
+    atBat.outcome ||
+    battedBallPitch?.battedBallOutcome ||
+    battedBallPitch?.batted_ball_outcome ||
+    battedBallPitch?.outcome ||
+    "";
+  const battedBallType =
+    atBat.battedBallType ||
+    atBat.batted_ball_type ||
+    battedBallPitch?.battedBallType ||
+    battedBallPitch?.batted_ball_type ||
+    "";
+  const normalizedOutcome = normalizeLegacyOutcome(rawOutcome, battedBallType);
+
+  if (normalizedOutcome) {
+    return (
+      ballInPlayOutcomeFields.has(normalizedOutcome) &&
+      !hardHitIneligibleOutcomeFields.has(normalizedOutcome)
+    );
+  }
+
+  return hasBallInPlay(atBat);
+}
+
+window.isHardHitEligible = isHardHitEligible;
+
 function addOutcomeToStats(stats, outcome) {
   if (outcome && Object.prototype.hasOwnProperty.call(stats, outcome)) {
     stats[outcome] += 1;
@@ -867,7 +923,14 @@ function normalizeAtBat(atBat) {
         : rawPitcherVelocity !== "" && rawPitcherVelocity !== null && Number.isFinite(Number(rawPitcherVelocity))
           ? Number(rawPitcherVelocity)
           : "",
-    hardHitBall: normalizeHardHitBallValue(atBat.hardHitBall),
+    hardHitBall: isHardHitEligible({
+      ...atBat,
+      pitches,
+      finalOutcome: rawOutcome,
+      outcome,
+    })
+      ? normalizeHardHitBallValue(atBat.hardHitBall)
+      : null,
     productiveOut: atBat.productiveOut === true || isAutomaticallyProductiveOut(outcome),
     timing: normalizeTiming(atBat.timing),
     pitches,
@@ -3021,7 +3084,10 @@ function initGamesPage(games) {
       pitcherVelocity: atBat.pitcherVelocity === "" || atBat.pitcherVelocity === null ? "" : atBat.pitcherVelocity,
       outcome: getEditOutcomeValue(atBat),
       battedBallType,
-      hardHitBall: typeof atBat.hardHitBall === "boolean" ? atBat.hardHitBall : null,
+      hardHitBall:
+        isHardHitEligible(atBat) && typeof atBat.hardHitBall === "boolean"
+          ? atBat.hardHitBall
+          : null,
       productiveOut: atBat.productiveOut === true,
       timing: normalizeTiming(atBat.timing),
     };
@@ -3079,12 +3145,18 @@ function initGamesPage(games) {
   function createEditedAtBat(originalAtBat, draft) {
     const battedBallType = isBattedEditOutcome(draft.outcome) ? draft.battedBallType : "";
     const normalizedOutcome = normalizeLegacyOutcome(draft.outcome, battedBallType);
+    const hardHitEligible = isHardHitEligible({
+      ...originalAtBat,
+      battedBallType,
+      finalOutcome: draft.outcome,
+      outcome: normalizedOutcome,
+    });
     const editedAtBat = {
       ...originalAtBat,
       pitcherHandedness: draft.pitcherHandedness,
       pitcherVelocity: draft.pitcherVelocity,
       battedBallType,
-      hardHitBall: draft.hardHitBall,
+      hardHitBall: hardHitEligible ? draft.hardHitBall : null,
       productiveOut: isOutOutcome(normalizedOutcome)
         ? draft.productiveOut || isAutomaticallyProductiveOut(normalizedOutcome)
         : false,
@@ -3625,6 +3697,12 @@ function initGamesPage(games) {
     const saveButton = document.createElement("button");
     const cancelButton = document.createElement("button");
     const normalizedOutcome = normalizeLegacyOutcome(draft.outcome, draft.battedBallType);
+    const hardHitEligible = isHardHitEligible({
+      ...atBat,
+      battedBallType: draft.battedBallType,
+      finalOutcome: draft.outcome,
+      outcome: normalizedOutcome,
+    });
 
     form.className = "at-bat-edit-form";
     fieldGrid.className = "edit-field-grid";
@@ -3641,6 +3719,16 @@ function initGamesPage(games) {
           draft.productiveOut = false;
         }
 
+        const nextNormalizedOutcome = normalizeLegacyOutcome(draft.outcome, draft.battedBallType);
+        if (!isHardHitEligible({
+          ...atBat,
+          battedBallType: draft.battedBallType,
+          finalOutcome: draft.outcome,
+          outcome: nextNormalizedOutcome,
+        })) {
+          draft.hardHitBall = null;
+        }
+
         renderReviewGame();
       })
     );
@@ -3650,15 +3738,17 @@ function initGamesPage(games) {
         renderReviewGame();
       })
     );
-    fieldGrid.appendChild(
-      renderEditSelect("Hard Hit Ball", draft.hardHitBall === null ? "" : String(draft.hardHitBall), [
-        { label: "Not Set", value: "" },
-        { label: "Yes", value: "true" },
-        { label: "No", value: "false" },
-      ], (value) => {
-        draft.hardHitBall = value === "" ? null : value === "true";
-      })
-    );
+    if (hardHitEligible) {
+      fieldGrid.appendChild(
+        renderEditSelect("Hard Hit Ball", draft.hardHitBall === null ? "" : String(draft.hardHitBall), [
+          { label: "Not Set", value: "" },
+          { label: "Yes", value: "true" },
+          { label: "No", value: "false" },
+        ], (value) => {
+          draft.hardHitBall = value === "" ? null : value === "true";
+        })
+      );
+    }
     fieldGrid.appendChild(
       renderEditSelect("Productive Out", draft.productiveOut ? "true" : "false", productiveOutOptions.map((option) => ({
         label: option.label,
@@ -3706,6 +3796,13 @@ function initGamesPage(games) {
       const game = getReviewGame();
 
       if (!game || !Array.isArray(game.atBats)) {
+        return;
+      }
+
+      if (hardHitEligible && typeof draft.hardHitBall !== "boolean") {
+        reviewMessage.textContent = "Select whether this was a hard-hit ball before saving.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
         return;
       }
 
@@ -4202,7 +4299,12 @@ function initGamesPage(games) {
 
     state.pendingProductiveOutOutcome = isOutOutcome(normalizedOutcome) ? normalizedOutcome : "";
     completeCurrentPitch();
-    goToStep(isOutOutcome(normalizedOutcome) ? "productive_out" : "hard_hit_ball");
+    if (isOutOutcome(normalizedOutcome)) {
+      goToStep("productive_out");
+      return;
+    }
+
+    goToStep(isHardHitEligible(state.activeAtBat) ? "hard_hit_ball" : "timing");
   }
 
   function handleProductiveOut(isProductiveOut) {
@@ -4213,7 +4315,7 @@ function initGamesPage(games) {
     state.activeAtBat.productiveOut =
       isProductiveOut || isAutomaticallyProductiveOut(state.pendingProductiveOutOutcome);
     state.pendingProductiveOutOutcome = "";
-    goToStep("hard_hit_ball");
+    goToStep(isHardHitEligible(state.activeAtBat) ? "hard_hit_ball" : "timing");
   }
 
   function handleHardHitBall(isHardHit) {
@@ -4275,6 +4377,15 @@ function initGamesPage(games) {
     if (!state.activeAtBat.finalOutcome) {
       const lastPitch = state.activeAtBat.pitches[state.activeAtBat.pitches.length - 1];
       state.activeAtBat.finalOutcome = lastPitch ? lastPitch.battedBallOutcome || lastPitch.strikeType || lastPitch.result : "";
+    }
+
+    if (!isHardHitEligible(state.activeAtBat)) {
+      state.activeAtBat.hardHitBall = null;
+    } else if (typeof state.activeAtBat.hardHitBall !== "boolean") {
+      state.step = "hard_hit_ball";
+      setMessage("Select whether this was a hard-hit ball before saving this at-bat.");
+      renderAtBats();
+      return;
     }
 
     if (hasBallInPlay(state.activeAtBat) && !normalizeTiming(state.activeAtBat.timing)) {
@@ -4927,13 +5038,13 @@ function getAdvancedPercentMetrics(atBats, totals) {
 function getHardHitMetrics(atBats) {
   const metrics = atBats.reduce(
     (summary, atBat) => {
-      const isBallInPlay = hasBallInPlay(atBat);
+      const isEligibleBattedBall = isHardHitEligible(atBat);
       const isTwoStrikeAtBat = reachedTwoStrikes(atBat);
-      const isHardHit = atBat.hardHitBall === true;
+      const isHardHit = isEligibleBattedBall && atBat.hardHitBall === true;
 
       summary.plateAppearances += 1;
 
-      if (isBallInPlay) {
+      if (isEligibleBattedBall) {
         summary.ballsInPlay += 1;
 
         if (isHardHit) {
@@ -4944,7 +5055,7 @@ function getHardHitMetrics(atBats) {
       if (isTwoStrikeAtBat) {
         summary.twoStrikeAtBats += 1;
 
-        if (isBallInPlay) {
+        if (isEligibleBattedBall) {
           summary.twoStrikeBallsInPlay += 1;
 
           if (isHardHit) {
@@ -5131,22 +5242,7 @@ function applyPerformanceScoreStatus(element, score) {
 }
 
 function hasBallInPlay(atBat) {
-  const contactOutcomes = new Set([
-    "single",
-    "double",
-    "triple",
-    "home_run",
-    "reached_on_error",
-    "fielders_choice",
-    "ground_out",
-    "line_out",
-    "fly_out",
-    "sac_fly",
-    "sac_bunt",
-    "drag_bunt",
-  ]);
-
-  if (contactOutcomes.has(atBat.outcome)) {
+  if (ballInPlayOutcomeFields.has(atBat.outcome)) {
     return true;
   }
 
@@ -5227,7 +5323,7 @@ function getIsQualityAtBat(atBat) {
 
   return (
     qualityOutcomes.has(atBat.outcome) ||
-    atBat.hardHitBall === true ||
+    (isHardHitEligible(atBat) && atBat.hardHitBall === true) ||
     (Array.isArray(atBat.pitches) && atBat.pitches.length >= 6)
   );
 }

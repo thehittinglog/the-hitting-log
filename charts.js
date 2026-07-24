@@ -631,11 +631,11 @@ function matchesSprayFilter(entry, filterId) {
   }
 
   if (filterId === "hard-hit") {
-    return entry.hardHitBall === true;
+    return window.isHardHitEligible?.(entry.atBat) === true && entry.hardHitBall === true;
   }
 
   if (filterId === "weak-contact") {
-    return entry.hardHitBall === false;
+    return window.isHardHitEligible?.(entry.atBat) === true && entry.hardHitBall === false;
   }
 
   if (filterId === "hits") {
