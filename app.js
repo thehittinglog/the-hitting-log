@@ -202,6 +202,50 @@ function getSignupErrorMessage(error) {
   return "We couldn’t create your account. Please try again or contact support.";
 }
 
+function getWeakPasswordMessage(error) {
+  const requirementsMessage =
+    typeof error?.weak_password?.message === "string"
+      ? error.weak_password.message.trim()
+      : typeof error?.message === "string"
+        ? error.message.trim()
+        : "";
+
+  if (requirementsMessage && !/^(?:weak password|password is too weak)\.?$/i.test(requirementsMessage)) {
+    return requirementsMessage;
+  }
+
+  const reasonMessages = {
+    length: "Your password must meet the minimum length requirement.",
+    characters: "Your password must include all required character types.",
+    pwned: "Choose a password that has not appeared in a known data breach.",
+  };
+  const requirements = Array.isArray(error?.reasons)
+    ? error.reasons.map((reason) => reasonMessages[reason]).filter(Boolean)
+    : [];
+
+  if (requirements.length) {
+    return requirements.join(" ");
+  }
+
+  return "That password does not meet the password requirements. Please choose a stronger password.";
+}
+
+function getPasswordUpdateErrorMessage(error) {
+  switch (error?.code) {
+    case "same_password":
+      return "Your new password must be different from your current password.";
+    case "weak_password":
+      return getWeakPasswordMessage(error);
+    case "reauthentication_needed":
+      return "For security, please request a new password-reset link and try again.";
+    case "session_expired":
+    case "session_not_found":
+      return "This password-reset link has expired. Please request a new one.";
+    default:
+      return "We couldn't update your password. Please try again or request a new reset link.";
+  }
+}
+
 function loadAccounts() {
   const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
   if (!Array.isArray(savedAccounts)) {
@@ -6075,7 +6119,7 @@ function initResetPasswordPage() {
       const { error } = await window.hittingLogAuth.updatePassword(newPassword);
       if (error) {
         console.error("Supabase password update failed:", error);
-        setAuthFormMessage(message, "We couldn't update your password. Please try again.", "error");
+        setAuthFormMessage(message, getPasswordUpdateErrorMessage(error), "error");
         setFormEnabled(true);
         return;
       }
@@ -6095,7 +6139,11 @@ function initResetPasswordPage() {
       window.setTimeout(() => redirectTo("/login"), 2000);
     } catch (error) {
       console.error("Password update error:", error);
-      setAuthFormMessage(message, "We couldn't update your password. Please try again.", "error");
+      setAuthFormMessage(
+        message,
+        "We couldn't update your password. Please try again or request a new reset link.",
+        "error",
+      );
       setFormEnabled(true);
     } finally {
       isSubmitting = false;
