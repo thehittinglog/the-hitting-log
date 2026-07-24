@@ -6176,14 +6176,71 @@ function initSignupPage() {
   const signupForm = document.getElementById("signup-form");
   const emailInput = document.getElementById("signup-email");
   const passwordInput = document.getElementById("signup-password");
+  const confirmPasswordInput = document.getElementById("signup-confirm-password");
   const sportTypeInput = document.getElementById("signup-sport-type");
   const signupMessage = document.getElementById("signup-message");
+  const passwordError = document.getElementById("signup-password-error");
+  const submitButton = signupForm?.querySelector("button[type='submit']");
 
-  if (!signupForm || !signupMessage || !emailInput || !passwordInput || !sportTypeInput) {
+  if (
+    !signupForm ||
+    !signupMessage ||
+    !emailInput ||
+    !passwordInput ||
+    !confirmPasswordInput ||
+    !sportTypeInput ||
+    !passwordError ||
+    !submitButton
+  ) {
     return;
   }
 
   let isSubmitting = false;
+
+  function setPasswordMismatchError(hasMismatch) {
+    passwordError.textContent = hasMismatch ? "Passwords do not match." : "";
+    passwordError.hidden = !hasMismatch;
+
+    if (hasMismatch) {
+      passwordInput.setAttribute("aria-invalid", "true");
+      confirmPasswordInput.setAttribute("aria-invalid", "true");
+    } else {
+      passwordInput.removeAttribute("aria-invalid");
+      confirmPasswordInput.removeAttribute("aria-invalid");
+    }
+  }
+
+  function passwordsDoNotMatch() {
+    return (
+      passwordInput.value.length > 0 &&
+      confirmPasswordInput.value.length > 0 &&
+      passwordInput.value !== confirmPasswordInput.value
+    );
+  }
+
+  function updateSubmitButtonState() {
+    submitButton.disabled =
+      isSubmitting ||
+      passwordInput.value.length === 0 ||
+      confirmPasswordInput.value.length === 0 ||
+      passwordsDoNotMatch();
+  }
+
+  function handlePasswordEdit() {
+    setPasswordMismatchError(false);
+    updateSubmitButtonState();
+  }
+
+  function showPasswordMismatchOnBlur() {
+    setPasswordMismatchError(passwordsDoNotMatch());
+    updateSubmitButtonState();
+  }
+
+  passwordInput.addEventListener("input", handlePasswordEdit);
+  confirmPasswordInput.addEventListener("input", handlePasswordEdit);
+  passwordInput.addEventListener("blur", showPasswordMismatchOnBlur);
+  confirmPasswordInput.addEventListener("blur", showPasswordMismatchOnBlur);
+  updateSubmitButtonState();
 
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -6194,8 +6251,8 @@ function initSignupPage() {
 
     const email = normalizeEmail(emailInput.value);
     const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
     const sportType = normalizeSportType(sportTypeInput.value);
-    const submitButton = signupForm.querySelector("button[type='submit']");
 
     signupMessage.classList.remove("is-success");
     signupMessage.textContent = "";
@@ -6211,16 +6268,27 @@ function initSignupPage() {
       return;
     }
 
+    if (!password || !confirmPassword) {
+      updateSubmitButtonState();
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setPasswordMismatchError(true);
+      updateSubmitButtonState();
+      return;
+    }
+
+    setPasswordMismatchError(false);
+
     if (password.length < 8) {
       signupMessage.textContent = "Password must be at least 8 characters.";
       return;
     }
 
     isSubmitting = true;
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Creating account...";
-    }
+    updateSubmitButtonState();
+    submitButton.textContent = "Creating account...";
 
     let authUserCreated = false;
 
@@ -6312,10 +6380,10 @@ function initSignupPage() {
     } finally {
       isSubmitting = false;
 
-      if (submitButton && !authUserCreated) {
-        submitButton.disabled = false;
+      if (!authUserCreated) {
         submitButton.textContent = "Create Account";
-      } else if (submitButton) {
+        updateSubmitButtonState();
+      } else {
         submitButton.textContent = "Account Created";
       }
     }
