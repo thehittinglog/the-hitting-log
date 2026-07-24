@@ -42,13 +42,18 @@
     });
 
     if (result.error) {
-      console.error("[Signup][Auth] Supabase signUp failed", {
-        message: result.error.message,
-        status: result.error.status,
-        code: result.error.code,
-        name: result.error.name,
-        error: result.error,
+      const authError = result.error;
+      console.error("[Signup][Auth] Full error:", {
+        message: authError?.message,
+        status: authError?.status,
+        code: authError?.code,
+        name: authError?.name,
+        error: authError,
       });
+      console.log(
+        "[Signup][Auth] Error JSON:",
+        JSON.stringify(authError, null, 2)
+      );
     }
 
     return result;
