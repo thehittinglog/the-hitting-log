@@ -1,6 +1,13 @@
 (function () {
   const storageKey = "hitting-log-games";
+  const accountsKey = "hitting-log-accounts";
   const currentUserKey = "hitting-log-current-user";
+  const gamesTable = "hitting_log_games";
+  const profilesTable = "hitting_log_profiles";
+  let gamesCache = [];
+  let profileCache = null;
+  let authenticatedUser = null;
+  let initialized = false;
   const hitResults = new Set(["Single", "Double", "Triple", "Home Run"]);
   const outResults = new Set(["Out"]);
   const resultLabels = {
@@ -111,31 +118,314 @@
     return String(email || "").trim().toLowerCase();
   }
 
-  function getCurrentUser() {
+  function logOperation(operation, details = {}) {
+    console.info(`[DataStore] ${operation}`, {
+      userId: authenticatedUser?.id || null,
+      ...details,
+    });
+  }
+
+  function logFailure(operation, error, details = {}) {
+    console.error(`[DataStore] ${operation} failed`, {
+      userId: authenticatedUser?.id || null,
+      message: error?.message || String(error),
+      ...details,
+      error,
+    });
+  }
+
+  function getLegacyCurrentUserEmail() {
     try {
       const savedUser = JSON.parse(localStorage.getItem(currentUserKey) || "null");
       return savedUser && typeof savedUser.email === "string" ? normalizeEmail(savedUser.email) : "";
     } catch (error) {
+      logFailure("legacy user marker load", error);
       return "";
     }
   }
 
-  function getGamesStorageKey() {
-    const currentUser = getCurrentUser();
-    return currentUser ? `${storageKey}-${currentUser}` : storageKey;
+  function getLegacyGamesStorageKey() {
+    const email = authenticatedUser?.email ? normalizeEmail(authenticatedUser.email) : getLegacyCurrentUserEmail();
+    return email ? `${storageKey}-${email}` : "";
   }
 
-  function readGamesFromKey(key) {
+  function readLegacyGames() {
+    const key = getLegacyGamesStorageKey();
+    if (!key) {
+      return [];
+    }
+
     try {
       const savedGames = JSON.parse(localStorage.getItem(key) || "[]");
       return Array.isArray(savedGames) ? savedGames : [];
     } catch (error) {
+      logFailure("legacy games load", error, { key });
       return [];
     }
   }
 
-  function getReadableGameKeys() {
-    return [getGamesStorageKey()];
+  async function getClient() {
+    const client = await window.hittingLogSupabaseReady;
+    if (!client) {
+      throw new Error("Supabase data storage is not configured.");
+    }
+    return client;
+  }
+
+  function requireUser() {
+    if (!authenticatedUser?.id) {
+      throw new Error("An authenticated Supabase user is required for data access.");
+    }
+    return authenticatedUser;
+  }
+
+  async function getVerifiedUser(client) {
+    const { data, error } = await client.auth.getUser();
+    if (error) {
+      throw error;
+    }
+    if (!data?.user?.id) {
+      throw new Error("No authenticated Supabase user is available.");
+    }
+    return data.user;
+  }
+
+  function getLegacyAccount() {
+    try {
+      const accounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
+      if (!Array.isArray(accounts) || !authenticatedUser?.email) {
+        return null;
+      }
+      const email = normalizeEmail(authenticatedUser.email);
+      return accounts.find((account) => normalizeEmail(account?.email || "") === email) || null;
+    } catch (error) {
+      logFailure("legacy profile load", error);
+      return null;
+    }
+  }
+
+  function removeLegacyAccount() {
+    if (!authenticatedUser?.email) {
+      return;
+    }
+    try {
+      const accounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
+      const authenticatedEmail = normalizeEmail(authenticatedUser.email);
+      const remainingAccounts = Array.isArray(accounts)
+        ? accounts.filter((account) => normalizeEmail(account?.email || "") !== authenticatedEmail)
+        : [];
+      if (remainingAccounts.length) {
+        localStorage.setItem(accountsKey, JSON.stringify(remainingAccounts));
+      } else {
+        localStorage.removeItem(accountsKey);
+      }
+      logOperation("legacy profile cleanup succeeded");
+    } catch (error) {
+      logFailure("legacy profile cleanup", error);
+    }
+  }
+
+  async function loadProfileFromCloud(client) {
+    const user = requireUser();
+    logOperation("profile load started");
+    const { data, error } = await client
+      .from(profilesTable)
+      .select("user_id, athlete_name, sport_type, updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    profileCache = data
+      ? {
+          userId: data.user_id,
+          athleteName: data.athlete_name || "",
+          sportType: data.sport_type === "softball" ? "softball" : "baseball",
+        }
+      : null;
+    logOperation("profile load succeeded", { found: Boolean(data) });
+    return profileCache;
+  }
+
+  async function saveProfile(profile, clientOverride) {
+    const client = clientOverride || await getClient();
+    const user = requireUser();
+    const savedProfile = {
+      athleteName: String(profile?.athleteName || "").trim(),
+      sportType: profile?.sportType === "softball" ? "softball" : "baseball",
+    };
+    logOperation("profile save started");
+
+    try {
+      const { data, error } = await client
+        .from(profilesTable)
+        .upsert({
+          user_id: user.id,
+          athlete_name: savedProfile.athleteName,
+          sport_type: savedProfile.sportType,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" })
+        .select("user_id, athlete_name, sport_type")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+      if (data?.user_id !== user.id) {
+        throw new Error("Supabase did not confirm the saved profile.");
+      }
+
+      profileCache = {
+        userId: data.user_id,
+        athleteName: data.athlete_name || "",
+        sportType: data.sport_type === "softball" ? "softball" : "baseball",
+      };
+      logOperation("profile save succeeded");
+      return profileCache;
+    } catch (error) {
+      logFailure("profile save", error);
+      throw error;
+    }
+  }
+
+  async function migrateLegacyProfile(client) {
+    if (profileCache) {
+      removeLegacyAccount();
+      return;
+    }
+    const legacyAccount = getLegacyAccount();
+    const metadata = authenticatedUser?.user_metadata || {};
+    const profile = {
+      athleteName:
+        legacyAccount?.athleteName ||
+        metadata.athlete_name ||
+        metadata.athleteName ||
+        metadata.full_name ||
+        "",
+      sportType: legacyAccount?.sportType || metadata.sport_type || "baseball",
+    };
+    await saveProfile(profile, client);
+    if (legacyAccount) {
+      removeLegacyAccount();
+    }
+  }
+
+  async function loadGamesFromCloud(client) {
+    const user = requireUser();
+    logOperation("games load started");
+    try {
+      const { data, error } = await client
+        .from(gamesTable)
+        .select("game_id, payload, updated_at")
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      gamesCache = (data || [])
+        .map((row) => normalizeStoredGame(row.payload))
+        .filter((game) => game && typeof game === "object");
+      logOperation("games load succeeded", { count: gamesCache.length });
+      return gamesCache;
+    } catch (error) {
+      logFailure("games load", error);
+      throw error;
+    }
+  }
+
+  async function upsertGamesToCloud(games, clientOverride) {
+    const client = clientOverride || await getClient();
+    const user = requireUser();
+    const normalizedGames = games.map(normalizeStoredGame);
+    if (!normalizedGames.length) {
+      return [];
+    }
+    const rows = normalizedGames.map((game) => ({
+      user_id: user.id,
+      game_id: getGameIdentity(game),
+      payload: game,
+      updated_at: new Date().toISOString(),
+    }));
+    logOperation("games save started", { count: rows.length, gameIds: rows.map((row) => row.game_id) });
+
+    try {
+      const { data, error } = await client
+        .from(gamesTable)
+        .upsert(rows, { onConflict: "user_id,game_id" })
+        .select("user_id, game_id");
+
+      if (error) {
+        throw error;
+      }
+      if (!Array.isArray(data) || data.length !== rows.length || data.some((row) => row.user_id !== user.id)) {
+        throw new Error("Supabase did not confirm every saved game.");
+      }
+      logOperation("games save succeeded", { count: data.length, gameIds: data.map((row) => row.game_id) });
+      return normalizedGames;
+    } catch (error) {
+      logFailure("games save", error, { gameIds: rows.map((row) => row.game_id) });
+      throw error;
+    }
+  }
+
+  async function migrateLegacyGames(client) {
+    const legacyGames = readLegacyGames();
+    if (!legacyGames.length) {
+      return;
+    }
+    const gamesById = new Map(gamesCache.map((game) => [getGameIdentity(game), game]));
+    const newLegacyGames = [];
+    legacyGames.map(normalizeStoredGame).forEach((game) => {
+      const gameId = getGameIdentity(game);
+      if (!gamesById.has(gameId)) {
+        gamesById.set(gameId, game);
+        newLegacyGames.push(game);
+      }
+    });
+    const mergedGames = Array.from(gamesById.values());
+    logOperation("legacy games migration started", {
+      localCount: legacyGames.length,
+      newCloudCount: newLegacyGames.length,
+    });
+    await upsertGamesToCloud(newLegacyGames, client);
+    gamesCache = mergedGames;
+    const legacyKey = getLegacyGamesStorageKey();
+    if (legacyKey) {
+      localStorage.removeItem(legacyKey);
+    }
+    logOperation("legacy games migration succeeded", { count: legacyGames.length });
+  }
+
+  async function initializeDataStore() {
+    if (initialized) {
+      return { games: getSavedGames(), profile: profileCache, user: authenticatedUser };
+    }
+
+    const client = await getClient();
+    try {
+      authenticatedUser = await getVerifiedUser(client);
+      logOperation("authenticated user load succeeded");
+      await Promise.all([loadGamesFromCloud(client), loadProfileFromCloud(client)]);
+      await migrateLegacyProfile(client);
+      await migrateLegacyGames(client);
+      localStorage.removeItem(currentUserKey);
+      initialized = true;
+      return { games: getSavedGames(), profile: profileCache, user: authenticatedUser };
+    } catch (error) {
+      logFailure("initialization", error);
+      throw error;
+    }
+  }
+
+  function clearDataStore() {
+    gamesCache = [];
+    profileCache = null;
+    authenticatedUser = null;
+    initialized = false;
+    logOperation("in-memory data cleared");
   }
 
   function getGameIdentity(game) {
@@ -169,23 +459,10 @@
   }
 
   function getSavedGames() {
-    const gamesById = new Map();
-
-    getReadableGameKeys().forEach((key) => {
-      readGamesFromKey(key).forEach((game) => {
-        const normalizedGame = normalizeStoredGame(game);
-        const gameId = getGameIdentity(normalizedGame);
-
-        if (gameId) {
-          gamesById.set(gameId, normalizedGame);
-        }
-      });
-    });
-
-    return Array.from(gamesById.values());
+    return gamesCache.map((game) => normalizeStoredGame(game));
   }
 
-  function saveGame(game) {
+  async function saveGame(game) {
     const games = getSavedGames();
     const savedGame = normalizeStoredGame(game);
     const gameId = getGameIdentity(savedGame);
@@ -200,8 +477,42 @@
       games.push(savedGame);
     }
 
-    localStorage.setItem(getGamesStorageKey(), JSON.stringify(games));
+    await upsertGamesToCloud([savedGame]);
+    gamesCache = games;
     return savedGame;
+  }
+
+  async function saveGameBatch(games) {
+    const normalizedGames = await upsertGamesToCloud(games);
+    const gamesById = new Map(gamesCache.map((game) => [getGameIdentity(game), game]));
+    normalizedGames.forEach((game) => gamesById.set(getGameIdentity(game), game));
+    gamesCache = Array.from(gamesById.values());
+    return normalizedGames;
+  }
+
+  async function deleteGame(gameId) {
+    const client = await getClient();
+    const user = requireUser();
+    logOperation("game delete started", { gameId });
+    try {
+      const { data, error } = await client
+        .from(gamesTable)
+        .delete()
+        .eq("user_id", user.id)
+        .eq("game_id", gameId)
+        .select("user_id, game_id");
+      if (error) {
+        throw error;
+      }
+      if (!Array.isArray(data) || data.length !== 1 || data[0].user_id !== user.id) {
+        throw new Error("Supabase did not confirm the deleted game.");
+      }
+      gamesCache = gamesCache.filter((game) => getGameIdentity(game) !== gameId);
+      logOperation("game delete succeeded", { gameId });
+    } catch (error) {
+      logFailure("game delete", error, { gameId });
+      throw error;
+    }
   }
 
   function getAllAtBats(games = getSavedGames()) {
@@ -379,8 +690,15 @@
   }
 
   window.dataStorePitchLocations = pitchLocations;
+  window.initializeHittingLogDataStore = initializeDataStore;
+  window.clearHittingLogDataStore = clearDataStore;
+  window.getHittingLogProfile = () => profileCache;
+  window.saveHittingLogProfile = saveProfile;
+  window.getHittingLogAuthenticatedUser = () => authenticatedUser;
   window.getSavedGames = getSavedGames;
   window.saveGame = saveGame;
+  window.saveGameBatchToCloud = saveGameBatch;
+  window.deleteGameFromCloud = deleteGame;
   window.getAllAtBats = getAllAtBats;
   window.getAllPitches = getAllPitches;
   window.normalizeResultName = normalizeResultName;

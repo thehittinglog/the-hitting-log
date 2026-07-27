@@ -791,8 +791,15 @@ function setChartsView(viewName) {
 
 window.setChartsView = setChartsView;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (document.body?.dataset.page !== "charts") {
+    return;
+  }
+
+  try {
+    await window.hittingLogDataReady;
+  } catch (error) {
+    console.error("[Charts] Supabase data load failed; charts were not rendered", error);
     return;
   }
 

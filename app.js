@@ -1,6 +1,4 @@
-const storageKey = "hitting-log-games";
-const accountsKey = "hitting-log-accounts";
-const currentUserKey = "hitting-log-current-user";
+let currentSupabaseUser = null;
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
 const authPages = new Set(["login", "signup"]);
@@ -261,30 +259,9 @@ function getPasswordUpdateErrorMessage(error) {
   }
 }
 
-function loadAccounts() {
-  const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
-  if (!Array.isArray(savedAccounts)) {
-    return [];
-  }
-
-  return savedAccounts.map(({ password, ...account }) => account);
-}
-
-function saveAccounts(accounts) {
-  const safeAccounts = accounts.map(({ password, ...account }) => account);
-  localStorage.setItem(accountsKey, JSON.stringify(safeAccounts));
-}
-
 function removeStoredAccountPasswords() {
-  const savedAccounts = JSON.parse(localStorage.getItem(accountsKey) || "[]");
-
-  if (!Array.isArray(savedAccounts)) {
-    return;
-  }
-
-  if (savedAccounts.some((account) => Object.prototype.hasOwnProperty.call(account, "password"))) {
-    saveAccounts(savedAccounts);
-  }
+  // Legacy account records are read only by the one-time cloud migration.
+  // They are never used as the application's source of truth.
 }
 
 function normalizeSportType(sportType) {
@@ -292,38 +269,29 @@ function normalizeSportType(sportType) {
 }
 
 function getCurrentUser() {
-  const savedUser = JSON.parse(localStorage.getItem(currentUserKey) || "null");
-
-  if (!savedUser || typeof savedUser.email !== "string") {
+  if (!currentSupabaseUser?.id || typeof currentSupabaseUser.email !== "string") {
     return null;
   }
 
   return {
-    email: normalizeEmail(savedUser.email),
+    id: currentSupabaseUser.id,
+    email: normalizeEmail(currentSupabaseUser.email),
   };
 }
 
-function setCurrentUser(email) {
-  localStorage.setItem(
-    currentUserKey,
-    JSON.stringify({
-      email: normalizeEmail(email),
-    })
-  );
+function setCurrentUser(user) {
+  currentSupabaseUser = user?.id ? user : null;
 }
 
 function getCurrentAccount() {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  return loadAccounts().find((account) => normalizeEmail(account.email || "") === currentUser.email) || null;
+  return typeof window.getHittingLogProfile === "function" ? window.getHittingLogProfile() : null;
 }
 
 function getCurrentSportType() {
-  return normalizeSportType(getCurrentAccount()?.sportType);
+  return normalizeSportType(
+    getCurrentAccount()?.sportType ||
+    currentSupabaseUser?.user_metadata?.sport_type
+  );
 }
 
 function getPitchTypesForSport(sportType = getCurrentSportType()) {
@@ -333,49 +301,22 @@ function getPitchTypesForSport(sportType = getCurrentSportType()) {
 
 window.getPitchTypesForSport = getPitchTypesForSport;
 
-function updateCurrentAccountSportType(sportType) {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return null;
-  }
-
-  const accounts = loadAccounts();
-  const accountIndex = accounts.findIndex((account) => normalizeEmail(account.email || "") === currentUser.email);
-
-  if (accountIndex === -1) {
-    return null;
-  }
-
-  accounts[accountIndex] = {
-    ...accounts[accountIndex],
-    sportType: normalizeSportType(sportType),
-  };
-  saveAccounts(accounts);
-  return accounts[accountIndex];
+async function updateCurrentAccountSportType(sportType) {
+  const profile = getCurrentAccount() || {};
+  return updateCurrentAccountProfile({
+    athleteName: profile.athleteName || "",
+    sportType,
+  });
 }
 
-function updateCurrentAccountProfile({ athleteName, sportType }) {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    return null;
+async function updateCurrentAccountProfile({ athleteName, sportType }) {
+  if (typeof window.saveHittingLogProfile !== "function") {
+    throw new Error("Supabase profile storage is unavailable.");
   }
-
-  const accounts = loadAccounts();
-  const accountIndex = accounts.findIndex((account) => normalizeEmail(account.email || "") === currentUser.email);
-
-  if (accountIndex === -1) {
-    return null;
-  }
-
-  accounts[accountIndex] = {
-    ...accounts[accountIndex],
+  return window.saveHittingLogProfile({
     athleteName: String(athleteName || "").trim(),
     sportType: normalizeSportType(sportType),
-  };
-  saveAccounts(accounts);
-  return accounts[accountIndex];
+  });
 }
 
 function createId(prefix) {
@@ -387,32 +328,12 @@ function createId(prefix) {
 }
 
 function clearCurrentUser() {
-  localStorage.removeItem(currentUserKey);
-}
-
-function getGamesStorageKey() {
-  const currentUser = getCurrentUser();
-  return currentUser ? `${storageKey}-${currentUser.email}` : storageKey;
+  currentSupabaseUser = null;
+  window.clearHittingLogDataStore?.();
 }
 
 function redirectTo(path) {
   window.location.replace(path);
-}
-
-function guardRoute() {
-  const currentUser = getCurrentUser();
-
-  if (protectedPages.has(page) && !currentUser) {
-    redirectTo("/");
-    return false;
-  }
-
-  if (authPages.has(page) && currentUser) {
-    redirectTo("dashboard.html");
-    return false;
-  }
-
-  return true;
 }
 
 function updateAuthUI() {
@@ -427,11 +348,22 @@ function updateAuthUI() {
   if (logoutButton) {
     logoutButton.hidden = !currentUser;
     logoutButton.addEventListener("click", async () => {
-      if (window.hittingLogAuth) {
-        await window.hittingLogAuth.logOut().catch(() => {});
+      try {
+        if (!window.hittingLogAuth) {
+          throw new Error("Supabase authentication is unavailable.");
+        }
+        console.info("[Auth] Supabase logout started", { userId: currentUser?.id || null });
+        const { error } = await window.hittingLogAuth.logOut();
+        if (error) {
+          throw error;
+        }
+        console.info("[Auth] Supabase logout succeeded", { userId: currentUser?.id || null });
+        clearCurrentUser();
+        redirectTo("login.html");
+      } catch (error) {
+        console.error("[Auth] Supabase logout failed", error);
+        window.alert("We couldn't log you out. Please check your connection and try again.");
       }
-      clearCurrentUser();
-      redirectTo("login.html");
     });
   }
 }
@@ -1021,46 +953,17 @@ function loadGames() {
   if (typeof window.getSavedGames === "function") {
     return window.getSavedGames().map(normalizeGame);
   }
-
-  const savedGames = JSON.parse(localStorage.getItem(getGamesStorageKey()) || "[]");
-
-  if (!Array.isArray(savedGames)) {
-    return [];
-  }
-
-  return savedGames.map(normalizeGame);
+  return [];
 }
 
 function loadRawGames() {
-  const storageKeys = Object.keys(localStorage).filter((key) => {
-    return key === storageKey || key.startsWith(`${storageKey}-`);
-  });
-  const savedGames = storageKeys.flatMap((key) => {
-    const gamesForKey = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(gamesForKey) ? gamesForKey : [];
-  });
-
-  if (!Array.isArray(savedGames)) {
-    return [];
-  }
-
-  const normalizedGames = savedGames.map(normalizeGame);
-  const uniqueGames = Array.from(
-    normalizedGames
-      .reduce((gamesById, game) => {
-        gamesById.set(game.id || `${game.date}-${game.opponent}`, game);
-        return gamesById;
-      }, new Map())
-      .values()
-  );
-
-  localStorage.setItem(getGamesStorageKey(), JSON.stringify(uniqueGames));
-  return uniqueGames;
+  return loadGames();
 }
 
-function upsertSavedGame(games, game) {
+async function upsertSavedGame(games, game) {
   const savedGame = normalizeGame(game);
   const existingIndex = games.findIndex((saved) => saved.id === savedGame.id);
+  const previousGame = existingIndex >= 0 ? games[existingIndex] : null;
 
   if (existingIndex >= 0) {
     games[existingIndex] = savedGame;
@@ -1068,18 +971,21 @@ function upsertSavedGame(games, game) {
     games.push(savedGame);
   }
 
-  if (typeof window.saveGame === "function") {
-    window.saveGame(savedGame);
-  } else {
-    saveGames(games);
+  try {
+    if (typeof window.saveGame !== "function") {
+      throw new Error("Supabase game storage is unavailable.");
+    }
+    await window.saveGame(savedGame);
+  } catch (error) {
+    if (existingIndex >= 0) {
+      games[existingIndex] = previousGame;
+    } else {
+      games.splice(games.findIndex((saved) => saved.id === savedGame.id), 1);
+    }
+    throw error;
   }
 
   return savedGame;
-}
-
-function saveGames(games) {
-  const normalizedGames = games.map(normalizeGame);
-  localStorage.setItem(getGamesStorageKey(), JSON.stringify(normalizedGames));
 }
 
 function sortGamesByDateDesc(games) {
@@ -2154,7 +2060,7 @@ function initGamesPage(games) {
     return;
   }
 
-  const gamesOwnerEmail = getCurrentUser()?.email || "";
+  const gamesOwnerUserId = getCurrentUser()?.id || "";
   const state = {
     draftGame: null,
     activeAtBat: null,
@@ -2394,16 +2300,27 @@ function initGamesPage(games) {
     renderTournamentDetails();
   }
 
-  function setTournamentCompletion(tournamentId, completed) {
-    games
-      .filter((game) => getTournamentKey(game) === tournamentId)
-      .slice()
-      .forEach((game) => {
-        upsertSavedGame(games, {
+  async function setTournamentCompletion(tournamentId, completed) {
+    const previousGames = games.slice();
+    const updatedGames = [];
+    games.forEach((game, index) => {
+      if (getTournamentKey(game) === tournamentId) {
+        games[index] = normalizeGame({
           ...game,
           tournamentCompleted: completed,
         });
-      });
+        updatedGames.push(games[index]);
+      }
+    });
+    try {
+      if (typeof window.saveGameBatchToCloud !== "function") {
+        throw new Error("Supabase game storage is unavailable.");
+      }
+      await window.saveGameBatchToCloud(updatedGames);
+    } catch (error) {
+      games.splice(0, games.length, ...previousGames);
+      throw error;
+    }
 
     if (state.activeTournament?.id === tournamentId) {
       state.activeTournament.completed = completed;
@@ -2990,7 +2907,7 @@ function initGamesPage(games) {
   }
 
   function currentUserOwnsLoadedGames() {
-    return Boolean(gamesOwnerEmail && getCurrentUser()?.email === gamesOwnerEmail);
+    return Boolean(gamesOwnerUserId && getCurrentUser()?.id === gamesOwnerUserId);
   }
 
   function setGameDetailsEditing(isEditing) {
@@ -3365,7 +3282,7 @@ function initGamesPage(games) {
     return false;
   }
 
-  function saveReviewPitchChange(game, atBatIndex, pitches, successMessage) {
+  async function saveReviewPitchChange(game, atBatIndex, pitches, successMessage) {
     const updatedAtBat = normalizeAtBat({
       ...game.atBats[atBatIndex],
       balls: undefined,
@@ -3380,7 +3297,7 @@ function initGamesPage(games) {
     let savedGame;
 
     try {
-      savedGame = upsertSavedGame(games, updatedGame);
+      savedGame = await upsertSavedGame(games, updatedGame);
     } catch (saveError) {
       if (existingGameIndex >= 0) {
         games[existingGameIndex] = game;
@@ -3464,7 +3381,7 @@ function initGamesPage(games) {
     updateButton.type = "button";
     updateButton.textContent = state.pitchEditSaving ? "Updating..." : "Update Pitch";
     updateButton.disabled = state.pitchEditSaving;
-    updateButton.addEventListener("click", () => {
+    updateButton.addEventListener("click", async () => {
       if (state.pitchEditSaving) {
         return;
       }
@@ -3509,7 +3426,7 @@ function initGamesPage(games) {
       updateButton.textContent = "Updating...";
 
       try {
-        saveReviewPitchChange(game, atBatIndex, pitches, "Pitch updated.");
+        await saveReviewPitchChange(game, atBatIndex, pitches, "Pitch updated.");
       } catch (saveError) {
         state.pitchEditSaving = false;
         showPitchEditError("We couldn't update this pitch. Please try again.");
@@ -3550,7 +3467,7 @@ function initGamesPage(games) {
     confirmButton.type = "button";
     confirmButton.className = "danger-button";
     confirmButton.textContent = "Delete Pitch";
-    confirmButton.addEventListener("click", () => {
+    confirmButton.addEventListener("click", async () => {
       if (state.pitchEditSaving) {
         return;
       }
@@ -3582,7 +3499,7 @@ function initGamesPage(games) {
       confirmButton.textContent = "Deleting...";
 
       try {
-        saveReviewPitchChange(game, atBatIndex, pitches, "Pitch deleted.");
+        await saveReviewPitchChange(game, atBatIndex, pitches, "Pitch deleted.");
       } catch (deleteError) {
         state.pitchEditSaving = false;
         confirmButton.disabled = false;
@@ -3792,7 +3709,7 @@ function initGamesPage(games) {
     actions.className = "builder-actions game-entry-actions";
     saveButton.type = "button";
     saveButton.textContent = "Save At-Bat";
-    saveButton.addEventListener("click", () => {
+    saveButton.addEventListener("click", async () => {
       const game = getReviewGame();
 
       if (!game || !Array.isArray(game.atBats)) {
@@ -3806,17 +3723,32 @@ function initGamesPage(games) {
         return;
       }
 
-      game.atBats[index] = createEditedAtBat(atBat, draft);
-      const savedGame = upsertSavedGame(games, game);
-      state.reviewGameId = savedGame.id;
-      state.editingAtBatIndex = null;
-      state.editingAtBatDraft = null;
-      reviewMessage.textContent = "At-bat updated.";
-      reviewMessage.classList.remove("is-error");
-      reviewMessage.classList.add("is-success");
-      renderGamesHome();
-      renderGamesTable(games, "review-games-table-body", "review-games-empty");
-      renderReviewGame();
+      const updatedGame = {
+        ...game,
+        atBats: game.atBats.map((savedAtBat, atBatIndex) => (
+          atBatIndex === index ? createEditedAtBat(atBat, draft) : savedAtBat
+        )),
+      };
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving...";
+      try {
+        const savedGame = await upsertSavedGame(games, updatedGame);
+        state.reviewGameId = savedGame.id;
+        state.editingAtBatIndex = null;
+        state.editingAtBatDraft = null;
+        reviewMessage.textContent = "At-bat updated.";
+        reviewMessage.classList.remove("is-error");
+        reviewMessage.classList.add("is-success");
+        renderGamesHome();
+        renderGamesTable(games, "review-games-table-body", "review-games-empty");
+        renderReviewGame();
+      } catch (error) {
+        console.error("Unable to update at-bat:", error);
+        reviewMessage.textContent = "We couldn't update this at-bat. Please try again.";
+        reviewMessage.classList.add("is-error");
+        saveButton.disabled = false;
+        saveButton.textContent = "Save At-Bat";
+      }
     });
 
     cancelButton.type = "button";
@@ -4359,7 +4291,7 @@ function initGamesPage(games) {
     renderAtBats();
   }
 
-  function endAtBatFlow() {
+  async function endAtBatFlow() {
     if (!state.activeAtBat) {
       return;
     }
@@ -4396,6 +4328,7 @@ function initGamesPage(games) {
     }
 
     const wasEditingWorkflow = Number.isInteger(state.workflowEditAtBatIndex) && state.workflowEditAtBatIndex >= 0;
+    const previousAtBats = state.draftGame.atBats.slice();
 
     if (wasEditingWorkflow) {
       state.draftGame.atBats[state.workflowEditAtBatIndex] = normalizeAtBat(state.activeAtBat);
@@ -4405,8 +4338,15 @@ function initGamesPage(games) {
 
     syncDraftFields();
     if (state.draftGame.date && state.draftGame.opponent) {
-      state.draftGame = upsertSavedGame(games, state.draftGame);
-      renderGamesHome();
+      try {
+        state.draftGame = await upsertSavedGame(games, state.draftGame);
+        renderGamesHome();
+      } catch (error) {
+        state.draftGame.atBats = previousAtBats;
+        console.error("Unable to save at-bat:", error);
+        setMessage("We couldn't save this at-bat. Please try again.");
+        return;
+      }
     }
 
     state.activeAtBat = null;
@@ -4490,7 +4430,7 @@ function initGamesPage(games) {
 
     try {
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
-      const savedGame = upsertSavedGame(games, {
+      const savedGame = await upsertSavedGame(games, {
         ...game,
         date,
         opponent,
@@ -4596,7 +4536,10 @@ function initGamesPage(games) {
     try {
       await new Promise((resolve) => window.requestAnimationFrame(resolve));
       games.splice(gameIndex, 1);
-      saveGames(games);
+      if (typeof window.deleteGameFromCloud !== "function") {
+        throw new Error("Supabase game storage is unavailable.");
+      }
+      await window.deleteGameFromCloud(deletedGame.id);
       closeDeleteGameModal({ restoreFocus: false });
       window.history.replaceState(null, "", "games.html");
       showHomeView();
@@ -4728,18 +4671,23 @@ function initGamesPage(games) {
     showNewGameView(state.activeTournament);
   });
 
-  finishTournamentButton.addEventListener("click", () => {
+  finishTournamentButton.addEventListener("click", async () => {
     if (state.activeAtBat) {
       setMessage("Finish the current at-bat before finishing the tournament.");
       return;
     }
 
-    setTournamentCompletion(state.activeTournament.id, true);
-    state.activeTournament = null;
-    showHomeView();
+    try {
+      await setTournamentCompletion(state.activeTournament.id, true);
+      state.activeTournament = null;
+      showHomeView();
+    } catch (error) {
+      console.error("Unable to finish tournament:", error);
+      setMessage("We couldn't finish this tournament. Please try again.");
+    }
   });
 
-  function saveDraftGame(message) {
+  async function saveDraftGame(message) {
     syncDraftFields();
 
     if (!state.draftGame.date || !state.draftGame.opponent) {
@@ -4752,10 +4700,16 @@ function initGamesPage(games) {
       return false;
     }
 
-    state.draftGame = upsertSavedGame(games, state.draftGame);
-    renderGamesHome();
-    setMessage(message, true);
-    return true;
+    try {
+      state.draftGame = await upsertSavedGame(games, state.draftGame);
+      renderGamesHome();
+      setMessage(message, true);
+      return true;
+    } catch (error) {
+      console.error("Unable to save game:", error);
+      setMessage("We couldn't save this game. Please try again.");
+      return false;
+    }
   }
 
   newGameForm.addEventListener("submit", (event) => {
@@ -4786,19 +4740,19 @@ function initGamesPage(games) {
     renderAtBats();
   });
 
-  saveGameButton.addEventListener("click", () => {
-    if (saveDraftGame(state.activeTournament ? "Tournament game saved." : "Game saved.")) {
+  saveGameButton.addEventListener("click", async () => {
+    if (await saveDraftGame(state.activeTournament ? "Tournament game saved." : "Game saved.")) {
       updateTournamentContext();
       renderAtBats();
     }
   });
 
-  finishGameButton.addEventListener("click", () => {
+  finishGameButton.addEventListener("click", async () => {
     if (state.activeTournament) {
       return;
     }
 
-    if (saveDraftGame("Game finished.")) {
+    if (await saveDraftGame("Game finished.")) {
       showHomeView();
     }
   });
@@ -5859,7 +5813,7 @@ function initAccountPage() {
         sportType,
         metadata: data?.user?.user_metadata || metadata,
       };
-      updateCurrentAccountProfile({ athleteName, sportType });
+      await updateCurrentAccountProfile({ athleteName, sportType });
       renderProfile();
       setProfileFormOpen(false);
       setAuthFormMessage(profileMessage, "Profile updated successfully.", "success");
@@ -5957,13 +5911,18 @@ function initAccountPage() {
       }
 
       const metadata = user.user_metadata || {};
+      const cloudProfile = getCurrentAccount();
       profile = {
         email: user.email || profile.email,
-        athleteName: metadata.athlete_name || metadata.athleteName || metadata.full_name || profile.athleteName,
-        sportType: normalizeSportType(metadata.sport_type || profile.sportType),
+        athleteName:
+          cloudProfile?.athleteName ||
+          metadata.athlete_name ||
+          metadata.athleteName ||
+          metadata.full_name ||
+          profile.athleteName,
+        sportType: normalizeSportType(cloudProfile?.sportType || metadata.sport_type || profile.sportType),
         metadata,
       };
-      updateCurrentAccountProfile(profile);
       renderProfile();
     } catch (error) {
       console.error("Unable to load account profile:", error);
@@ -6292,16 +6251,7 @@ function initLoginPage() {
         return;
       }
 
-      const accounts = loadAccounts();
-      if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
-        accounts.push({
-          email,
-          sportType: normalizeSportType(data.user.user_metadata?.sport_type),
-        });
-        saveAccounts(accounts);
-      }
-
-      setCurrentUser(data.user.email);
+      setCurrentUser(data.user);
       loginMessage.textContent = "Login successful. Redirecting...";
       loginMessage.classList.add("is-success");
       redirectTo("dashboard.html");
@@ -6479,31 +6429,12 @@ function initSignupPage() {
         hasSession: Boolean(data.session),
       });
 
-      console.info("[Signup][Stage 2: Account setup] Started");
-      try {
-        const accounts = loadAccounts();
-        if (!accounts.some((account) => normalizeEmail(account.email || "") === email)) {
-          accounts.push({ email, sportType });
-          saveAccounts(accounts);
-        }
-        console.info("[Signup][Stage 2: Account setup] Completed");
-      } catch (setupError) {
-        console.error("[Signup][Stage 2: Account setup] Failed", {
-          message: getErrorMessage(setupError),
-          name: setupError?.name,
-          error: setupError,
-        });
-        signupMessage.textContent =
-          "Your login was created, but local account setup could not be completed. Confirm your email, then sign in to retry setup.";
-        return;
-      }
-
-      console.info("[Signup][Stage 3: Athlete setup] Skipped; no athlete database record is created during signup");
+      console.info("[Signup][Stage 2: Account setup] Supabase Auth metadata saved; cloud profile will initialize on first authenticated page load");
       signupMessage.classList.add("is-success");
 
       if (data?.session && data.user?.email) {
         console.info("[Signup][Stage 4: Redirect] Active session found; redirecting to dashboard");
-        setCurrentUser(data.user.email);
+        setCurrentUser(data.user);
         signupMessage.textContent = "Account created. Redirecting...";
         redirectTo("dashboard.html");
         return;
@@ -6536,44 +6467,79 @@ function initSignupPage() {
 
 removeStoredAccountPasswords();
 
-if (guardRoute()) {
-  updateAuthUI();
+async function bootstrapApplication() {
+  let session = null;
 
+  if (protectedPages.has(page) || authPages.has(page)) {
+    if (!window.hittingLogAuth?.getCurrentSession) {
+      console.error("[Bootstrap] Supabase authentication helper is unavailable", { page });
+      if (protectedPages.has(page)) {
+        redirectTo("login.html");
+        return;
+      }
+    } else {
+      console.info("[Bootstrap] Supabase session load started", { page });
+      const { data, error } = await window.hittingLogAuth.getCurrentSession();
+      if (error) {
+        console.error("[Bootstrap] Supabase session load failed", { page, error });
+        throw error;
+      }
+      session = data?.session || null;
+      console.info("[Bootstrap] Supabase session load succeeded", {
+        page,
+        userId: session?.user?.id || null,
+      });
+    }
+  }
+
+  if (protectedPages.has(page) && !session?.user) {
+    clearCurrentUser();
+    redirectTo("login.html");
+    return;
+  }
+
+  if (authPages.has(page) && session?.user) {
+    setCurrentUser(session.user);
+    redirectTo("dashboard.html");
+    return;
+  }
+
+  if (protectedPages.has(page)) {
+    setCurrentUser(session.user);
+    if (typeof window.initializeHittingLogDataStore !== "function") {
+      throw new Error("Supabase data storage is unavailable on this page.");
+    }
+    await window.initializeHittingLogDataStore();
+  }
+
+  updateAuthUI();
   const games = loadGames();
 
   if (page === "dashboard") {
     initDashboard(games);
-  }
-
-  if (page === "games") {
+  } else if (page === "games") {
     initGamesPage(games);
-  }
-
-  if (page === "all-games") {
+  } else if (page === "all-games") {
     initAllGamesPage(games);
-  }
-
-  if (page === "advanced") {
+  } else if (page === "advanced") {
     initAdvancedPage(games);
-  }
-
-  if (page === "account") {
+  } else if (page === "account") {
     initAccountPage();
-  }
-
-  if (page === "login") {
+  } else if (page === "login") {
     initLoginPage();
-  }
-
-  if (page === "signup") {
+  } else if (page === "signup") {
     initSignupPage();
-  }
-
-  if (page === "forgot-password") {
+  } else if (page === "forgot-password") {
     initForgotPasswordPage();
-  }
-
-  if (page === "reset-password") {
+  } else if (page === "reset-password") {
     initResetPasswordPage();
   }
 }
+
+window.hittingLogDataReady = bootstrapApplication().catch((error) => {
+  console.error("[Bootstrap] Application initialization failed", error);
+  if (protectedPages.has(page)) {
+    window.alert("We couldn't load your cloud data. Please check your connection and reload the page.");
+  }
+  throw error;
+});
