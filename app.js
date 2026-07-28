@@ -747,7 +747,7 @@ function createCalculatedStats(stats) {
     totalBases,
     totalOuts,
     productiveOuts,
-    productiveOutPercent: totalOuts === 0 ? 0 : productiveOuts / totalOuts,
+    productiveOutPercent: totalOuts === 0 ? null : productiveOuts / totalOuts,
     plateAppearances,
     battingAverage,
     onBasePercentage,
@@ -4985,7 +4985,8 @@ function getAdvancedPercentMetrics(atBats, totals) {
     contactRate: metrics.swings === 0 ? 0 : metrics.contactSwings / metrics.swings,
     qualityAtBatPercent:
       metrics.plateAppearances === 0 ? 0 : metrics.qualityAtBats / metrics.plateAppearances,
-    productiveOutPercent: metrics.totalOuts === 0 ? 0 : metrics.productiveOuts / metrics.totalOuts,
+    productiveOutPercent:
+      metrics.totalOuts === 0 ? null : metrics.productiveOuts / metrics.totalOuts,
   };
 }
 
