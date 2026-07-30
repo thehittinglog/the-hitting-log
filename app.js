@@ -1049,6 +1049,10 @@ function formatPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function calculateRateMetric(numerator, denominator) {
+  return denominator > 0 ? numerator / denominator : null;
+}
+
 function getGameStats(game) {
   return normalizeGame(game);
 }
@@ -4977,16 +4981,14 @@ function getAdvancedPercentMetrics(atBats, totals) {
   const extraBaseHits = totals.double + totals.triple + totals.home_run;
 
   return {
-    lineDrivePercent: metrics.ballsInPlay === 0 ? 0 : metrics.lineDrives / metrics.ballsInPlay,
-    groundBallPercent: metrics.ballsInPlay === 0 ? 0 : metrics.groundBalls / metrics.ballsInPlay,
-    flyBallPercent: metrics.ballsInPlay === 0 ? 0 : metrics.flyBalls / metrics.ballsInPlay,
-    extraBaseHitPercent: totals.hits === 0 ? 0 : extraBaseHits / totals.hits,
-    chaseRate: metrics.outOfZonePitches === 0 ? 0 : metrics.outOfZoneSwings / metrics.outOfZonePitches,
-    contactRate: metrics.swings === 0 ? 0 : metrics.contactSwings / metrics.swings,
-    qualityAtBatPercent:
-      metrics.plateAppearances === 0 ? 0 : metrics.qualityAtBats / metrics.plateAppearances,
-    productiveOutPercent:
-      metrics.totalOuts === 0 ? null : metrics.productiveOuts / metrics.totalOuts,
+    lineDrivePercent: calculateRateMetric(metrics.lineDrives, metrics.ballsInPlay) ?? 0,
+    groundBallPercent: calculateRateMetric(metrics.groundBalls, metrics.ballsInPlay) ?? 0,
+    flyBallPercent: calculateRateMetric(metrics.flyBalls, metrics.ballsInPlay) ?? 0,
+    extraBaseHitPercent: calculateRateMetric(extraBaseHits, totals.hits),
+    chaseRate: calculateRateMetric(metrics.outOfZoneSwings, metrics.outOfZonePitches),
+    contactRate: calculateRateMetric(metrics.contactSwings, metrics.swings),
+    qualityAtBatPercent: calculateRateMetric(metrics.qualityAtBats, metrics.plateAppearances),
+    productiveOutPercent: calculateRateMetric(metrics.productiveOuts, metrics.totalOuts),
   };
 }
 
@@ -5032,12 +5034,12 @@ function getHardHitMetrics(atBats) {
   );
 
   return {
-    hardHitPercent: metrics.ballsInPlay === 0 ? 0 : metrics.hardHitBalls / metrics.ballsInPlay,
-    twoStrikePercent: metrics.plateAppearances === 0 ? 0 : metrics.twoStrikeAtBats / metrics.plateAppearances,
-    hardHitTwoStrikePercent:
-      metrics.twoStrikeBallsInPlay === 0
-        ? null
-        : metrics.twoStrikeHardHits / metrics.twoStrikeBallsInPlay,
+    hardHitPercent: calculateRateMetric(metrics.hardHitBalls, metrics.ballsInPlay),
+    twoStrikePercent: calculateRateMetric(metrics.twoStrikeAtBats, metrics.plateAppearances),
+    hardHitTwoStrikePercent: calculateRateMetric(
+      metrics.twoStrikeHardHits,
+      metrics.twoStrikeBallsInPlay
+    ),
     twoStrikeAtBats: metrics.twoStrikeAtBats,
     twoStrikeBallsInPlay: metrics.twoStrikeBallsInPlay,
     twoStrikeHardHits: metrics.twoStrikeHardHits,
@@ -5074,9 +5076,9 @@ function getTimingMetrics(atBats) {
   );
 
   return {
-    onTimePercent: metrics.total === 0 ? 0 : metrics.onTime / metrics.total,
-    earlyPercent: metrics.total === 0 ? 0 : metrics.early / metrics.total,
-    latePercent: metrics.total === 0 ? 0 : metrics.late / metrics.total,
+    onTimePercent: calculateRateMetric(metrics.onTime, metrics.total),
+    earlyPercent: calculateRateMetric(metrics.early, metrics.total),
+    latePercent: calculateRateMetric(metrics.late, metrics.total),
   };
 }
 
@@ -5091,17 +5093,31 @@ function calculateHittingLogPerformanceScore(source) {
   const hardHitMetrics = getHardHitMetrics(atBats);
   const advancedPercentMetrics = getAdvancedPercentMetrics(atBats, totals);
   const totalOuts = atBats.filter((atBat) => isOutOutcome(atBat.outcome)).length;
-  const twoStrikePercent = hardHitMetrics.twoStrikePercent * 100;
+  const twoStrikePercent = hardHitMetrics.twoStrikePercent === null
+    ? null
+    : hardHitMetrics.twoStrikePercent * 100;
   const hasHardHitTwoStrikePercent = hardHitMetrics.hardHitTwoStrikePercent !== null;
   const hardHitTwoStrikePercent = hasHardHitTwoStrikePercent
     ? hardHitMetrics.hardHitTwoStrikePercent * 100
     : null;
-  const twoStrikeAdjustment = hasHardHitTwoStrikePercent
-    ? 100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100))
-    : 100 - twoStrikePercent;
+  const twoStrikeAdjustment = twoStrikePercent === null
+    ? null
+    : hasHardHitTwoStrikePercent
+      ? 100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100))
+      : 100 - twoStrikePercent;
   const components = [
-    { value: hardHitMetrics.hardHitPercent * 100, weight: 0.45 },
-    { value: advancedPercentMetrics.qualityAtBatPercent * 100, weight: 0.25 },
+    {
+      value: hardHitMetrics.hardHitPercent === null
+        ? null
+        : hardHitMetrics.hardHitPercent * 100,
+      weight: 0.45,
+    },
+    {
+      value: advancedPercentMetrics.qualityAtBatPercent === null
+        ? null
+        : advancedPercentMetrics.qualityAtBatPercent * 100,
+      weight: 0.25,
+    },
     { value: twoStrikeAdjustment, weight: 0.10 },
   ];
 

@@ -35,11 +35,6 @@
       average: (value) => value >= 60 && value < 75,
       poor: (value) => value < 60,
     },
-    extraBaseHitPercent: {
-      good: (value) => value >= 30,
-      average: (value) => value >= 15 && value < 30,
-      poor: (value) => value < 15,
-    },
     battingAverage: {
       good: (value) => value >= 0.35,
       average: (value) => value >= 0.25 && value < 0.35,
