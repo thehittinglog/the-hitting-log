@@ -2004,6 +2004,7 @@ body.has-account-modal {
   align-items: baseline;
   gap: 4px;
   margin: 0 0 14px;
+  white-space: nowrap;
 }
 
 .membership-plan-price strong {
@@ -2038,6 +2039,35 @@ body.has-account-modal {
 
 .membership-manage-button {
   margin-top: 18px;
+}
+
+@media (min-width: 901px) {
+  body[data-page="account"] .account-card-stack {
+    display: contents;
+  }
+
+  body[data-page="account"] .account-card-stack > .panel {
+    margin-top: 0;
+  }
+
+  body[data-page="account"] .account-billing-panel {
+    grid-column: 1 / -1;
+  }
+
+  body[data-page="account"] .membership-plan-card button,
+  body[data-page="account"] .membership-manage-button {
+    white-space: nowrap;
+  }
+
+  body[data-page="account"] .membership-manage-button {
+    width: min(100%, 320px);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 900px) {
+  body[data-page="account"] .two-column-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .membership-access-gate {
