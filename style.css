@@ -2403,6 +2403,69 @@ select:focus {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.pitch-entry-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.pitch-entry-number {
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.pitch-edit-cancel-button {
+  width: auto;
+  min-width: 0;
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 0.84rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pitch-edit-cancel-button:hover,
+.pitch-edit-cancel-button:focus-visible {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: none;
+  transform: none;
+}
+
+.pitch-sequence .pitch-sequence-edit-button {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.45;
+  text-align: left;
+  box-shadow: none;
+}
+
+.pitch-sequence .pitch-sequence-edit-button:hover,
+.pitch-sequence .pitch-sequence-edit-button:focus-visible,
+.pitch-sequence .pitch-sequence-edit-button:active,
+.pitch-sequence .pitch-sequence-edit-button.is-editing {
+  border-color: rgba(169, 31, 36, 0.34);
+  background: var(--accent-soft);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.pitch-sequence .pitch-sequence-edit-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .review-pitch-item {
   overflow: hidden;
   border: 1px solid var(--line);

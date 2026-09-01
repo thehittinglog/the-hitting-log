@@ -446,6 +446,7 @@ function normalizePitch(pitch) {
           ? normalizeSavedBattedBallOutcome(pitch.outcome)
           : "";
   const normalizedPitch = {
+    id: typeof pitch.id === "string" && pitch.id ? pitch.id : createId("pitch"),
     location: {
       id: typeof location.id === "string" ? location.id : "",
       label: typeof location.label === "string" ? location.label : "",
@@ -529,6 +530,33 @@ function normalizePitch(pitch) {
   }
 
   return normalizedPitch;
+}
+
+function getNextPitchNumber(atBat) {
+  return (Array.isArray(atBat?.pitches) ? atBat.pitches.length : 0) + 1;
+}
+
+function replacePitchInSequence(pitches, editedPitch, stableId, fallbackIndex) {
+  if (!Array.isArray(pitches)) {
+    return null;
+  }
+
+  const stableIndex = stableId
+    ? pitches.findIndex((pitch) => pitch?.id === stableId)
+    : -1;
+  const targetIndex = stableIndex >= 0 ? stableIndex : fallbackIndex;
+  const originalPitch = pitches[targetIndex];
+
+  if (!originalPitch || !Number.isInteger(targetIndex)) {
+    return null;
+  }
+
+  const nextPitches = pitches.slice();
+  nextPitches[targetIndex] = {
+    ...editedPitch,
+    id: originalPitch.id || stableId || editedPitch?.id || createId("pitch"),
+  };
+  return { pitches: nextPitches, targetIndex };
 }
 
 function normalizeSavedBattedBallOutcome(outcome) {
@@ -1789,7 +1817,7 @@ function renderStrikeZoneLayout(
   });
 }
 
-function renderPitchSequence(sequenceElement, atBat) {
+function renderPitchSequence(sequenceElement, atBat, { onEditPitch, editingPitchId = "", disabled = false } = {}) {
   sequenceElement.innerHTML = "";
 
   if (!atBat || atBat.pitches.length === 0) {
@@ -1801,8 +1829,10 @@ function renderPitchSequence(sequenceElement, atBat) {
   }
 
   atBat.pitches.forEach((pitch, index) => {
-    const item = document.createElement("article");
-    item.className = "pitch-chip";
+    const item = document.createElement(typeof onEditPitch === "function" ? "button" : "article");
+    item.className = typeof onEditPitch === "function"
+      ? "pitch-chip pitch-sequence-edit-button"
+      : "pitch-chip";
     const details = [];
     const locationLabel =
       pitch.locationLabel ||
@@ -1833,6 +1863,17 @@ function renderPitchSequence(sequenceElement, atBat) {
     item.textContent =
       `Pitch ${index + 1}: ${locationLabel} - ${getPitchResultLabel(pitch.primaryResult || pitch.result)}` +
       (details.length ? ` (${details.join(", ")})` : "");
+
+    if (typeof onEditPitch === "function") {
+      item.type = "button";
+      item.disabled = disabled;
+      item.setAttribute("aria-label", `Edit Pitch ${index + 1}`);
+      if (pitch.id && pitch.id === editingPitchId) {
+        item.classList.add("is-editing");
+        item.setAttribute("aria-current", "true");
+      }
+      item.addEventListener("click", () => onEditPitch(pitch, index));
+    }
     sequenceElement.appendChild(item);
   });
 }
@@ -2086,6 +2127,11 @@ function initGamesPage(games) {
     gameDeleting: false,
     workflowEditAtBatIndex: null,
     workflowEditOriginalAtBat: null,
+    editingWorkflowPitchId: "",
+    editingWorkflowPitchIndex: null,
+    editingWorkflowPitchOriginal: null,
+    editingWorkflowAtBatSnapshot: null,
+    workflowPitchSaving: false,
     activePitchIndex: null,
     pendingProductiveOutOutcome: "",
     stepHistory: [],
@@ -2364,10 +2410,19 @@ function initGamesPage(games) {
     return normalizeAtBat(JSON.parse(JSON.stringify(atBat || createDraftAtBat())));
   }
 
+  function resetWorkflowPitchEditState() {
+    state.editingWorkflowPitchId = "";
+    state.editingWorkflowPitchIndex = null;
+    state.editingWorkflowPitchOriginal = null;
+    state.editingWorkflowAtBatSnapshot = null;
+    state.workflowPitchSaving = false;
+  }
+
   function resetWorkflowEditState() {
     state.workflowEditAtBatIndex = null;
     state.workflowEditOriginalAtBat = null;
     state.activePitchIndex = null;
+    resetWorkflowPitchEditState();
   }
 
   function setMessage(text, success = false) {
@@ -2513,6 +2568,7 @@ function initGamesPage(games) {
 
   function createPitch(location, result = "") {
     return {
+      id: createId("pitch"),
       location: {
         id: location.id,
         label: location.label,
@@ -2541,7 +2597,12 @@ function initGamesPage(games) {
     state.activePitch.locationLabel = location.label;
     state.activePitch.pitch_location = location.id;
 
-    if (state.activeAtBat && Number.isInteger(state.activePitchIndex) && state.activePitchIndex >= 0) {
+    if (
+      !state.editingWorkflowPitchId &&
+      state.activeAtBat &&
+      Number.isInteger(state.activePitchIndex) &&
+      state.activePitchIndex >= 0
+    ) {
       state.activeAtBat.pitches[state.activePitchIndex] = state.activePitch;
     }
   }
@@ -2594,6 +2655,200 @@ function initGamesPage(games) {
     state.activePitchCompleted = true;
   }
 
+  function isEditingWorkflowPitch() {
+    return Boolean(
+      state.editingWorkflowPitchId &&
+      Number.isInteger(state.editingWorkflowPitchIndex)
+    );
+  }
+
+  function getWorkflowPitchResultSelection(pitch) {
+    const result = getEditablePitchResult(pitch);
+    return result === "called_strike" || result === "swinging_strike"
+      ? "strike"
+      : result;
+  }
+
+  function captureWorkflowAtBatSnapshot() {
+    return {
+      finalOutcome: state.activeAtBat?.finalOutcome || "",
+      outcome: state.activeAtBat?.outcome || "",
+      productiveOut: state.activeAtBat?.productiveOut === true,
+      hardHitBall: state.activeAtBat?.hardHitBall ?? null,
+      timing: state.activeAtBat?.timing || "",
+      pendingProductiveOutOutcome: state.pendingProductiveOutOutcome || "",
+    };
+  }
+
+  function restoreWorkflowAtBatSnapshot() {
+    const snapshot = state.editingWorkflowAtBatSnapshot;
+    if (!snapshot || !state.activeAtBat) {
+      return;
+    }
+
+    state.activeAtBat.finalOutcome = snapshot.finalOutcome;
+    state.activeAtBat.outcome = snapshot.outcome;
+    state.activeAtBat.productiveOut = snapshot.productiveOut;
+    state.activeAtBat.hardHitBall = snapshot.hardHitBall;
+    state.activeAtBat.timing = snapshot.timing;
+    state.pendingProductiveOutOutcome = snapshot.pendingProductiveOutOutcome;
+  }
+
+  function beginWorkflowPitchEdit(pitch, index) {
+    if (
+      state.workflowPitchSaving ||
+      !state.activeAtBat ||
+      !Array.isArray(state.activeAtBat.pitches) ||
+      !state.activeAtBat.pitches[index]
+    ) {
+      return;
+    }
+
+    if (
+      state.activePitch &&
+      !state.activePitchCompleted &&
+      !isEditingWorkflowPitch() &&
+      !state.activeAtBat.pitches.includes(state.activePitch)
+    ) {
+      setMessage("Finish the pitch you are entering before editing an earlier pitch.");
+      return;
+    }
+
+    if (isEditingWorkflowPitch()) {
+      restoreWorkflowAtBatSnapshot();
+    }
+
+    const savedPitch = state.activeAtBat.pitches[index];
+    const pitchId = savedPitch.id || pitch?.id || createId("pitch");
+    if (!savedPitch.id) savedPitch.id = pitchId;
+
+    state.editingWorkflowPitchId = pitchId;
+    state.editingWorkflowPitchIndex = index;
+    state.editingWorkflowPitchOriginal = cloneSavedPitch(savedPitch);
+    state.editingWorkflowAtBatSnapshot = captureWorkflowAtBatSnapshot();
+    state.activePitch = cloneSavedPitch(savedPitch);
+    state.activePitch.id = pitchId;
+    state.activePitchIndex = index;
+    state.activePitchCompleted = true;
+    state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
+    state.step = "location";
+    setMessage("", false);
+    renderAtBats();
+  }
+
+  function cancelWorkflowPitchEdit() {
+    if (state.workflowPitchSaving || !isEditingWorkflowPitch()) {
+      return;
+    }
+
+    restoreWorkflowAtBatSnapshot();
+    state.activePitch = null;
+    state.activePitchIndex = null;
+    state.activePitchCompleted = false;
+    resetWorkflowPitchEditState();
+    resetStepHistory();
+    state.step = "location";
+    setMessage("Pitch edit canceled.", false);
+    renderAtBats();
+  }
+
+  async function updateWorkflowPitch() {
+    if (
+      state.workflowPitchSaving ||
+      !isEditingWorkflowPitch() ||
+      !state.activeAtBat ||
+      !state.activePitch
+    ) {
+      return;
+    }
+
+    const replacement = replacePitchInSequence(
+      state.activeAtBat.pitches.map(cloneSavedPitch),
+      state.activePitch,
+      state.editingWorkflowPitchId,
+      state.editingWorkflowPitchIndex
+    );
+
+    if (!replacement) {
+      setMessage("We couldn't find that pitch. Select it again and retry.");
+      return;
+    }
+
+    const targetIndex = replacement.targetIndex;
+    const updatedPitches = replacement.pitches.map((pitch, index) => index === targetIndex
+      ? normalizePitch({
+          ...pitch,
+          id: state.editingWorkflowPitchId,
+        })
+      : pitch);
+    const snapshot = state.editingWorkflowAtBatSnapshot;
+    const snapshotAtBat = snapshot ? {
+      ...state.activeAtBat,
+      finalOutcome: snapshot.finalOutcome,
+      outcome: snapshot.outcome,
+    } : state.activeAtBat;
+    const explicitlyChangedFinalOutcome = Boolean(
+      snapshot &&
+      state.activeAtBat.finalOutcome &&
+      state.activeAtBat.finalOutcome !== snapshot.finalOutcome
+    );
+    if (
+      targetIndex < updatedPitches.length - 1 ||
+      (
+        snapshot &&
+        !explicitlyChangedFinalOutcome &&
+        pitchesSupportSavedAtBatResult(snapshotAtBat, updatedPitches)
+      )
+    ) {
+      restoreWorkflowAtBatSnapshot();
+    }
+    const updatedAtBat = normalizeAtBat({
+      ...state.activeAtBat,
+      balls: undefined,
+      strikes: undefined,
+      pitches: updatedPitches,
+    });
+
+    state.workflowPitchSaving = true;
+    renderAtBats();
+
+    try {
+      if (Number.isInteger(state.workflowEditAtBatIndex)) {
+        syncDraftFields();
+        const updatedGame = {
+          ...state.draftGame,
+          atBats: state.draftGame.atBats.map((atBat, index) => (
+            index === state.workflowEditAtBatIndex ? updatedAtBat : atBat
+          )),
+        };
+        state.draftGame = await upsertSavedGame(games, updatedGame);
+        state.activeAtBat = cloneAtBatForWorkflow(
+          state.draftGame.atBats[state.workflowEditAtBatIndex]
+        );
+        state.workflowEditOriginalAtBat = cloneAtBatForWorkflow(state.activeAtBat);
+        renderGamesHome();
+      } else {
+        state.activeAtBat = updatedAtBat;
+      }
+    } catch (error) {
+      state.workflowPitchSaving = false;
+      console.error("Unable to update pitch:", error);
+      setMessage("We couldn't update this pitch. Please try again.");
+      renderAtBats();
+      return;
+    }
+
+    state.activePitch = null;
+    state.activePitchIndex = null;
+    state.activePitchCompleted = false;
+    resetWorkflowPitchEditState();
+    resetStepHistory();
+    state.step = "location";
+    setMessage("Pitch updated.", true);
+    renderAtBats();
+  }
+
   function startWorkflowEditAtBat(index) {
     const atBat = state.draftGame?.atBats?.[index];
 
@@ -2609,11 +2864,10 @@ function initGamesPage(games) {
       state.activeAtBat.pitches = [];
     }
 
-    if (state.activeAtBat.pitches.length === 0) {
-      state.activeAtBat.pitches.push(createPitch(pitchLocations.find((location) => location.id === "zone-5") || pitchLocations[0]));
-    }
-
-    setActivePitchFromIndex(0);
+    state.activePitch = null;
+    state.activePitchIndex = null;
+    state.activePitchCompleted = false;
+    resetWorkflowPitchEditState();
     state.pendingProductiveOutOutcome = "";
     resetStepHistory();
     state.stepHistory.push("at_bat_details");
@@ -3934,11 +4188,34 @@ function initGamesPage(games) {
 
     card.appendChild(heading);
 
+    const pitchContext = document.createElement("div");
+    const pitchLabel = document.createElement("p");
+    pitchContext.className = "pitch-entry-context";
+    pitchLabel.className = "pitch-entry-number";
+    pitchLabel.textContent = isEditingWorkflowPitch()
+      ? `Editing Pitch ${state.editingWorkflowPitchIndex + 1}`
+      : `Pitch ${getNextPitchNumber(state.activeAtBat)}`;
+    pitchContext.appendChild(pitchLabel);
+
+    if (isEditingWorkflowPitch()) {
+      const cancelPitchEditButton = document.createElement("button");
+      cancelPitchEditButton.type = "button";
+      cancelPitchEditButton.className = "pitch-edit-cancel-button";
+      cancelPitchEditButton.textContent = "Cancel pitch edit";
+      cancelPitchEditButton.disabled = state.workflowPitchSaving;
+      cancelPitchEditButton.addEventListener("click", cancelWorkflowPitchEdit);
+      pitchContext.appendChild(cancelPitchEditButton);
+    }
+
+    card.appendChild(pitchContext);
+
     const prompt = document.createElement("p");
     prompt.className = "section-copy";
     prompt.textContent =
       state.step === "at_bat_details"
         ? "Enter pitcher details before logging pitches."
+        : state.step === "location"
+          ? "Select a pitch location."
         : state.step === "pitch_type"
           ? "Choose the pitch type."
         : state.step === "hard_hit_ball"
@@ -3991,7 +4268,7 @@ function initGamesPage(games) {
     }
 
     if (state.step === "pitch_result") {
-      card.appendChild(renderOptionGroup("Pitch Result", pitchResultOptions, handlePitchResult, state.activePitch?.primaryResult || state.activePitch?.result || ""));
+      card.appendChild(renderOptionGroup("Pitch Result", pitchResultOptions, handlePitchResult, getWorkflowPitchResultSelection(state.activePitch)));
     }
 
     if (state.step === "strike_type") {
@@ -4044,7 +4321,11 @@ function initGamesPage(games) {
     sequenceTitle.textContent = "Pitch Sequence";
     const sequenceList = document.createElement("div");
     sequenceList.className = "pitch-sequence";
-    renderPitchSequence(sequenceList, state.activeAtBat);
+    renderPitchSequence(sequenceList, state.activeAtBat, {
+      onEditPitch: beginWorkflowPitchEdit,
+      editingPitchId: state.editingWorkflowPitchId,
+      disabled: state.workflowPitchSaving,
+    });
     sequence.appendChild(sequenceTitle);
     sequence.appendChild(sequenceList);
     card.appendChild(sequence);
@@ -4055,6 +4336,23 @@ function initGamesPage(games) {
   function renderActionButtons(showNextPitch) {
     const actions = document.createElement("div");
     actions.className = "builder-actions game-entry-actions";
+
+    if (isEditingWorkflowPitch()) {
+      const updatePitch = document.createElement("button");
+      const cancelPitchEdit = document.createElement("button");
+      updatePitch.type = "button";
+      updatePitch.textContent = state.workflowPitchSaving ? "Updating..." : "Update Pitch";
+      updatePitch.disabled = state.workflowPitchSaving;
+      updatePitch.addEventListener("click", updateWorkflowPitch);
+      cancelPitchEdit.type = "button";
+      cancelPitchEdit.className = "secondary-button";
+      cancelPitchEdit.textContent = "Cancel";
+      cancelPitchEdit.disabled = state.workflowPitchSaving;
+      cancelPitchEdit.addEventListener("click", cancelWorkflowPitchEdit);
+      actions.appendChild(updatePitch);
+      actions.appendChild(cancelPitchEdit);
+      return actions;
+    }
 
     if (showNextPitch) {
       const nextPitch = document.createElement("button");
@@ -4080,6 +4378,11 @@ function initGamesPage(games) {
 
   function completeCurrentPitch() {
     if (!state.activeAtBat || !state.activePitch) {
+      return;
+    }
+
+    if (isEditingWorkflowPitch()) {
+      state.activePitchCompleted = true;
       return;
     }
 
@@ -4110,27 +4413,31 @@ function initGamesPage(games) {
       return;
     }
 
+    const previousResult = getWorkflowPitchResultSelection(state.activePitch);
+    const preserveDependentFields = isEditingWorkflowPitch() && previousResult === result;
     state.activePitch.result = result;
     state.activePitch.primaryResult = result;
     state.activePitch.pitch_result = result;
     state.activePitch.swing_result = result;
     state.activePitchCompleted = false;
-    delete state.activePitch.strikeType;
-    delete state.activePitch.strikeDetail;
-    delete state.activePitch.foulDirection;
-    delete state.activePitch.battedBallType;
-    delete state.activePitch.batted_ball_type;
-    delete state.activePitch.contact_type;
-    delete state.activePitch.hitLocation;
-    delete state.activePitch.hit_location;
-    delete state.activePitch.hitLocationX;
-    delete state.activePitch.hitLocationY;
-    delete state.activePitch.hit_location_x;
-    delete state.activePitch.hit_location_y;
-    delete state.activePitch.battedBallOutcome;
-    delete state.activePitch.batted_ball_outcome;
-    delete state.activePitch.outcome;
-    delete state.activePitch.chartResult;
+    if (!preserveDependentFields) {
+      delete state.activePitch.strikeType;
+      delete state.activePitch.strikeDetail;
+      delete state.activePitch.foulDirection;
+      delete state.activePitch.battedBallType;
+      delete state.activePitch.batted_ball_type;
+      delete state.activePitch.contact_type;
+      delete state.activePitch.hitLocation;
+      delete state.activePitch.hit_location;
+      delete state.activePitch.hitLocationX;
+      delete state.activePitch.hitLocationY;
+      delete state.activePitch.hit_location_x;
+      delete state.activePitch.hit_location_y;
+      delete state.activePitch.battedBallOutcome;
+      delete state.activePitch.batted_ball_outcome;
+      delete state.activePitch.outcome;
+      delete state.activePitch.chartResult;
+    }
     state.activeAtBat.finalOutcome = "";
     state.activeAtBat.productiveOut = false;
     state.activeAtBat.hardHitBall = null;
