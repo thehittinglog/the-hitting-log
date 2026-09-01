@@ -6,6 +6,10 @@ const {
   requireSupabasePublicConfig,
   verifySupabaseUser,
 } = require("../lib/supabase-server");
+const {
+  MEMBERSHIP_PLANS,
+  getStripePriceIds,
+} = require("../lib/membership");
 
 const MANAGED_SUBSCRIPTION_STATUSES = new Set([
   "active",
@@ -13,6 +17,7 @@ const MANAGED_SUBSCRIPTION_STATUSES = new Set([
   "past_due",
   "unpaid",
   "paused",
+  "incomplete",
 ]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -34,11 +39,11 @@ function getSafeStripeError(error) {
   }
 
   if (error?.code === "resource_missing") {
-    return "The configured Stripe Price ID was not found. Make sure STRIPE_SECRET_KEY and STRIPE_PRICE_ID use the same Stripe test or live mode.";
+    return "The configured Stripe Price ID was not found. Make sure the Stripe secret key and membership Price IDs use the same Stripe test or live mode.";
   }
 
   if (error?.type === "StripeInvalidRequestError") {
-    return "Stripe rejected the Checkout configuration. Verify that STRIPE_PRICE_ID is an active recurring Price.";
+    return "Stripe rejected the Checkout configuration. Verify that the selected membership Price ID is active and recurring.";
   }
 
   if (error?.type === "StripeRateLimitError" || error?.type === "StripeAPIError") {
@@ -55,19 +60,29 @@ module.exports = async function handler(req, res) {
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  const stripePriceId = process.env.STRIPE_PRICE_ID;
+  const requestedPlan = req.body?.plan;
+  const priceIds = getStripePriceIds();
+  const stripePriceId = requestedPlan === MEMBERSHIP_PLANS.PRO_PLUS
+    ? priceIds.pro_plus
+    : requestedPlan === MEMBERSHIP_PLANS.PRO
+      ? priceIds.pro
+      : "";
+
+  if (!new Set([MEMBERSHIP_PLANS.PRO, MEMBERSHIP_PLANS.PRO_PLUS]).has(requestedPlan)) {
+    return res.status(400).json({ error: "Choose a valid membership plan." });
+  }
 
   if (!stripeSecretKey || !stripePriceId) {
-    console.error("Stripe Checkout configuration error: STRIPE_SECRET_KEY or STRIPE_PRICE_ID is missing.");
+    console.error("Stripe Checkout configuration error: Stripe secret key or selected membership Price ID is missing.");
     return res.status(500).json({
-      error: "Stripe Checkout is not configured. Add STRIPE_SECRET_KEY and STRIPE_PRICE_ID in Vercel, then redeploy.",
+      error: "Stripe Checkout is not configured for the selected membership plan.",
     });
   }
 
   if (getStripeMode(stripeSecretKey) === "unknown" || !stripePriceId.startsWith("price_")) {
     console.error("Stripe Checkout configuration error: Invalid Stripe secret key or Price ID format.");
     return res.status(500).json({
-      error: "Stripe Checkout configuration is invalid. Check STRIPE_SECRET_KEY and STRIPE_PRICE_ID in Vercel.",
+      error: "Stripe Checkout configuration is invalid. Check the Stripe secret key and membership Price IDs in Vercel.",
     });
   }
 
@@ -180,10 +195,12 @@ module.exports = async function handler(req, res) {
       ],
       metadata: {
         supabase_user_id: user.id,
+        requested_plan: requestedPlan,
       },
       subscription_data: {
         metadata: {
           supabase_user_id: user.id,
+          requested_plan: requestedPlan,
         },
       },
       success_url: `${origin}/account?checkout=success`,

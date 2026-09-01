@@ -5,6 +5,10 @@ const {
   requireSupabaseServerConfig,
   upsertSubscription,
 } = require("../lib/supabase-server");
+const {
+  getPlanForSubscription,
+  getStripePriceIds,
+} = require("../lib/membership");
 
 const HANDLED_EVENT_TYPES = new Set([
   "checkout.session.completed",
@@ -13,13 +17,6 @@ const HANDLED_EVENT_TYPES = new Set([
   "customer.subscription.deleted",
   "invoice.paid",
   "invoice.payment_failed",
-]);
-const PRO_SUBSCRIPTION_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-  "unpaid",
-  "paused",
 ]);
 
 function objectId(value) {
@@ -121,6 +118,10 @@ async function syncSubscription(subscription, hintedUserId) {
   const userId = await resolveSupabaseUserId(subscription, hintedUserId);
   const status = subscription.status || "inactive";
   const priceId = getPriceId(subscription);
+  const plan = getPlanForSubscription({
+    subscription_status: status,
+    stripe_price_id: priceId,
+  });
 
   await upsertSubscription({
     user_id: userId,
@@ -132,10 +133,7 @@ async function syncSubscription(subscription, hintedUserId) {
     current_period_end: unixTimestampToIso(getCurrentPeriodEnd(subscription)),
     cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
     created_at: unixTimestampToIso(subscription.created) || new Date().toISOString(),
-    plan:
-      PRO_SUBSCRIPTION_STATUSES.has(status) && priceId === process.env.STRIPE_PRICE_ID
-        ? "pro"
-        : "free",
+    plan,
   });
 }
 
@@ -189,7 +187,7 @@ async function handler(req, res) {
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripePriceId = process.env.STRIPE_PRICE_ID;
+  const priceIds = getStripePriceIds();
 
   try {
     requireSupabaseServerConfig();
@@ -201,11 +199,12 @@ async function handler(req, res) {
     });
   }
 
-  if (!stripeSecretKey || !webhookSecret || !stripePriceId) {
+  if (!stripeSecretKey || !webhookSecret || !priceIds.pro || !priceIds.pro_plus) {
     const missingVariables = [
       ...(!stripeSecretKey ? ["STRIPE_SECRET_KEY"] : []),
       ...(!webhookSecret ? ["STRIPE_WEBHOOK_SECRET"] : []),
-      ...(!stripePriceId ? ["STRIPE_PRICE_ID"] : []),
+      ...(!priceIds.pro ? ["STRIPE_PRO_PRICE_ID (or legacy STRIPE_PRICE_ID)"] : []),
+      ...(!priceIds.pro_plus ? ["STRIPE_PRO_PLUS_PRICE_ID"] : []),
     ];
     console.error(
       "Stripe webhook configuration error. Missing environment variables:",

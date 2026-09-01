@@ -845,6 +845,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  if (window.hittingLogAnalyticsAccess === false) {
+    return;
+  }
+
   setChartsView(getChartsViewFromUrl());
   renderChartStrikeZone();
 

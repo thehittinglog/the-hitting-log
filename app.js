@@ -1972,7 +1972,7 @@ function renderAtBatList(listElement, atBats) {
   });
 }
 
-function initGamesPage(games) {
+function initGamesPage(games, membershipState = null) {
   const homeView = document.getElementById("games-home-view");
   const reviewListView = document.getElementById("game-review-list-view");
   const reviewGamesButton = document.getElementById("review-games-button");
@@ -2139,6 +2139,10 @@ function initGamesPage(games) {
     activePitchCompleted: false,
   };
   let lastDeleteGameModalFocus = null;
+  const gameLimit = Number.isInteger(membershipState?.entitlements?.gameLimit)
+    ? membershipState.entitlements.gameLimit
+    : 10;
+  const hasUnlimitedGames = membershipState?.entitlements?.unlimitedGames === true;
 
   const pitcherHandednessOptions = [
     { label: "Right-handed", value: "Right-handed" },
@@ -2252,6 +2256,10 @@ function initGamesPage(games) {
   }
 
   function openTournamentGame(tournament) {
+    if (!ensureCanCreateGame(gamesMessage)) {
+      return;
+    }
+
     showNewGameView({
       id: tournament.id,
       name: tournament.name,
@@ -2318,6 +2326,7 @@ function initGamesPage(games) {
     updateSummaryCards(games);
     renderRecentGames();
     renderTournaments();
+    addGameButton.textContent = hasReachedGameLimit() ? "Upgrade to Add Games" : "Add Game";
   }
 
   function renderTournamentDetails() {
@@ -2428,6 +2437,33 @@ function initGamesPage(games) {
   function setMessage(text, success = false) {
     formMessage.textContent = text;
     formMessage.classList.toggle("is-success", success);
+    formMessage.classList.remove("is-error");
+  }
+
+  function hasReachedGameLimit() {
+    return !hasUnlimitedGames && games.length >= gameLimit;
+  }
+
+  function showGameLimitMessage(target = gamesMessage) {
+    const link = document.createElement("a");
+    link.href = "/account";
+    link.textContent = "Upgrade to Pro or Pro Plus";
+    target.replaceChildren(
+      document.createTextNode(`Your Free plan includes ${gameLimit} games. Your existing data is safe. `),
+      link,
+      document.createTextNode(" to continue logging games."),
+    );
+    target.classList.remove("is-success");
+    target.classList.add("is-error");
+  }
+
+  function ensureCanCreateGame(target = gamesMessage) {
+    if (!hasReachedGameLimit()) {
+      return true;
+    }
+
+    showGameLimitMessage(target);
+    return false;
   }
 
   function showHomeView() {
@@ -4941,12 +4977,18 @@ function initGamesPage(games) {
       showReviewListView();
     }
   });
-  addGameButton.addEventListener("click", showChoiceView);
+  addGameButton.addEventListener("click", () => {
+    if (ensureCanCreateGame(gamesMessage)) {
+      showChoiceView();
+    }
+  });
   choiceBackButton.addEventListener("click", showHomeView);
   startTournamentButton.addEventListener("click", showTournamentNameView);
   tournamentBackButton.addEventListener("click", showChoiceView);
   singleGameButton.addEventListener("click", () => {
-    showNewGameView(null);
+    if (ensureCanCreateGame(gamesMessage)) {
+      showNewGameView(null);
+    }
   });
   backButton.addEventListener("click", showHomeView);
   tournamentDetailsBack.addEventListener("click", showHomeView);
@@ -4976,6 +5018,10 @@ function initGamesPage(games) {
 
     if (state.activeAtBat) {
       setMessage("Finish the current at-bat before starting another game.");
+      return;
+    }
+
+    if (!ensureCanCreateGame(formMessage)) {
       return;
     }
 
@@ -5018,7 +5064,11 @@ function initGamesPage(games) {
       return true;
     } catch (error) {
       console.error("Unable to save game:", error);
-      setMessage("We couldn't save this game. Please try again.");
+      if (String(error?.message || "").includes("FREE_GAME_LIMIT_REACHED")) {
+        showGameLimitMessage(formMessage);
+      } else {
+        setMessage("We couldn't save this game. Please try again.");
+      }
       return false;
     }
   }
@@ -6791,8 +6841,39 @@ function initSignupPage() {
 
 removeStoredAccountPasswords();
 
+function renderAnalyticsMembershipGate(verificationError = null) {
+  const main = document.querySelector("main");
+
+  if (!main) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  const eyebrow = document.createElement("p");
+  const title = document.createElement("h1");
+  const copy = document.createElement("p");
+  const action = document.createElement("a");
+
+  section.className = "panel membership-access-gate";
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = verificationError ? "Membership Check" : "Pro Analytics";
+  title.textContent = verificationError
+    ? "We couldn’t verify your membership."
+    : "Unlock full statistics and charts.";
+  copy.textContent = verificationError
+    ? "Reload this page to try again, or manage your membership from your account."
+    : "Full statistics, charts, heat maps, and spray charts are included with Pro and Pro Plus.";
+  action.className = "button-link";
+  action.href = "/account";
+  action.textContent = verificationError ? "View Account" : "View Membership Options";
+  section.append(eyebrow, title, copy, action);
+  main.replaceChildren(section);
+}
+
 async function bootstrapApplication() {
   let session = null;
+  let membershipState = null;
+  let membershipError = null;
 
   if (protectedPages.has(page) || authPages.has(page)) {
     if (!window.hittingLogAuth?.getCurrentSession) {
@@ -6834,6 +6915,21 @@ async function bootstrapApplication() {
       throw new Error("Supabase data storage is unavailable on this page.");
     }
     await window.initializeHittingLogDataStore();
+
+    if (new Set(["games", "advanced", "charts"]).has(page)) {
+      try {
+        membershipState = await window.hittingLogMembership?.loadStatus();
+      } catch (error) {
+        membershipError = error;
+        console.error("[Membership] Unable to verify page access", { page, error });
+        membershipState = window.hittingLogMembership?.normalizeState({
+          plan: "free",
+          status: "inactive",
+          subscription: null,
+        }) || null;
+        window.hittingLogMembershipState = membershipState;
+      }
+    }
   }
 
   updateAuthUI();
@@ -6842,11 +6938,20 @@ async function bootstrapApplication() {
   if (page === "dashboard") {
     initDashboard(games);
   } else if (page === "games") {
-    initGamesPage(games);
+    initGamesPage(games, membershipState);
   } else if (page === "all-games") {
     initAllGamesPage(games);
   } else if (page === "advanced") {
-    initAdvancedPage(games);
+    if (membershipState?.entitlements?.fullStatistics) {
+      initAdvancedPage(games);
+    } else {
+      renderAnalyticsMembershipGate(membershipError);
+    }
+  } else if (page === "charts") {
+    window.hittingLogAnalyticsAccess = membershipState?.entitlements?.charts === true;
+    if (!window.hittingLogAnalyticsAccess) {
+      renderAnalyticsMembershipGate(membershipError);
+    }
   } else if (page === "account") {
     initAccountPage();
   } else if (page === "login") {

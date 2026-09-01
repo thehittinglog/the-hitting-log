@@ -70,8 +70,63 @@ create policy "Users can delete their own hitting log games"
 on public.hitting_log_games for delete to authenticated
 using ((select auth.uid()) = user_id);
 
+create or replace function public.enforce_hitting_log_free_game_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  saved_game_count integer;
+  membership_plan text;
+  membership_status text;
+begin
+  if exists (
+    select 1
+    from public.hitting_log_games
+    where user_id = new.user_id and game_id = new.game_id
+  ) then
+    return new;
+  end if;
+
+  select plan, subscription_status
+  into membership_plan, membership_status
+  from public.subscriptions
+  where user_id = new.user_id;
+
+  if membership_plan in ('pro', 'pro_plus')
+    and membership_status in ('active', 'trialing') then
+    return new;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 0));
+
+  select count(*)
+  into saved_game_count
+  from public.hitting_log_games
+  where user_id = new.user_id;
+
+  if saved_game_count >= 10 then
+    raise exception using
+      errcode = 'P0001',
+      message = 'FREE_GAME_LIMIT_REACHED',
+      detail = 'Free memberships can save up to 10 games. Existing games remain available.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_hitting_log_free_game_limit() from public;
+
+drop trigger if exists enforce_hitting_log_free_game_limit on public.hitting_log_games;
+
+create trigger enforce_hitting_log_free_game_limit
+before insert on public.hitting_log_games
+for each row execute function public.enforce_hitting_log_free_game_limit();
+
 comment on table public.hitting_log_profiles is
   'Cloud-first athlete profile data owned by one authenticated Supabase user.';
 
 comment on table public.hitting_log_games is
-  'Cloud-first games; payload contains the existing tournament, at-bat, pitch, spray, heat-map, and calculated-stat shape.';
+  'Cloud-first games; payload contains the existing tournament, at-bat, pitch, spray, heat-map, and calculated-stat shape. New inserts enforce the trusted Free 10-game limit.';

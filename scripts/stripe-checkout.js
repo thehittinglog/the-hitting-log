@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
   const billingButton = document.getElementById("upgrade-button");
+  const planButtons = Array.from(document.querySelectorAll("[data-plan-action]"));
+  const planCards = Array.from(document.querySelectorAll("[data-membership-card]"));
   const planValue = document.getElementById("account-plan-value");
+  const gameAccessValue = document.getElementById("account-game-access-value");
   const subscriptionValue = document.getElementById("account-subscription-value");
   const billingValue = document.getElementById("account-billing-value");
   const billingCopy = document.getElementById("billing-section-copy");
@@ -11,7 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  let billingMode = "checkout";
+  let currentPlan = "free";
+  let planChangesUsePortal = false;
   const subscriptionStatusEndpoint = "/api/subscription-status";
 
   function setMessage(message, isError = false) {
@@ -90,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function isValidBillingState(billingState) {
     return Boolean(
       billingState &&
-      (billingState.plan === "free" || billingState.plan === "pro") &&
+      ["free", "pro", "pro_plus"].includes(billingState.plan) &&
       typeof billingState.status === "string" &&
       Object.prototype.hasOwnProperty.call(billingState, "subscription") &&
       (billingState.subscription === null || typeof billingState.subscription === "object")
@@ -98,26 +102,70 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderBillingState(billingState) {
-    const isPro = billingState?.plan === "pro";
-    billingMode = isPro ? "portal" : "checkout";
+    const normalizedState = window.hittingLogMembership?.normalizeState(billingState) || billingState;
+    currentPlan = normalizedState?.plan || "free";
+    const isPaid = currentPlan === "pro" || currentPlan === "pro_plus";
+    const hasStripeCustomer = normalizedState?.subscription?.hasStripeCustomer === true;
+    planChangesUsePortal = isPaid || new Set(["past_due", "unpaid", "paused", "incomplete"]).has(normalizedState?.status);
+    const planLabel = currentPlan === "pro_plus" ? "Pro Plus" : currentPlan === "pro" ? "Pro" : "Free";
 
     if (planValue) {
-      planValue.textContent = isPro ? "Pro" : "Free";
+      planValue.textContent = planLabel;
+    }
+    if (gameAccessValue) {
+      gameAccessValue.textContent = isPaid ? "Unlimited Games" : "10 Games Included";
     }
     if (subscriptionValue) {
-      subscriptionValue.textContent = formatStatus(billingState?.status);
+      subscriptionValue.textContent = formatStatus(normalizedState?.status);
     }
     if (billingValue) {
-      billingValue.textContent = billingState?.subscription?.hasStripeCustomer ? "Stripe Connected" : "Not Connected";
+      billingValue.textContent = hasStripeCustomer ? "Stripe Connected" : "Not Connected";
     }
     if (billingCopy) {
-      billingCopy.textContent = isPro
-        ? "Manage your payment method, invoices, and subscription through Stripe."
-        : "Upgrade to Pro for unlimited games and advanced hitting analytics.";
+      const periodEnd = normalizedState?.currentPeriodEnd
+        ? new Date(normalizedState.currentPeriodEnd).toLocaleDateString()
+        : "the end of the current billing period";
+
+      if (isPaid && normalizedState?.cancelAtPeriodEnd) {
+        billingCopy.textContent = `${planLabel} remains active until ${periodEnd}, then your account returns to Free.`;
+      } else if (isPaid) {
+        billingCopy.textContent = `${planLabel} is active. Manage plan changes, payment methods, invoices, and cancellation through Stripe.`;
+      } else if (planChangesUsePortal) {
+        billingCopy.textContent = `Your subscription is ${formatStatus(normalizedState?.status).toLowerCase()}. Open Stripe to resolve billing or change plans.`;
+      } else {
+        billingCopy.textContent = "Choose Pro for unlimited games and analytics, or Pro Plus to add the AI Hitting Assistant.";
+      }
     }
 
-    billingButton.textContent = isPro ? "Manage Billing" : "Upgrade to Pro";
-    billingButton.disabled = false;
+    planCards.forEach((card) => {
+      const cardPlan = card.dataset.membershipCard;
+      const isCurrent = cardPlan === currentPlan;
+      card.classList.toggle("is-current", isCurrent);
+      const label = card.querySelector("[data-current-plan-label]");
+      if (label) label.hidden = !isCurrent;
+    });
+
+    planButtons.forEach((button) => {
+      const targetPlan = button.dataset.planAction;
+      const isCurrent = targetPlan === currentPlan;
+      button.hidden = isCurrent;
+      button.disabled = isCurrent;
+
+      if (!isCurrent) {
+        button.textContent = planChangesUsePortal
+          ? "Manage in Stripe"
+          : currentPlan === "free"
+          ? `Upgrade to ${targetPlan === "pro_plus" ? "Pro Plus" : "Pro"}`
+          : targetPlan === "pro_plus"
+            ? "Upgrade in Stripe"
+            : "Change Plan in Stripe";
+        button.disabled = false;
+      }
+    });
+
+    billingButton.hidden = !hasStripeCustomer;
+    billingButton.textContent = "Manage Billing";
+    billingButton.disabled = !hasStripeCustomer;
   }
 
   async function loadBillingState(attempt = 0) {
@@ -162,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error("Your subscription status could not be verified. Please try again.");
       }
 
-      if (checkoutResult === "success" && data.plan !== "pro" && attempt < 4) {
+      if (checkoutResult === "success" && data.plan === "free" && attempt < 4) {
         setMessage("Finalizing your Stripe subscription...");
         window.setTimeout(() => loadBillingState(attempt + 1), 1500);
         return;
@@ -170,14 +218,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderBillingState(data);
 
-      if (checkoutResult === "success" && data.plan === "pro") {
-        setMessage("Your Pro subscription is active.");
+      if (checkoutResult === "success" && data.plan !== "free") {
+        setMessage(`Your ${data.plan === "pro_plus" ? "Pro Plus" : "Pro"} subscription is active.`);
       } else if (checkoutResult === "success") {
         setMessage("Your subscription is still syncing. Refresh this page in a moment.");
       } else if (checkoutResult === "cancelled") {
         setMessage("Checkout was cancelled. You have not been charged.");
       } else if (!data.subscription?.hasStripeCustomer) {
-        setMessage("Online billing management is being connected. You can still upgrade using the button above.");
+        setMessage("You’re currently on the Free plan.");
       }
     } catch (error) {
       console.error("Unable to load subscription status:", error);
@@ -186,12 +234,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  billingButton.addEventListener("click", async () => {
-    const originalText = billingButton.textContent;
+  async function openBilling(button, targetPlan = null) {
+    const originalText = button.textContent;
 
     try {
-      billingButton.disabled = true;
-      billingButton.textContent = billingMode === "portal" ? "Opening billing..." : "Opening checkout...";
+      button.disabled = true;
+      const usesPortal = planChangesUsePortal || !targetPlan;
+      button.textContent = usesPortal ? "Opening billing..." : "Opening checkout...";
       setMessage("");
 
       const session = await getAuthenticatedSession();
@@ -200,17 +249,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const endpoint =
-        billingMode === "portal"
-          ? "/api/create-portal-session"
-          : "/api/create-checkout-session";
+      const endpoint = usesPortal ? "/api/create-portal-session" : "/api/create-checkout-session";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(targetPlan ? { plan: targetPlan } : {}),
       });
 
       const result = await readApiResult(response);
@@ -227,9 +273,14 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Unable to open Stripe billing:", error);
       setMessage(error.message || "Something went wrong while opening Stripe billing.", true);
-      billingButton.disabled = false;
-      billingButton.textContent = originalText;
+      button.disabled = false;
+      button.textContent = originalText;
     }
+  }
+
+  billingButton.addEventListener("click", () => openBilling(billingButton));
+  planButtons.forEach((button) => {
+    button.addEventListener("click", () => openBilling(button, button.dataset.planAction));
   });
 
   loadBillingState();

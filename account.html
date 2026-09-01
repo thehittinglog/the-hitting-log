@@ -34,7 +34,7 @@
       <div class="section-heading">
         <div>
           <h2>Account Summary</h2>
-          <p class="section-copy">This page is ready for future Supabase and Stripe account data.</p>
+          <p class="section-copy">Your profile and trusted Stripe membership status.</p>
         </div>
       </div>
       <div class="summary-grid dashboard-snapshot-grid dashboard-stat-grid snapshot-stat-grid stats-grid stat-grid">
@@ -47,8 +47,8 @@
           <strong id="account-subscription-value" class="stat-value">Loading...</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
-          <span class="stat-label">Free Games</span>
-          <strong class="stat-value">10 Included</strong>
+          <span class="stat-label">Game Access</span>
+          <strong id="account-game-access-value" class="stat-value">Loading...</strong>
         </article>
         <article class="stat-card dashboard-stat-card snapshot-stat-card">
           <span class="stat-label">Billing</span>
@@ -121,7 +121,43 @@
             <p id="billing-section-copy" class="section-copy">Loading your subscription details...</p>
           </div>
         </div>
-        <button id="upgrade-button" type="button" disabled>Loading Billing...</button>
+        <div class="membership-plan-grid" aria-label="Membership options">
+          <article class="membership-plan-card" data-membership-card="free">
+            <p class="eyebrow">Free</p>
+            <h3>Free</h3>
+            <p class="membership-plan-price"><strong>$0</strong></p>
+            <ul>
+              <li>10 Games</li>
+            </ul>
+            <span class="membership-current-label" data-current-plan-label hidden>Current Plan</span>
+          </article>
+          <article class="membership-plan-card" data-membership-card="pro">
+            <p class="eyebrow">Pro</p>
+            <h3>Pro</h3>
+            <p class="membership-plan-price"><strong>$14.99</strong><span>/month</span></p>
+            <ul>
+              <li>Unlimited Games</li>
+              <li>Full Statistics</li>
+              <li>Charts &amp; Visualizations</li>
+              <li>Heat Maps &amp; Spray Charts</li>
+              <li>AI Hitting Assistant is not included</li>
+            </ul>
+            <button type="button" data-plan-action="pro" disabled>Loading...</button>
+            <span class="membership-current-label" data-current-plan-label hidden>Current Plan</span>
+          </article>
+          <article class="membership-plan-card membership-plan-card--plus" data-membership-card="pro_plus">
+            <p class="eyebrow">Highest Tier</p>
+            <h3>Pro Plus</h3>
+            <p class="membership-plan-price"><strong>$19.99</strong><span>/month</span></p>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>AI Hitting Assistant</li>
+            </ul>
+            <button type="button" data-plan-action="pro_plus" disabled>Loading...</button>
+            <span class="membership-current-label" data-current-plan-label hidden>Current Plan</span>
+          </article>
+        </div>
+        <button id="upgrade-button" class="secondary-button membership-manage-button" type="button" disabled hidden>Manage Billing</button>
         <p id="billing-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
       </section>
     </section>
@@ -157,6 +193,7 @@
   <script src="scripts/supabase-client.js"></script>
   <script src="scripts/auth.js"></script>
   <script src="scripts/data-store.js"></script>
+  <script src="scripts/membership.js"></script>
   <script src="scripts/stripe-checkout.js"></script>
   <script src="app.js"></script>
 

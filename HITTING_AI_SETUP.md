@@ -1,6 +1,8 @@
 # Hitting Log AI setup
 
-The Hitting Log AI endpoint uses the existing Supabase and Stripe environment variables plus one required server-only variable:
+The AI Hitting Assistant is available only to active Pro Plus members. The endpoint verifies the server-managed subscription row and Pro Plus Stripe Price ID before it processes a question.
+
+The endpoint uses the existing Supabase and Stripe environment variables plus one required server-only variable:
 
 - `OPENAI_API_KEY` — required; add it to `.env.local` for local Vercel development and to the Vercel project environment variables for Production and any Preview environments that should support Hitting Log AI.
 - `HITTING_AI_MODEL` — optional; defaults to `gpt-5-mini`.

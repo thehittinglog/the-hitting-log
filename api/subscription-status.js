@@ -7,24 +7,26 @@ const {
   upsertSubscription,
   verifySupabaseUserWithDetails,
 } = require("../lib/supabase-server");
+const {
+  MEMBERSHIP_PLANS,
+  RECONCILABLE_SUBSCRIPTION_STATUSES,
+  getEntitlements,
+  getPlanForPriceId,
+  getPlanForSubscription,
+  getStripePriceIds,
+} = require("../lib/membership");
 
 const ENDPOINT = "/api/subscription-status";
-const SUBSCRIPTION_STATUS_PRIORITY = [
-  "active",
-  "trialing",
-  "past_due",
-  "unpaid",
-  "incomplete",
-];
-const PRO_SUBSCRIPTION_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-  "unpaid",
+const SUBSCRIPTION_STATUS_PRIORITY = RECONCILABLE_SUBSCRIPTION_STATUSES;
+const LOCAL_SUBSCRIPTION_STATUSES = new Set([
+  ...RECONCILABLE_SUBSCRIPTION_STATUSES,
+  "canceled",
+  "incomplete_expired",
 ]);
 const FREE_PLAN_RESPONSE = {
   plan: "free",
   status: "inactive",
+  entitlements: getEntitlements("free"),
   subscription: null,
   cancelAtPeriodEnd: false,
   currentPeriodEnd: null,
@@ -63,15 +65,16 @@ function getPriceId(subscription) {
   return objectId(firstItem?.price) || firstItem?.pricing?.price_details?.price || null;
 }
 
-function getLocalStatusResponse(subscription) {
+function getLocalStatusResponse(subscription, priceIds = getStripePriceIds()) {
   const status = subscription.subscription_status || "inactive";
-  const plan = subscription.plan === "pro" ? "pro" : "free";
+  const plan = getPlanForSubscription(subscription, priceIds);
   const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
   const currentPeriodEnd = subscription.current_period_end || null;
 
   return {
     plan,
     status,
+    entitlements: getEntitlements(plan),
     subscription: {
       plan,
       status,
@@ -84,17 +87,19 @@ function getLocalStatusResponse(subscription) {
   };
 }
 
-function isUsableLocalSubscription(subscription, stripePriceId) {
-  const hasExpectedPlan =
-    !PRO_SUBSCRIPTION_STATUSES.has(subscription?.subscription_status) ||
-    subscription?.plan === "pro";
+function isUsableLocalSubscription(subscription, priceIds) {
+  const pricePlan = getPlanForPriceId(subscription?.stripe_price_id, priceIds);
+  const expectedPlan = getPlanForSubscription(subscription, priceIds);
+  const storedPlan = [MEMBERSHIP_PLANS.PRO, MEMBERSHIP_PLANS.PRO_PLUS].includes(subscription?.plan)
+    ? subscription.plan
+    : MEMBERSHIP_PLANS.FREE;
 
   return Boolean(
     subscription?.stripe_customer_id &&
       subscription?.stripe_subscription_id &&
-      SUBSCRIPTION_STATUS_PRIORITY.includes(subscription.subscription_status) &&
-      (!stripePriceId || subscription.stripe_price_id === stripePriceId) &&
-      hasExpectedPlan
+      LOCAL_SUBSCRIPTION_STATUSES.has(subscription.subscription_status) &&
+      pricePlan !== MEMBERSHIP_PLANS.FREE &&
+      storedPlan === expectedPlan
   );
 }
 
@@ -151,9 +156,9 @@ async function findCheckoutSessionCustomerIds(stripe, user) {
   return customerIds;
 }
 
-function selectRelevantSubscription(subscriptions, stripePriceId) {
+function selectRelevantSubscription(subscriptions, priceIds) {
   const candidates = subscriptions
-    .filter((subscription) => getPriceId(subscription) === stripePriceId)
+    .filter((subscription) => getPlanForPriceId(getPriceId(subscription), priceIds) !== MEMBERSHIP_PLANS.FREE)
     .filter((subscription) => SUBSCRIPTION_STATUS_PRIORITY.includes(subscription.status));
 
   return candidates.sort((left, right) => {
@@ -164,7 +169,7 @@ function selectRelevantSubscription(subscriptions, stripePriceId) {
   })[0] || null;
 }
 
-async function findRelevantStripeSubscription(stripe, customerIds, stripePriceId) {
+async function findRelevantStripeSubscription(stripe, customerIds, priceIds) {
   let customerFound = false;
 
   for (const customerId of customerIds) {
@@ -186,7 +191,7 @@ async function findRelevantStripeSubscription(stripe, customerIds, stripePriceId
       throw error;
     }
 
-    const subscription = selectRelevantSubscription(subscriptions.data, stripePriceId);
+    const subscription = selectRelevantSubscription(subscriptions.data, priceIds);
 
     if (subscription) {
       return { customerFound, subscription };
@@ -196,7 +201,7 @@ async function findRelevantStripeSubscription(stripe, customerIds, stripePriceId
   return { customerFound, subscription: null };
 }
 
-async function reconcileSubscription(stripe, user, localSubscription, stripePriceId) {
+async function reconcileSubscription(stripe, user, localSubscription, priceIds) {
   let customerFound = false;
   let stripeSubscription = null;
   const localCustomerIds = [];
@@ -206,7 +211,7 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
     const localResult = await findRelevantStripeSubscription(
       stripe,
       localCustomerIds,
-      stripePriceId
+      priceIds
     );
     customerFound = customerFound || localResult.customerFound;
     stripeSubscription = localResult.subscription;
@@ -217,7 +222,7 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
     const emailResult = await findRelevantStripeSubscription(
       stripe,
       emailCustomerIds,
-      stripePriceId
+      priceIds
     );
     customerFound = customerFound || emailResult.customerFound;
     stripeSubscription = emailResult.subscription;
@@ -228,7 +233,7 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
     const checkoutResult = await findRelevantStripeSubscription(
       stripe,
       checkoutCustomerIds,
-      stripePriceId
+      priceIds
     );
     customerFound = customerFound || checkoutResult.customerFound;
     stripeSubscription = checkoutResult.subscription;
@@ -243,6 +248,10 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
 
   const status = stripeSubscription.status || "inactive";
   const priceId = getPriceId(stripeSubscription);
+  const plan = getPlanForSubscription({
+    subscription_status: status,
+    stripe_price_id: priceId,
+  }, priceIds);
 
   try {
     await upsertSubscription({
@@ -259,10 +268,7 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
         getSubscriptionPeriod(stripeSubscription, "current_period_end")
       ),
       created_at: unixTimestampToIso(stripeSubscription.created) || new Date().toISOString(),
-      plan:
-        PRO_SUBSCRIPTION_STATUSES.has(status) && priceId === stripePriceId
-          ? "pro"
-          : "free",
+      plan,
     });
     console.info("Subscription reconciliation Supabase upsert succeeded:", true);
   } catch (error) {
@@ -284,10 +290,7 @@ async function reconcileSubscription(stripe, user, localSubscription, stripePric
     current_period_end: unixTimestampToIso(
       getSubscriptionPeriod(stripeSubscription, "current_period_end")
     ),
-    plan:
-      PRO_SUBSCRIPTION_STATUSES.has(status) && priceId === stripePriceId
-        ? "pro"
-        : "free",
+    plan,
   };
 }
 
@@ -375,18 +378,18 @@ async function handleRequest(req, res) {
   console.info("Subscription status subscription record exists:", Boolean(subscription));
   console.info("Subscription status Stripe customer ID exists:", Boolean(subscription?.stripe_customer_id));
 
-  const stripePriceId = process.env.STRIPE_PRICE_ID || "";
+  const priceIds = getStripePriceIds();
 
-  if (isUsableLocalSubscription(subscription, stripePriceId)) {
+  if (isUsableLocalSubscription(subscription, priceIds)) {
     console.info("Subscription status Stripe queried:", false);
-    const responseBody = getLocalStatusResponse(subscription);
+    const responseBody = getLocalStatusResponse(subscription, priceIds);
     console.info("Subscription status final plan and status:", responseBody.plan, responseBody.status);
     return sendResponse(res, 200, responseBody);
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 
-  if (!stripeSecretKey || !stripePriceId) {
+  if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) {
     console.info("Subscription status Stripe queried:", false);
     console.error("Subscription reconciliation configuration error: Stripe configuration is missing.");
     return sendResponse(res, 502, {
@@ -415,7 +418,7 @@ async function handleRequest(req, res) {
       stripe,
       user,
       subscription,
-      stripePriceId
+      priceIds
     );
   } catch (error) {
     console.error("Subscription reconciliation error:", error.message);
@@ -438,7 +441,7 @@ async function handleRequest(req, res) {
     return sendResponse(res, 200, FREE_PLAN_RESPONSE);
   }
 
-  const responseBody = getLocalStatusResponse(reconciledSubscription);
+  const responseBody = getLocalStatusResponse(reconciledSubscription, priceIds);
   console.info("Subscription status final plan and status:", responseBody.plan, responseBody.status);
   return sendResponse(res, 200, responseBody);
 }

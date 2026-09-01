@@ -6,8 +6,8 @@ const {
 } = require("../lib/supabase-server");
 const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
+const { hasSubscriptionEntitlement } = require("../lib/membership");
 
-const PAID_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_HISTORY_ITEMS = 6;
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -69,7 +69,7 @@ async function readUserHittingData(accessToken, userId) {
 
 function directAnswer(result) {
   if (result.type === "refusal") {
-    return "I’m Hitting Log AI. I can only help analyze your hitting performance and hitting data.";
+    return "I’m the AI Hitting Assistant. I can only help analyze your hitting performance and hitting data.";
   }
   if (result.type === "no_data") {
     return "I don’t have enough hitting data recorded yet to answer that question.";
@@ -99,7 +99,7 @@ module.exports = async function handler(req, res) {
   }
 
   const accessToken = getBearerToken(req);
-  if (!accessToken) return send(res, 401, { error: "Please sign in to use Hitting Log AI.", code: "missing_auth_token" });
+  if (!accessToken) return send(res, 401, { error: "Please sign in to use the AI Hitting Assistant.", code: "missing_auth_token" });
 
   let authentication;
   try {
@@ -119,9 +119,9 @@ module.exports = async function handler(req, res) {
     console.error("Hitting Log AI subscription lookup failed:", error.message);
     return send(res, 503, { error: "We couldn’t verify your membership right now.", code: "subscription_check_failed" });
   }
-  if (subscription?.plan !== "pro" || !PAID_STATUSES.has(subscription?.subscription_status)) {
+  if (!hasSubscriptionEntitlement(subscription, "ai")) {
     return send(res, 402, {
-      error: "Hitting Log AI is available with a paid Hitting Log membership. Upgrade to ask questions about your hitting data and uncover deeper performance trends.",
+      error: "AI Hitting Assistant is available with Pro Plus.",
       code: "upgrade_required",
       upgradeUrl: "/account",
     });
@@ -167,8 +167,8 @@ module.exports = async function handler(req, res) {
     const notConfigured = error.code === "OPENAI_API_KEY_MISSING";
     return send(res, notConfigured ? 503 : 502, {
       error: notConfigured
-        ? "Hitting Log AI is being configured. Please try again soon."
-        : "Hitting Log AI couldn’t generate a response. Please try again.",
+        ? "The AI Hitting Assistant is being configured. Please try again soon."
+        : "The AI Hitting Assistant couldn’t generate a response. Please try again.",
       code: notConfigured ? "ai_not_configured" : "ai_request_failed",
     });
   }

@@ -1969,6 +1969,91 @@ body.has-account-modal {
   margin: 8px 0 0;
 }
 
+.membership-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.membership-plan-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel-solid);
+}
+
+.membership-plan-card--plus {
+  border-color: rgba(169, 31, 36, 0.5);
+  box-shadow: 0 12px 28px rgba(169, 31, 36, 0.1);
+}
+
+.membership-plan-card.is-current {
+  box-shadow: 0 0 0 2px var(--navy);
+}
+
+.membership-plan-card h3,
+.membership-plan-card .eyebrow {
+  margin-bottom: 8px;
+}
+
+.membership-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0 0 14px;
+}
+
+.membership-plan-price strong {
+  color: var(--navy);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+}
+
+.membership-plan-price span,
+.membership-plan-card li {
+  color: var(--muted);
+}
+
+.membership-plan-card ul {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding-left: 20px;
+}
+
+.membership-plan-card button,
+.membership-manage-button {
+  width: 100%;
+}
+
+.membership-current-label {
+  margin-top: auto;
+  color: var(--navy);
+  font-weight: 800;
+  text-align: center;
+}
+
+.membership-manage-button {
+  margin-top: 18px;
+}
+
+.membership-access-gate {
+  max-width: 720px;
+  margin: clamp(32px, 8vw, 88px) auto;
+  text-align: center;
+}
+
+.membership-access-gate p:not(.eyebrow) {
+  color: var(--muted);
+}
+
+.membership-access-gate .button-link {
+  margin-top: 10px;
+}
+
 .insight-stack {
   display: grid;
   gap: 14px;
@@ -3648,6 +3733,7 @@ body[data-page="games"] #game-choice-view .choice-card-button {
   .choice-grid,
   .choice-card-grid,
   .chart-selection-grid,
+  .membership-plan-grid,
   .spray-chart-layout,
   .chart-overview {
     grid-template-columns: 1fr;

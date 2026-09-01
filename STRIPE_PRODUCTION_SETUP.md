@@ -2,10 +2,10 @@
 
 ## Database migration
 
-Run `supabase/subscriptions.sql` in the Supabase SQL Editor. It safely creates or updates the
-`public.subscriptions` table, enables Row Level Security, lets authenticated users
-read only their own subscription row, and reserves writes for the server-side
-service role.
+Run `supabase/subscriptions.sql`, then `supabase/hitting-log-data.sql`, in the Supabase SQL Editor. They safely create or update the
+membership and hitting-log tables, enable Row Level Security, let authenticated users
+read only their own subscription row, and reserve subscription writes for the server-side
+service role. The hitting-log migration adds the trusted Free 10-game insert limit.
 
 The table stores:
 
@@ -23,7 +23,9 @@ The table stores:
 Configure these for Production and any Preview environment used for Stripe tests:
 
 - `STRIPE_SECRET_KEY` — Stripe secret key for the matching mode.
-- `STRIPE_PRICE_ID` — existing recurring Pro Price ID for the matching mode.
+- `STRIPE_PRO_PRICE_ID` — Pro recurring Price ID: `price_1TuoOlRHnsqSfi089T01MZvN`.
+- `STRIPE_PRO_PLUS_PRICE_ID` — Pro Plus recurring Price ID: `price_1UAzWHRHnsqSfi08kACnt0Rs`.
+- `STRIPE_PRICE_ID` — legacy Pro alias supported during migration. Keep it only until `STRIPE_PRO_PRICE_ID` is configured.
 - `STRIPE_WEBHOOK_SECRET` — signing secret for the deployed webhook endpoint.
 - `HITTING_LOG_SUPABASE_URL`, `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, or
   `VITE_SUPABASE_URL` — Supabase project URL.
@@ -43,7 +45,7 @@ Never expose `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 
 ## Stripe Dashboard setup
 
-1. Enable and configure the Stripe Customer Portal.
+1. Enable and configure the Stripe Customer Portal, including both the Pro and Pro Plus monthly prices as available subscription-update products.
 2. Create a webhook endpoint at:
    `https://thehittinglog.com/api/stripe-webhook`
 3. Subscribe it to:
@@ -67,6 +69,8 @@ consistent.
 - `api/create-checkout-session.js` preserves Checkout and prevents duplicate
   managed subscriptions.
 - `lib/supabase-server.js` contains server-only authentication and database helpers.
+- `lib/membership.js` maps trusted Stripe Price IDs and statuses to entitlements.
 - `supabase/subscriptions.sql` defines the subscription schema and RLS policy.
+- `supabase/hitting-log-data.sql` enforces the Free 10-game limit for direct authenticated inserts.
 - `account.html` contains dynamic plan and billing UI targets.
 - `scripts/stripe-checkout.js` loads subscription state and opens Checkout or Portal.

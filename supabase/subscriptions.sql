@@ -7,13 +7,19 @@ create table if not exists public.subscriptions (
   current_period_start timestamptz,
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,
-  plan text not null default 'free' check (plan in ('free', 'pro')),
+  plan text not null default 'free' check (plan in ('free', 'pro', 'pro_plus')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.subscriptions
 add column if not exists current_period_start timestamptz;
+
+alter table public.subscriptions
+drop constraint if exists subscriptions_plan_check;
+
+alter table public.subscriptions
+add constraint subscriptions_plan_check check (plan in ('free', 'pro', 'pro_plus'));
 
 alter table public.subscriptions enable row level security;
 
