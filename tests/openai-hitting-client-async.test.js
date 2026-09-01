@@ -31,11 +31,97 @@
   assert(capturedOptions.headers.Authorization === `Bearer ${process.env.OPENAI_API_KEY}`, "authorization header is incorrect");
   assert(capturedOptions.headers["Content-Type"] === "application/json", "content type is incorrect");
   assert(payload.model === "gpt-5-mini", "production request model is incorrect");
-  assert(payload.max_output_tokens === 300, "production max_output_tokens is incorrect");
+  assert(payload.max_output_tokens === 800, "production max_output_tokens is incorrect");
   assert(payload.store === false, "production store setting is incorrect");
   assert(payload.text.verbosity === "low", "production text verbosity is incorrect");
   assert(Array.isArray(payload.input) && payload.input[0].role === "user", "production input format is incorrect");
   assert(typeof payload.instructions === "string" && payload.instructions.length > 0, "production instructions are missing");
+  assert(payload.instructions.indexOf("2–5 short paragraphs") !== -1, "concise response guidance is missing");
+
+  const incompleteWarnings = [];
+  const originalWarn = console.warn;
+  console.warn = function (label, details) {
+    incompleteWarnings.push(`${label} ${details}`);
+  };
+  fetch = async function () {
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async function () {
+        return JSON.stringify({
+          status: "incomplete",
+          incomplete_details: { reason: "max_output_tokens" },
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: "Use the available partial coaching response." }],
+            },
+          ],
+        });
+      },
+    };
+  };
+
+  const partialAnswer = await client.explainCalculatedResult({
+    message: "Test partial",
+    result: { type: "test" },
+    userId: "user-1",
+  });
+  assert(partialAnswer === "Use the available partial coaching response.", "partial incomplete output was not returned");
+  assert(
+    incompleteWarnings.some(function (entry) {
+      return entry.indexOf("OPENAI_MAX_OUTPUT_TOKENS_REACHED") !== -1;
+    }),
+    "partial incomplete response was not clearly logged"
+  );
+
+  fetch = async function () {
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async function () {
+        return JSON.stringify({
+          status: "incomplete",
+          incomplete_details: { reason: "max_output_tokens" },
+          output: [{ type: "reasoning", content: [] }],
+        });
+      },
+    };
+  };
+
+  let incompleteError = null;
+  try {
+    await client.explainCalculatedResult({ message: "Test empty partial", result: { type: "test" }, userId: "user-1" });
+  } catch (error) {
+    incompleteError = error;
+  }
+  console.warn = originalWarn;
+  assert(incompleteError?.code === "OPENAI_MAX_OUTPUT_TOKENS_REACHED", "empty incomplete response used the wrong error code");
+  const incompleteLog = client.getSafeOpenAIErrorLog(incompleteError);
+  assert(incompleteLog.httpStatus === 200, "incomplete response HTTP status was not preserved");
+  assert(incompleteLog.responseStatus === "incomplete", "incomplete response status was not preserved");
+  assert(incompleteLog.incompleteReason === "max_output_tokens", "incomplete reason was not preserved");
+
+  fetch = async function () {
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async function () {
+        return JSON.stringify({ status: "completed", output: [] });
+      },
+    };
+  };
+
+  let emptyResponseError = null;
+  try {
+    await client.explainCalculatedResult({ message: "Test empty response", result: { type: "test" }, userId: "user-1" });
+  } catch (error) {
+    emptyResponseError = error;
+  }
+  assert(emptyResponseError?.code === "OPENAI_EMPTY_RESPONSE", "truly empty completed response used the wrong error code");
 
   fetch = async function () {
     return {
