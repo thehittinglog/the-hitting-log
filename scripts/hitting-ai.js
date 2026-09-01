@@ -93,7 +93,7 @@
   async function checkAccess() {
     renderStatus("Checking your membership…");
     try {
-      const membership = await window.hittingLogMembership?.loadStatus();
+      const membership = await window.hittingLogMembership?.loadStatus({ force: true });
       if (!membership) throw new Error("We couldn’t verify your membership.");
       isPro = membership.entitlements.ai === true;
       if (!isPro) {

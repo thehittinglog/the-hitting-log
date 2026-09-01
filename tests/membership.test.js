@@ -15,6 +15,11 @@ assert.equal(
 assert.equal(membership.getPlanForPriceId(priceIds.pro, priceIds), "pro");
 assert.equal(membership.getPlanForPriceId(priceIds.pro_plus, priceIds), "pro_plus");
 assert.equal(membership.getPlanForPriceId("price_unknown", priceIds), "free");
+assert.equal(
+  membership.getPlanForPriceId(priceIds.pro, { pro: priceIds.pro_plus, pro_plus: priceIds.pro }),
+  "pro",
+  "The finalized Pro Price must never be reclassified as Pro Plus by swapped configuration",
+);
 
 assert.equal(
   membership.getPlanForSubscription({ subscription_status: "active", stripe_price_id: priceIds.pro }, priceIds),
