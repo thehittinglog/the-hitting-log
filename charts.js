@@ -186,6 +186,22 @@ function getChartDateRange(startInput, endInput) {
   };
 }
 
+function getFilterControlDefaults(controls) {
+  return controls.map((control) => ({
+    control,
+    value:
+      control.tagName === "SELECT"
+        ? (Array.from(control.options).find((option) => option.defaultSelected) || control.options[0])?.value || ""
+        : control.defaultValue,
+  }));
+}
+
+function restoreFilterControlDefaults(defaults) {
+  defaults.forEach(({ control, value }) => {
+    control.value = value;
+  });
+}
+
 function isGameInChartDateRange(game, dateRange) {
   const gameDate = normalizeChartDate(game?.date);
 
@@ -357,18 +373,27 @@ function renderChartsPage() {
   const pitchTypeSelect = document.getElementById("chart-pitch-type-filter");
   const startDateInput = document.getElementById("chart-start-date");
   const endDateInput = document.getElementById("chart-end-date");
+  const clearFiltersButton = document.getElementById("chart-clear-filters");
   const chartsEmpty = document.getElementById("charts-empty");
   const zoneMap = document.getElementById("chart-zone-map");
   const filterTotal = document.getElementById("chart-filter-total");
   const chartZoneTitle = document.getElementById("chart-zone-title");
 
-  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
+  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !clearFiltersButton || !chartsEmpty || !zoneMap || !filterTotal || !chartZoneTitle) {
     return;
   }
 
   removeHiddenChartFilterOptions(filterSelect);
   populateVelocityRangeOptions(velocitySelect);
   populatePitchTypeOptions(pitchTypeSelect);
+  const filterDefaults = getFilterControlDefaults([
+    startDateInput,
+    endDateInput,
+    filterSelect,
+    velocitySelect,
+    handednessSelect,
+    pitchTypeSelect,
+  ]);
 
   function renderSelectedFilter() {
     const selectedFilter =
@@ -467,6 +492,10 @@ function renderChartsPage() {
   pitchTypeSelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
+  clearFiltersButton.addEventListener("click", () => {
+    restoreFilterControlDefaults(filterDefaults);
+    renderSelectedFilter();
+  });
   renderSelectedFilter();
 }
 
@@ -724,16 +753,26 @@ function renderSprayChartsPage() {
   const pitchTypeSelect = document.getElementById("spray-pitch-type-filter");
   const startDateInput = document.getElementById("spray-start-date");
   const endDateInput = document.getElementById("spray-end-date");
+  const clearFiltersButton = document.getElementById("spray-clear-filters");
   const markerLayer = document.getElementById("spray-marker-layer");
   const emptyState = document.getElementById("spray-empty-state");
   const legendList = document.getElementById("spray-legend-list");
 
-  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !markerLayer || !emptyState || !legendList) {
+  if (!filterSelect || !velocitySelect || !handednessSelect || !pitchTypeSelect || !startDateInput || !endDateInput || !clearFiltersButton || !markerLayer || !emptyState || !legendList) {
     return;
   }
 
   populateVelocityRangeOptions(velocitySelect);
   populatePitchTypeOptions(pitchTypeSelect);
+  filterSelect.value = "all";
+  const filterDefaults = getFilterControlDefaults([
+    startDateInput,
+    endDateInput,
+    filterSelect,
+    velocitySelect,
+    handednessSelect,
+    pitchTypeSelect,
+  ]);
 
   function renderSelectedFilter() {
     const filterId = SPRAY_RESULT_FILTERS.includes(filterSelect.value) ? filterSelect.value : "all";
@@ -764,13 +803,16 @@ function renderSprayChartsPage() {
     renderSprayLegend(legendList, filterId);
   }
 
-  filterSelect.value = "all";
   filterSelect.addEventListener("change", renderSelectedFilter);
   velocitySelect.addEventListener("change", renderSelectedFilter);
   handednessSelect.addEventListener("change", renderSelectedFilter);
   pitchTypeSelect.addEventListener("change", renderSelectedFilter);
   startDateInput.addEventListener("change", renderSelectedFilter);
   endDateInput.addEventListener("change", renderSelectedFilter);
+  clearFiltersButton.addEventListener("click", () => {
+    restoreFilterControlDefaults(filterDefaults);
+    renderSelectedFilter();
+  });
   renderSelectedFilter();
 }
 

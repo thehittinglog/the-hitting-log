@@ -3008,6 +3008,10 @@ select:focus {
   margin-top: 14px;
 }
 
+.spray-chart-clear-filters {
+  margin-top: 14px;
+}
+
 .spray-chart-filter-field label {
   margin: 0;
   font-size: 0.92rem;
