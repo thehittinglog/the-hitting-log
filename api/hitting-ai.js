@@ -5,7 +5,7 @@ const {
   verifySupabaseUserWithDetails,
 } = require("../lib/supabase-server");
 const { analyzeQuestion } = require("../lib/hitting-ai-stats");
-const { explainCalculatedResult } = require("../lib/openai-hitting-client");
+const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
 
 const PAID_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
 const MAX_MESSAGE_LENGTH = 500;
@@ -150,7 +150,7 @@ module.exports = async function handler(req, res) {
     });
     return send(res, 200, { answer, athleteName: hitterData.athleteName });
   } catch (error) {
-    console.error("Hitting Log AI model request failed:", error.code || error.message);
+    console.error("Hitting Log AI OpenAI request failed:", JSON.stringify(getSafeOpenAIErrorLog(error)));
     const notConfigured = error.code === "OPENAI_API_KEY_MISSING";
     return send(res, notConfigured ? 503 : 502, {
       error: notConfigured
