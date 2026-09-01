@@ -4,7 +4,7 @@ const {
   requireSupabasePublicConfig,
   verifySupabaseUserWithDetails,
 } = require("../lib/supabase-server");
-const { analyzeQuestion } = require("../lib/hitting-ai-stats");
+const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
 
 const PAID_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
@@ -75,12 +75,20 @@ function directAnswer(result) {
     return "I don’t have enough hitting data recorded yet to answer that question.";
   }
   if (result.type === "missing_data") {
+    if (result.reason === "insufficient_velocity_data") {
+      return "I don’t have enough recorded pitch-velocity data yet to determine which velocity you struggle with most.";
+    }
     return `I can’t calculate that yet because ${result.field} is not recorded for enough at-bats.`;
   }
   if (result.type === "insufficient_sample") {
     return `I need at least ${result.minimum} official at-bats to evaluate that trend. There are currently ${result.available}.`;
   }
+  if (isDirectStatisticalResult(result)) return formatDeterministicAnswer(result);
   return "";
+}
+
+function modelFailureAnswer(result) {
+  return formatDeterministicAnswer(result);
 }
 
 module.exports = async function handler(req, res) {
@@ -151,6 +159,10 @@ module.exports = async function handler(req, res) {
     return send(res, 200, { answer, athleteName: hitterData.athleteName });
   } catch (error) {
     console.error("Hitting Log AI OpenAI request failed:", JSON.stringify(getSafeOpenAIErrorLog(error)));
+    const fallbackAnswer = modelFailureAnswer(result);
+    if (fallbackAnswer) {
+      return send(res, 200, { answer: fallbackAnswer, athleteName: hitterData.athleteName });
+    }
     const notConfigured = error.code === "OPENAI_API_KEY_MISSING";
     return send(res, notConfigured ? 503 : 502, {
       error: notConfigured
@@ -161,4 +173,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._test = { consumeRateLimit, directAnswer, sanitizeHistory };
+module.exports._test = { consumeRateLimit, directAnswer, modelFailureAnswer, sanitizeHistory };

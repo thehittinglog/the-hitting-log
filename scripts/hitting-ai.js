@@ -224,7 +224,7 @@
     form = createElement("form", "hitting-ai-form");
     input = document.createElement("textarea");
     input.className = "hitting-ai-input";
-    input.placeholder = "Ask about counts, velocity, zones, or recent at-bats…";
+    input.placeholder = "Ask about your performance, trends, or what to work on…";
     input.maxLength = 500;
     input.rows = 2;
     input.setAttribute("aria-label", "Ask Hitting Log AI a question");

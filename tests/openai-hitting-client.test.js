@@ -26,12 +26,14 @@
     instructions: "Test instructions",
     input: "Reply with OK.",
     maxOutputTokens: 64,
+    reasoning: { effort: "low" },
     userId: "user-123",
     text: { verbosity: "low" },
   });
   assert(request.model === "gpt-5-mini", "default model is incorrect");
   assert(request.input === "Reply with OK.", "Responses API input is incorrect");
   assert(request.max_output_tokens === 64, "Responses API max_output_tokens is incorrect");
+  assert(request.reasoning.effort === "low", "Responses API reasoning effort is incorrect");
   assert(request.store === false, "Responses API store setting is incorrect");
   assert(request.instructions === "Test instructions", "Responses API instructions are missing");
   assert(request.safety_identifier === "user-123", "safety_identifier is incorrect");

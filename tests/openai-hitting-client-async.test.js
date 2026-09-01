@@ -31,24 +31,36 @@
   assert(capturedOptions.headers.Authorization === `Bearer ${process.env.OPENAI_API_KEY}`, "authorization header is incorrect");
   assert(capturedOptions.headers["Content-Type"] === "application/json", "content type is incorrect");
   assert(payload.model === "gpt-5-mini", "production request model is incorrect");
-  assert(payload.max_output_tokens === 800, "production max_output_tokens is incorrect");
+  assert(payload.max_output_tokens === 1600, "production max_output_tokens is incorrect");
+  assert(payload.reasoning.effort === "low", "production reasoning effort is incorrect");
   assert(payload.store === false, "production store setting is incorrect");
   assert(payload.text.verbosity === "low", "production text verbosity is incorrect");
   assert(Array.isArray(payload.input) && payload.input[0].role === "user", "production input format is incorrect");
   assert(typeof payload.instructions === "string" && payload.instructions.length > 0, "production instructions are missing");
   assert(payload.instructions.indexOf("2–5 short paragraphs") !== -1, "concise response guidance is missing");
+  assert(payload.instructions.indexOf("Lead with the conclusion") !== -1, "conclusion-first guidance is missing");
+  assert(payload.instructions.indexOf("do not manufacture a weakness") !== -1, "no-forced-weakness guidance is missing");
 
   const incompleteWarnings = [];
   const originalWarn = console.warn;
   console.warn = function (label, details) {
     incompleteWarnings.push(`${label} ${details}`);
   };
-  fetch = async function () {
+  const retryPayloads = [];
+  fetch = async function (url, options) {
+    retryPayloads.push(JSON.parse(options.body));
+    const isRetry = retryPayloads.length === 2;
     return {
       ok: true,
       status: 200,
       statusText: "OK",
       text: async function () {
+        if (isRetry) {
+          return JSON.stringify({
+            status: "completed",
+            output: [{ type: "message", content: [{ type: "output_text", text: "Complete coaching response." }] }],
+          });
+        }
         return JSON.stringify({
           status: "incomplete",
           incomplete_details: { reason: "max_output_tokens" },
@@ -68,15 +80,20 @@
     result: { type: "test" },
     userId: "user-1",
   });
-  assert(partialAnswer === "Use the available partial coaching response.", "partial incomplete output was not returned");
+  assert(partialAnswer === "Complete coaching response.", "incomplete partial output was shown instead of the completed retry");
+  assert(retryPayloads.length === 2, "incomplete response did not retry exactly once");
+  assert(retryPayloads[0].max_output_tokens === 1600, "initial retry test used the wrong token limit");
+  assert(retryPayloads[1].max_output_tokens === 2400, "retry did not use additional token headroom");
   assert(
     incompleteWarnings.some(function (entry) {
       return entry.indexOf("OPENAI_MAX_OUTPUT_TOKENS_REACHED") !== -1;
     }),
-    "partial incomplete response was not clearly logged"
+    "incomplete response retry was not clearly logged"
   );
 
+  let exhaustedAttempts = 0;
   fetch = async function () {
+    exhaustedAttempts += 1;
     return {
       ok: true,
       status: 200,
@@ -99,6 +116,7 @@
   }
   console.warn = originalWarn;
   assert(incompleteError?.code === "OPENAI_MAX_OUTPUT_TOKENS_REACHED", "empty incomplete response used the wrong error code");
+  assert(exhaustedAttempts === 2, "incomplete response exceeded the one-retry limit");
   const incompleteLog = client.getSafeOpenAIErrorLog(incompleteError);
   assert(incompleteLog.httpStatus === 200, "incomplete response HTTP status was not preserved");
   assert(incompleteLog.responseStatus === "incomplete", "incomplete response status was not preserved");
