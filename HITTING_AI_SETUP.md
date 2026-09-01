@@ -1,8 +1,8 @@
-# Hitting AI setup
+# Hitting Log AI setup
 
-The Hitting AI endpoint uses the existing Supabase and Stripe environment variables plus one required server-only variable:
+The Hitting Log AI endpoint uses the existing Supabase and Stripe environment variables plus one required server-only variable:
 
-- `OPENAI_API_KEY` — required; add it to the Vercel project environment variables for Production and any Preview environments that should support Hitting AI.
+- `OPENAI_API_KEY` — required; add it to `.env.local` for local Vercel development and to the Vercel project environment variables for Production and any Preview environments that should support Hitting Log AI.
 - `HITTING_AI_MODEL` — optional; defaults to `gpt-5-mini`.
 
 Do not expose either value in a browser script or rename it with a public/client-side prefix.

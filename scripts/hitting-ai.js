@@ -1,11 +1,13 @@
 (function () {
   const STARTERS = [
+    "What should I work on this week?",
+    "What hurt my Performance Score?",
+    "What am I doing well lately?",
+    "What is causing most of my outs?",
     "What count am I hitting best in?",
-    "What velocity do I struggle with?",
-    "Where am I getting most of my hits?",
-    "What should I know about my last 20 at-bats?",
+    "What velocity gives me the most trouble?",
   ];
-  const UPGRADE_MESSAGE = "AI Hitting Insights is available with a paid Hitting Log membership. Upgrade to ask questions about your hitting data and uncover deeper performance trends.";
+  const UPGRADE_MESSAGE = "Hitting Log AI is available with a paid Hitting Log membership. Upgrade to ask questions about your hitting data and uncover deeper performance trends.";
   const PAID_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
   const messages = [];
   let isOpen = false;
@@ -55,6 +57,7 @@
     conversation.querySelector(".hitting-ai-starters")?.remove();
     if (messages.length || isPro !== true) return;
     const section = createElement("section", "hitting-ai-starters");
+    section.appendChild(createElement("p", "hitting-ai-empty-copy", "Ask Hitting Log AI about your performance."));
     section.appendChild(createElement("p", "hitting-ai-starter-label", "Try asking:"));
     STARTERS.forEach((question) => {
       const button = createElement("button", "hitting-ai-starter", question);
@@ -75,7 +78,7 @@
     const icon = createElement("span", "hitting-ai-upgrade-icon", "✦");
     icon.setAttribute("aria-hidden", "true");
     card.appendChild(icon);
-    card.appendChild(createElement("h3", "", "Unlock AI Hitting Insights"));
+    card.appendChild(createElement("h3", "", "Unlock Hitting Log AI"));
     card.appendChild(createElement("p", "", UPGRADE_MESSAGE));
     const link = createElement("a", "hitting-ai-upgrade-link", "View membership options");
     link.href = "/account";
@@ -171,7 +174,7 @@
         renderUpgrade();
         return;
       }
-      if (!response.ok) throw new Error(data.error || "Hitting AI couldn’t answer that question.");
+      if (!response.ok) throw new Error(data.error || "Hitting Log AI couldn’t answer that question.");
       const answer = String(data.answer || "I couldn’t generate an answer. Please try again.");
       if (data.athleteName) athleteName.textContent = data.athleteName;
       messages.push({ role: "assistant", content: answer });
@@ -190,7 +193,7 @@
     accessButton.type = "button";
     accessButton.setAttribute("aria-controls", "hitting-ai-panel");
     accessButton.setAttribute("aria-expanded", "false");
-    accessButton.innerHTML = '<span aria-hidden="true">✦</span><span>Ask Hitting AI</span>';
+    accessButton.innerHTML = '<span aria-hidden="true">✦</span><span>Hitting Log AI</span>';
 
     overlay = createElement("div", "hitting-ai-overlay");
     overlay.hidden = true;
@@ -205,14 +208,14 @@
 
     const header = createElement("header", "hitting-ai-header");
     const heading = createElement("div", "hitting-ai-heading");
-    const eyebrow = createElement("p", "hitting-ai-eyebrow", "✦ AI HITTING INSIGHTS");
-    const title = createElement("h2", "", "Hitting AI");
+    const eyebrow = createElement("p", "hitting-ai-eyebrow", "✦ PERFORMANCE ANALYSIS");
+    const title = createElement("h2", "", "Hitting Log AI");
     title.id = "hitting-ai-title";
     athleteName = createElement("strong", "hitting-ai-athlete", window.getHittingLogProfile?.()?.athleteName || "Your hitter");
     heading.append(eyebrow, title, athleteName, createElement("p", "hitting-ai-description", "Ask questions about this hitter’s statistics."));
     const closeButton = createElement("button", "hitting-ai-close", "×");
     closeButton.type = "button";
-    closeButton.setAttribute("aria-label", "Close Hitting AI");
+    closeButton.setAttribute("aria-label", "Close Hitting Log AI");
     closeButton.addEventListener("click", closePanel);
     header.append(heading, closeButton);
 
@@ -224,7 +227,7 @@
     input.placeholder = "Ask about counts, velocity, zones, or recent at-bats…";
     input.maxLength = 500;
     input.rows = 2;
-    input.setAttribute("aria-label", "Ask Hitting AI a question");
+    input.setAttribute("aria-label", "Ask Hitting Log AI a question");
     sendButton = createElement("button", "hitting-ai-send", "Send");
     sendButton.type = "submit";
     sendButton.disabled = true;

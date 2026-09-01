@@ -18,7 +18,7 @@
   --chart-mixed: rgba(7, 50, 79, 0.56);
 }
 
-/* Hitting AI */
+/* Hitting Log AI */
 .hitting-ai-access-button {
   position: fixed;
   right: clamp(16px, 2.5vw, 32px);
@@ -117,6 +117,7 @@
 }
 .hitting-ai-message-bubble.is-error { border-color: #e3aaaa; background: #fff3f3; color: #8a2525; }
 .hitting-ai-starter-label { margin: 0 0 10px; color: #627083; font-size: 0.82rem; font-weight: 700; }
+.hitting-ai-empty-copy { margin: 0 0 16px; color: #213b58; font-weight: 800; }
 .hitting-ai-starter {
   width: 100%;
   margin-bottom: 9px;

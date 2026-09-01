@@ -69,7 +69,7 @@ async function readUserHittingData(accessToken, userId) {
 
 function directAnswer(result) {
   if (result.type === "refusal") {
-    return "I’m Hitting AI, so I can only answer questions about this hitter’s statistics and hitting performance.";
+    return "I’m Hitting Log AI. I can only help analyze your hitting performance and hitting data.";
   }
   if (result.type === "no_data") {
     return "I don’t have enough hitting data recorded yet to answer that question.";
@@ -90,13 +90,13 @@ module.exports = async function handler(req, res) {
   }
 
   const accessToken = getBearerToken(req);
-  if (!accessToken) return send(res, 401, { error: "Please sign in to use Hitting AI.", code: "missing_auth_token" });
+  if (!accessToken) return send(res, 401, { error: "Please sign in to use Hitting Log AI.", code: "missing_auth_token" });
 
   let authentication;
   try {
     authentication = await verifySupabaseUserWithDetails(accessToken);
   } catch (error) {
-    console.error("Hitting AI authentication failed:", error.message);
+    console.error("Hitting Log AI authentication failed:", error.message);
     return send(res, 500, { error: "Unable to verify your session.", code: "authentication_failed" });
   }
   if (!authentication.user) {
@@ -107,12 +107,12 @@ module.exports = async function handler(req, res) {
   try {
     subscription = await getAuthenticatedUserSubscription(accessToken, authentication.user.id);
   } catch (error) {
-    console.error("Hitting AI subscription lookup failed:", error.message);
+    console.error("Hitting Log AI subscription lookup failed:", error.message);
     return send(res, 503, { error: "We couldn’t verify your membership right now.", code: "subscription_check_failed" });
   }
   if (subscription?.plan !== "pro" || !PAID_STATUSES.has(subscription?.subscription_status)) {
     return send(res, 402, {
-      error: "AI Hitting Insights is available with a paid Hitting Log membership. Upgrade to ask questions about your hitting data and uncover deeper performance trends.",
+      error: "Hitting Log AI is available with a paid Hitting Log membership. Upgrade to ask questions about your hitting data and uncover deeper performance trends.",
       code: "upgrade_required",
       upgradeUrl: "/account",
     });
@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
   try {
     hitterData = await readUserHittingData(accessToken, authentication.user.id);
   } catch (error) {
-    console.error("Hitting AI data lookup failed:", error.message);
+    console.error("Hitting Log AI data lookup failed:", error.message);
     return send(res, 503, { error: "We couldn’t load this hitter’s data right now.", code: "data_load_failed" });
   }
 
@@ -150,12 +150,12 @@ module.exports = async function handler(req, res) {
     });
     return send(res, 200, { answer, athleteName: hitterData.athleteName });
   } catch (error) {
-    console.error("Hitting AI model request failed:", error.code || error.message);
+    console.error("Hitting Log AI model request failed:", error.code || error.message);
     const notConfigured = error.code === "OPENAI_API_KEY_MISSING";
     return send(res, notConfigured ? 503 : 502, {
       error: notConfigured
-        ? "Hitting AI is being configured. Please try again soon."
-        : "Hitting AI couldn’t generate a response. Please try again.",
+        ? "Hitting Log AI is being configured. Please try again soon."
+        : "Hitting Log AI couldn’t generate a response. Please try again.",
       code: notConfigured ? "ai_not_configured" : "ai_request_failed",
     });
   }
