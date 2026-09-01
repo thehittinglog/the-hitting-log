@@ -18,6 +18,18 @@
   });
   assert(directVelocity.includes("60–64 mph"), "calculated velocity result still depended on OpenAI");
 
+  const directStat = api.directAnswer({
+    type: "stat_lookup",
+    formattedAnswer: "Your batting average in August 2026 was .342.",
+  });
+  assert(directStat === "Your batting average in August 2026 was .342.", "simple stat lookup still depended on OpenAI");
+
+  const directFormula = api.directAnswer({
+    type: "formula",
+    formattedAnswer: "Batting average is calculated as hits divided by official at-bats.",
+  });
+  assert(directFormula.includes("hits divided by official at-bats"), "formula request still depended on OpenAI");
+
   const coachingFallback = api.modelFailureAnswer({
     type: "performance_analysis",
     formattedAnswer: "Your biggest area for improvement is contact quality. 6 of 9 balls in play were not hard-hit.",

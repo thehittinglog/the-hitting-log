@@ -37,9 +37,12 @@
   assert(payload.text.verbosity === "low", "production text verbosity is incorrect");
   assert(Array.isArray(payload.input) && payload.input[0].role === "user", "production input format is incorrect");
   assert(typeof payload.instructions === "string" && payload.instructions.length > 0, "production instructions are missing");
-  assert(payload.instructions.indexOf("2–5 short paragraphs") !== -1, "concise response guidance is missing");
-  assert(payload.instructions.indexOf("Lead with the conclusion") !== -1, "conclusion-first guidance is missing");
-  assert(payload.instructions.indexOf("do not manufacture a weakness") !== -1, "no-forced-weakness guidance is missing");
+  assert(payload.instructions.indexOf("stat_lookup") !== -1, "simple-stat response-depth guidance is missing");
+  assert(payload.instructions.indexOf("Did I swing at a strike?") !== -1, "decision-first coaching framework is missing");
+  assert(payload.instructions.indexOf("Was I on time?") !== -1, "timing coaching framework is missing");
+  assert(payload.instructions.indexOf("Did I hit the right part of the ball?") !== -1, "contact coaching framework is missing");
+  assert(payload.instructions.indexOf("Never advise starting the load later or loading faster") !== -1, "timing philosophy guardrail is missing");
+  assert(payload.instructions.indexOf("Do not manufacture a weakness") !== -1, "no-forced-weakness guidance is missing");
 
   const incompleteWarnings = [];
   const originalWarn = console.warn;

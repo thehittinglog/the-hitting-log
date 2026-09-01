@@ -134,6 +134,10 @@
     ["What should I work on today?", stats.QUESTION_INTENTS.TRAINING_RECOMMENDATION],
     ["What is my strongest skill?", stats.QUESTION_INTENTS.PERFORMANCE_ANALYSIS],
     ["What is my biggest problem lately?", stats.QUESTION_INTENTS.PERFORMANCE_ANALYSIS],
+    ["How do you calculate batting average?", stats.QUESTION_INTENTS.STAT_FORMULA],
+    ["Compare my batting average over my last game versus the previous game.", stats.QUESTION_INTENTS.COMPARISON],
+    ["I'm late against faster pitching.", stats.QUESTION_INTENTS.TRAINING_RECOMMENDATION],
+    ["I'm popping the ball up constantly. What should I work on?", stats.QUESTION_INTENTS.TRAINING_RECOMMENDATION],
   ];
   acceptedQuestions.forEach(([question, expectedIntent]) => {
     assert(stats.classifyQuestionIntent(question) === expectedIntent, `${question} received the wrong intent`);
@@ -161,6 +165,97 @@
   assert(coaching.plateAppearances === 10, "recent tournament sample size is wrong");
   assert(coaching.biggestNegativeIndicator.label === "Non-hard-hit balls in play", "biggest recent issue was not ranked correctly");
   assert(coaching.hasSignificantProblem === true, "supported recent issue was not marked significant");
+  assert(coaching.responseMode === "coaching", "coaching request did not receive coaching response depth");
+  assert(coaching.coachingDiagnostic.priority === "contact", "coaching hierarchy did not reach the first supported issue");
+  assert(/middle of the baseball/.test(coaching.coachingDiagnostic.adjustment), "contact coaching did not use contact intention");
+
+  const augustAverage = stats.analyzeQuestion({ message: "What was my batting average in August?", games });
+  assert(augustAverage.type === "stat_lookup", "month-filtered stat did not use deterministic lookup");
+  assert(augustAverage.value === ".100", "month-filtered batting average is incorrect");
+  assert(stats.formatDeterministicAnswer(augustAverage) === "Your batting average in August 2026 was .100.", "simple filtered stat was not one concise sentence");
+
+  const tournamentAverage = stats.analyzeQuestion({ message: "What was my batting average this tournament?", games });
+  assert(tournamentAverage.type === "stat_lookup" && tournamentAverage.value === ".100", "tournament stat lookup is incorrect");
+  assert(stats.formatDeterministicAnswer(tournamentAverage) === "Your batting average in Summer Finale was .100.", "tournament stat answer included unnecessary detail");
+
+  const opponentAverage = stats.analyzeQuestion({ message: "What was my batting average against A?", games });
+  assert(opponentAverage.type === "stat_lookup" && opponentAverage.value === ".000", "opponent-filtered stat lookup is incorrect");
+  assert(stats.formatDeterministicAnswer(opponentAverage) === "Your batting average against A was .000.", "opponent stat answer is not concise");
+
+  const recentHardHit = stats.analyzeQuestion({ message: "What was my hard-hit percentage in my last two games?", games });
+  assert(recentHardHit.type === "stat_lookup" && recentHardHit.value === "22%", "recent-game hard-hit lookup is incorrect");
+  assert(stats.formatDeterministicAnswer(recentHardHit) === "Your hard-hit percentage over your last 2 games was 22%.", "recent hard-hit answer included extra data");
+
+  const formula = stats.analyzeQuestion({ message: "How do you calculate batting average?", games: [] });
+  assert(formula.type === "formula", "formula request incorrectly required hitting data");
+  assert(stats.isDirectStatisticalResult(formula), "formula request still depended on OpenAI");
+  assert(stats.formatDeterministicAnswer(formula) === "Batting average is calculated as hits divided by official at-bats.", "formula answer is incorrect");
+
+  const comparison = stats.analyzeQuestion({ message: "Compare my batting average over my last game versus the previous game.", games });
+  assert(comparison.type === "comparison", "comparison request did not use deterministic comparison");
+  assert(comparison.recentValue === ".200" && comparison.previousValue === ".000", "comparison values are incorrect");
+  assert(stats.formatDeterministicAnswer(comparison).length < 220, "comparison answer is too verbose");
+
+  const versusOpponent = stats.analyzeQuestion({ message: "What was my batting average vs. B?", games });
+  assert(versusOpponent.type === "stat_lookup" && versusOpponent.value === ".200", "versus-opponent filter was mistaken for a comparison");
+
+  const broadAnalysis = stats.analyzeQuestion({ message: "Why have I struggled lately?", games });
+  const broadAnalysisAnswer = stats.formatDeterministicAnswer(broadAnalysis);
+  assert(broadAnalysis.responseMode === "analysis", "broad analysis was incorrectly treated as coaching");
+  assert(!/For your next training session/.test(broadAnalysisAnswer), "analysis added unsolicited coaching");
+
+  const fastTiming = stats.analyzeQuestion({ message: "I'm late against faster pitching.", games });
+  assert(fastTiming.coachingDiagnostic.priority === "timing", "faster-pitching question did not prioritize timing");
+  assert(/load slow and early/.test(fastTiming.coachingDiagnostic.adjustment), "timing advice contradicted the early-load philosophy");
+  assert(/stride foot down slightly sooner/.test(fastTiming.coachingDiagnostic.adjustment), "faster-pitching timing adjustment is incorrect");
+
+  const slowTiming = stats.analyzeQuestion({ message: "I'm way out front against a slow pitcher.", games });
+  assert(slowTiming.coachingDiagnostic.priority === "timing", "slow-pitching question did not prioritize timing");
+  assert(/stride develop longer/.test(slowTiming.coachingDiagnostic.adjustment), "slow-pitching timing adjustment is incorrect");
+  assert(!/start your load later/i.test(slowTiming.coachingDiagnostic.adjustment), "slow-pitching advice told the hitter to load later");
+
+  const popupGames = [{
+    id: "popup-game",
+    date: "2026-08-31",
+    atBats: Array.from({ length: 5 }, () => batted("fly_out", "popup", false)),
+  }];
+  const popupCoaching = stats.analyzeQuestion({ message: "I'm popping the ball up constantly. What should I work on?", games: popupGames });
+  assert(popupCoaching.coachingDiagnostic.priority === "contact", "pop-up coaching did not reach contact intention");
+  assert(/try to hit ground balls/i.test(popupCoaching.coachingDiagnostic.adjustment), "pop-up coaching omitted the opposite-intention adjustment");
+  assert(/cannot identify a mechanical cause/i.test(popupCoaching.coachingDiagnostic.observation), "pop-up coaching invented a mechanical diagnosis");
+
+  const unsupportedMechanics = stats.analyzeQuestion({ message: "Why am I popping everything up?", games });
+  assert(/cannot confirm a mechanical cause/i.test(unsupportedMechanics.coachingDiagnostic.observation), "insufficient data did not limit the mechanical diagnosis");
+
+  const decisionGames = [{
+    id: "decision-game",
+    date: "2026-08-31",
+    atBats: Array.from({ length: 5 }, () => ({
+      outcome: "strikeout",
+      timing: "late",
+      pitches: [{ result: "swinging_strike", location: { id: "outside", isZone: false } }],
+    })),
+  }];
+  const decisionCoaching = stats.analyzeQuestion({ message: "What should I work on?", games: decisionGames });
+  assert(decisionCoaching.coachingDiagnostic.priority === "decision", "timing incorrectly outranked a supported swing-decision issue");
+  assert(/without expanding to balls/.test(decisionCoaching.coachingDiagnostic.adjustment), "decision coaching encouraged indiscriminate aggression");
+
+  const takenStrikeGames = [{
+    id: "taken-strike-game",
+    date: "2026-08-31",
+    atBats: Array.from({ length: 10 }, () => ({
+      outcome: "ground_out",
+      hardHitBall: false,
+      pitches: [
+        { result: "called_strike", location: { id: "zone-5", isZone: true } },
+        { result: "batted_ball", battedBallType: "ground_ball", location: { id: "zone-5", isZone: true } },
+      ],
+    })),
+  }];
+  const takenStrikeCoaching = stats.analyzeQuestion({ message: "What should I work on?", games: takenStrikeGames });
+  assert(takenStrikeCoaching.coachingDiagnostic.priority === "decision", "early called strikes did not outrank contact outcomes");
+  assert(/attack strikes earlier/.test(takenStrikeCoaching.coachingDiagnostic.adjustment), "early-strike coaching did not follow the attack-strikes philosophy");
+  assert(/rather than waiting for one perfect pitch/.test(takenStrikeCoaching.coachingDiagnostic.adjustment), "early-strike coaching became overly passive");
 
   const weakestSkill = stats.analyzeQuestion({ message: "What is my weakest skill?", games });
   const weakestSkillFallback = stats.formatDeterministicAnswer(weakestSkill);
@@ -218,6 +313,10 @@
   assert(score.performanceScore === 24, "Performance Score does not match the existing weighted formula");
   assert(score.biggestNegativeIndicator.key === "hard_hit_rate", "largest score impact was not identified");
   assert(score.scoreImpactFactors[0].pointsBelowPerfect === 35, "score impact calculation is wrong");
+  assert(score.responseMode === "analysis", "score explanation incorrectly added coaching");
+
+  const improveScore = stats.analyzeQuestion({ message: "How can I improve my score?", games });
+  assert(improveScore.responseMode === "coaching", "score-improvement question did not request coaching depth");
 
   const outs = stats.analyzeQuestion({ message: "What caused most of my outs?", games });
   assert(outs.outcomeDistribution[0].label === "Fly outs", "most common out was not identified");

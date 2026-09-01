@@ -39,5 +39,25 @@
   assert(request.safety_identifier === "user-123", "safety_identifier is incorrect");
   assert(request.text.verbosity === "low", "Responses API text verbosity is incorrect");
 
+  const compactCoachingContext = client.buildModelContext({
+    type: "performance_analysis",
+    responseMode: "coaching",
+    intent: "training_recommendation",
+    sampleDescription: "last five games",
+    plateAppearances: 20,
+    gamesIncluded: 5,
+    statistics: { battingAverage: ".300" },
+    coachingDiagnostic: { priority: "decision", adjustment: "Attack strikes early.", indicator: { key: "chases", count: 4, recommendation: "duplicate advice" } },
+    negativeIndicators: Array.from({ length: 20 }, function (_, index) { return { key: `unused-${index}` }; }),
+    positiveIndicators: Array.from({ length: 20 }, function (_, index) { return { key: `unused-positive-${index}` }; }),
+    outcomeDistribution: Array.from({ length: 20 }, function (_, index) { return { key: `unused-outcome-${index}` }; }),
+    sampleSizeWarnings: [],
+  });
+  assert(compactCoachingContext.coachingDiagnostic.priority === "decision", "compact context omitted the coaching decision");
+  assert(!compactCoachingContext.coachingDiagnostic.indicator.recommendation, "compact context retained duplicate recommendation text");
+  assert(!compactCoachingContext.negativeIndicators, "compact coaching context retained the full negative-indicator list");
+  assert(!compactCoachingContext.positiveIndicators, "compact coaching context retained the full positive-indicator list");
+  assert(!compactCoachingContext.outcomeDistribution, "compact coaching context retained unrelated outcome data");
+
   print("OpenAI Hitting Log AI client tests passed");
 })();

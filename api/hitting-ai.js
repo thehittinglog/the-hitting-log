@@ -81,7 +81,8 @@ function directAnswer(result) {
     return `I can’t calculate that yet because ${result.field} is not recorded for enough at-bats.`;
   }
   if (result.type === "insufficient_sample") {
-    return `I need at least ${result.minimum} official at-bats to evaluate that trend. There are currently ${result.available}.`;
+    const unit = result.unit === "games" ? "games" : "official at-bats";
+    return `I need at least ${result.minimum} ${unit} to evaluate that ${result.unit === "games" ? "comparison" : "trend"}. There are currently ${result.available}.`;
   }
   if (isDirectStatisticalResult(result)) return formatDeterministicAnswer(result);
   return "";
