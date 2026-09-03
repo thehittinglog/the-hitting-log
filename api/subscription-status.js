@@ -6,11 +6,14 @@ const {
   requireSupabaseServerConfig,
   verifySupabaseUserWithDetails,
 } = require("../lib/supabase-server");
-const { getEntitlements, getPlanForSubscription, getStripePriceIds } = require("../lib/membership");
+const { getEntitlements, getPlanDetails, getPlanForSubscription, getStripePriceIds } = require("../lib/membership");
+const { loadStripePriceCatalog } = require("../lib/stripe-subscription");
 const { isReconciliationDue, reconcileSubscription } = require("../lib/subscription-reconciliation");
 
 const FREE_PLAN_RESPONSE = Object.freeze({
   plan: "free",
+  displayName: "Free",
+  priceMonthly: 0,
   status: "inactive",
   entitlements: getEntitlements("free"),
   subscription: null,
@@ -28,12 +31,17 @@ function getStatusResponse(subscription, priceIds = getStripePriceIds()) {
   const plan = getPlanForSubscription(subscription, priceIds);
   const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
   const currentPeriodEnd = subscription.current_period_end || null;
+  const planDetails = getPlanDetails(plan);
   return {
     plan,
+    displayName: planDetails.displayName,
+    priceMonthly: planDetails.priceMonthly,
     status,
     entitlements: getEntitlements(plan),
     subscription: {
       plan,
+      displayName: planDetails.displayName,
+      priceMonthly: planDetails.priceMonthly,
       status,
       hasStripeCustomer: Boolean(subscription.stripe_customer_id),
       currentPeriodEnd,
@@ -107,7 +115,9 @@ async function handleRequest(req, res) {
 
   try {
     requireSupabaseServerConfig();
-    const result = await reconcileSubscription(new Stripe(stripeSecretKey), user, subscription, priceIds);
+    const stripe = new Stripe(stripeSecretKey);
+    const catalog = await loadStripePriceCatalog(stripe, priceIds);
+    const result = await reconcileSubscription(stripe, user, subscription, priceIds, catalog);
     logSync({
       source: force ? "account_return" : "stale_cache",
       userId: user.id,
@@ -118,6 +128,14 @@ async function handleRequest(req, res) {
       subscriptionStatus: result.subscription?.subscription_status || "inactive",
       databaseChanged: result.changed,
       stripeCustomerFound: result.customerFound,
+      proPriceMatch: result.subscription?.stripe_price_id === priceIds.pro,
+      proPlusPriceMatch: result.subscription?.stripe_price_id === priceIds.pro_plus,
+      configuredProPriceActive: catalog.proPriceActive,
+      configuredProPlusPriceActive: catalog.proPlusPriceActive,
+      databaseTierBefore: subscription?.plan || "free",
+      databaseTierAfter: result.subscription?.plan || "free",
+      aiEntitlement: result.subscription?.plan === "pro_plus" && new Set(["active", "trialing"]).has(result.subscription?.subscription_status),
+      tierResolution: result.normalization?.resolution || "no_active_subscription",
     });
     return sendResponse(res, 200, getStatusResponse(result.subscription, priceIds));
   } catch (error) {

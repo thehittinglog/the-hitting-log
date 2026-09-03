@@ -9,6 +9,7 @@ const {
 const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
 const { getStripePriceIds, hasSubscriptionEntitlement } = require("../lib/membership");
+const { loadStripePriceCatalog } = require("../lib/stripe-subscription");
 const { isReconciliationDue, reconcileSubscription } = require("../lib/subscription-reconciliation");
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -63,7 +64,9 @@ async function reconcileAiSubscription(user, subscription) {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
   if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) return subscription;
   requireSupabaseServerConfig();
-  const result = await reconcileSubscription(new Stripe(stripeSecretKey), user, subscription, priceIds);
+  const stripe = new Stripe(stripeSecretKey);
+  const catalog = await loadStripePriceCatalog(stripe, priceIds);
+  const result = await reconcileSubscription(stripe, user, subscription, priceIds, catalog);
   console.info("subscription_sync", JSON.stringify({
     source: "ai_authorization",
     userId: user.id,

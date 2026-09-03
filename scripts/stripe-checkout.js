@@ -108,7 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const isPaid = currentPlan === "pro" || currentPlan === "pro_plus";
     const hasStripeCustomer = normalizedState?.subscription?.hasStripeCustomer === true;
     planChangesUsePortal = isPaid || new Set(["past_due", "unpaid", "paused", "incomplete"]).has(normalizedState?.status);
-    const planLabel = currentPlan === "pro_plus" ? "Pro Plus" : currentPlan === "pro" ? "Pro" : "Free";
+    const planLabel = typeof normalizedState?.displayName === "string"
+      ? normalizedState.displayName
+      : currentPlan === "pro_plus" ? "Pro Plus" : currentPlan === "pro" ? "Pro" : "Free";
 
     if (planValue) {
       planValue.textContent = planLabel;
@@ -180,10 +182,10 @@ document.addEventListener("DOMContentLoaded", () => {
       console.info("Subscription status authenticated user ID:", session.user?.id || "unavailable");
       console.info("Subscription status requested API endpoint:", subscriptionStatusEndpoint);
 
-      const shouldForceReconcile = checkoutResult === "success" || billingReturn;
-      const endpoint = shouldForceReconcile
-        ? `${subscriptionStatusEndpoint}?reconcile=1`
-        : subscriptionStatusEndpoint;
+      // Account is the explicit billing surface, so one authoritative Stripe
+      // reconciliation per account-page load is appropriate and repairs users
+      // whose webhook was missed even when they did not just return from Stripe.
+      const endpoint = `${subscriptionStatusEndpoint}?reconcile=1`;
       const response = await fetch(endpoint, {
         method: "GET",
         cache: "no-store",

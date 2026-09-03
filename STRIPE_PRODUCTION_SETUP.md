@@ -23,8 +23,8 @@ The table stores:
 Configure these for Production and any Preview environment used for Stripe tests:
 
 - `STRIPE_SECRET_KEY` — Stripe secret key for the matching mode.
-- `STRIPE_PRO_PRICE_ID` — Pro recurring Price ID: `price_1TuoOlRHnsqSfi089T01MZvN`.
-- `STRIPE_PRO_PLUS_PRICE_ID` — Pro Plus recurring Price ID: `price_1UAzWHRHnsqSfi08kACnt0Rs`.
+- `STRIPE_PRO_PRICE_ID` — the current Pro recurring Price ID from the same Stripe mode as the secret key.
+- `STRIPE_PRO_PLUS_PRICE_ID` — the current Pro Plus recurring Price ID from the same Stripe mode as the secret key.
 - `STRIPE_PRICE_ID` — legacy Pro alias supported during migration. Keep it only until `STRIPE_PRO_PRICE_ID` is configured.
 - `STRIPE_WEBHOOK_SECRET` — signing secret for the deployed webhook endpoint.
 - `HITTING_LOG_SUPABASE_URL`, `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, or
@@ -60,7 +60,8 @@ Never expose `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 
 Stripe test-mode and live-mode keys, Price IDs, webhook endpoints, and webhook
 signing secrets are separate. Keep each deployment environment internally
-consistent.
+consistent. Do not copy Price IDs from source code or another Stripe mode; the
+environment mapping is authoritative and the two configured prices must be distinct.
 
 ## Files in this integration
 

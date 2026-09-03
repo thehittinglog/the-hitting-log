@@ -10,6 +10,8 @@ const {
 } = require("../lib/membership");
 const {
   objectId,
+  getTierFromStripeSubscription,
+  loadStripePriceCatalog,
   selectRelevantSubscription,
   subscriptionRecordChanged,
   toSubscriptionRecord,
@@ -82,10 +84,11 @@ async function resolveSupabaseUserId(subscription, hintedUserId) {
   return [...candidateUserIds][0];
 }
 
-async function syncSubscription(subscription, hintedUserId, eventType = "unknown") {
+async function syncSubscription(subscription, hintedUserId, eventType = "unknown", priceIds = getStripePriceIds(), catalog = {}) {
   const userId = await resolveSupabaseUserId(subscription, hintedUserId);
   const existing = await getSubscriptionBy("user_id", userId);
-  const record = toSubscriptionRecord(subscription, userId, getStripePriceIds());
+  const normalized = getTierFromStripeSubscription(subscription, priceIds, catalog);
+  const record = toSubscriptionRecord(subscription, userId, priceIds, catalog);
   const changed = subscriptionRecordChanged(existing, record);
   await upsertSubscription(record);
   console.info("subscription_sync", JSON.stringify({
@@ -98,6 +101,12 @@ async function syncSubscription(subscription, hintedUserId, eventType = "unknown
     normalizedTier: record.plan,
     subscriptionStatus: record.subscription_status,
     databaseChanged: changed,
+    proPriceMatch: normalized.proPriceMatch,
+    proPlusPriceMatch: normalized.proPlusPriceMatch,
+    tierResolution: normalized.resolution,
+    databaseTierBefore: existing?.plan || "free",
+    databaseTierAfter: record.plan,
+    aiEntitlement: record.plan === "pro_plus" && new Set(["active", "trialing"]).has(record.subscription_status),
   }));
 }
 
@@ -111,7 +120,7 @@ async function retrieveSubscription(stripe, subscriptionId) {
   });
 }
 
-async function retrieveCurrentCustomerSubscription(stripe, subscription, priceIds) {
+async function retrieveCurrentCustomerSubscription(stripe, subscription, priceIds, catalog = {}) {
   const customerId = objectId(subscription?.customer);
   if (!customerId) return subscription;
   const subscriptions = await stripe.subscriptions.list({
@@ -120,17 +129,19 @@ async function retrieveCurrentCustomerSubscription(stripe, subscription, priceId
     limit: 100,
     expand: ["data.items.data.price"],
   });
-  return selectRelevantSubscription(subscriptions.data, priceIds) || subscription;
+  return selectRelevantSubscription(subscriptions.data, priceIds, catalog) || subscription;
 }
 
 async function processEvent(stripe, event) {
   const stripeObject = event.data.object;
+  const priceIds = getStripePriceIds();
+  const catalog = await loadStripePriceCatalog(stripe, priceIds);
 
   if (event.type === "checkout.session.completed") {
     const subscription = await retrieveSubscription(stripe, objectId(stripeObject.subscription));
     const hintedUserId =
       stripeObject.metadata?.supabase_user_id || stripeObject.client_reference_id || null;
-    await syncSubscription(subscription, hintedUserId, event.type);
+    await syncSubscription(subscription, hintedUserId, event.type, priceIds, catalog);
     return;
   }
 
@@ -142,9 +153,10 @@ async function processEvent(stripe, event) {
     const subscription = await retrieveCurrentCustomerSubscription(
       stripe,
       eventSubscription,
-      getStripePriceIds(),
+      priceIds,
+      catalog,
     );
-    await syncSubscription(subscription, null, event.type);
+    await syncSubscription(subscription, null, event.type, priceIds, catalog);
     return;
   }
 
@@ -159,9 +171,10 @@ async function processEvent(stripe, event) {
     const subscription = await retrieveCurrentCustomerSubscription(
       stripe,
       invoiceSubscription,
-      getStripePriceIds(),
+      priceIds,
+      catalog,
     );
-    await syncSubscription(subscription, null, event.type);
+    await syncSubscription(subscription, null, event.type, priceIds, catalog);
   }
 }
 

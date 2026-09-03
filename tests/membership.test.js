@@ -2,8 +2,8 @@ const assert = require("node:assert/strict");
 const membership = require("../lib/membership");
 
 const priceIds = {
-  pro: "price_1TuoOlRHnsqSfi089T01MZvN",
-  pro_plus: "price_1UAzWHRHnsqSfi08kACnt0Rs",
+  pro: "price_configured_pro",
+  pro_plus: "price_configured_pro_plus",
 };
 
 assert.equal(
@@ -22,8 +22,8 @@ assert.equal(
 );
 assert.equal(
   membership.getPlanForPriceId(priceIds.pro, { pro: priceIds.pro_plus, pro_plus: priceIds.pro }),
-  "pro",
-  "The finalized Pro Price must never be reclassified as Pro Plus by swapped configuration",
+  "pro_plus",
+  "The deployment's configured Price mapping must override historical assumptions",
 );
 
 assert.equal(

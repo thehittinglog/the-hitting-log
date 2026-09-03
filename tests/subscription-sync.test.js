@@ -6,6 +6,7 @@ const {
 } = require("../lib/membership");
 const {
   getPriceId,
+  getTierFromStripeSubscription,
   selectRelevantSubscription,
   subscriptionRecordChanged,
   toSubscriptionRecord,
@@ -27,6 +28,7 @@ function stripeSubscription({
   created = 100,
   extraPrices = [],
   metadata,
+  product = "prod_pro",
 } = {}) {
   return {
     id,
@@ -37,7 +39,7 @@ function stripeSubscription({
     metadata,
     items: {
       data: [price, ...extraPrices].map((itemPrice) => ({
-        price: { id: itemPrice },
+        price: { id: itemPrice, product: itemPrice === priceIds.pro_plus ? "prod_plus" : product },
         current_period_start: 100,
         current_period_end: 200,
       })),
@@ -68,6 +70,18 @@ assert.equal(upgraded.plan, "pro_plus");
 const multiItem = stripeSubscription({ price: priceIds.pro, extraPrices: [priceIds.pro_plus] });
 assert.equal(getPriceId(multiItem, priceIds), priceIds.pro_plus);
 assert.equal(toSubscriptionRecord(multiItem, userId, priceIds).plan, "pro_plus");
+
+// Exact production failure: the portal can select a different recurring Price
+// under the configured Pro Plus product. Product identity is anchored by the
+// configured prices, never inferred from its display name or amount.
+const catalog = { proProductId: "prod_pro", proPlusProductId: "prod_plus" };
+const portalProPlus = stripeSubscription({ price: "price_portal_plus", product: "prod_plus" });
+const portalTier = getTierFromStripeSubscription(portalProPlus, priceIds, catalog);
+assert.equal(portalTier.priceId, "price_portal_plus");
+assert.equal(portalTier.proPlusPriceMatch, false);
+assert.equal(portalTier.resolution, "configured_product");
+assert.equal(portalTier.tier, "pro_plus");
+assert.equal(toSubscriptionRecord(portalProPlus, userId, priceIds, catalog).plan, "pro_plus");
 
 // 5. An effective downgrade changes the normalized tier and removes AI.
 const downgraded = toSubscriptionRecord(stripeSubscription({ price: priceIds.pro }), userId, priceIds);
@@ -133,7 +147,7 @@ global.fetch = async (_url, options = {}) => {
   try {
     const stripe = {
       subscriptions: {
-        list: async () => ({ data: [stripeSubscription({ price: priceIds.pro_plus })] }),
+        list: async () => ({ data: [portalProPlus] }),
       },
       customers: { list: async () => ({ data: [] }) },
       checkout: { sessions: { list: async () => ({ data: [] }) } },
@@ -143,10 +157,16 @@ global.fetch = async (_url, options = {}) => {
       { id: userId, email: "player@example.com" },
       freshLocal,
       priceIds,
+      catalog,
     );
     assert.equal(result.subscription.plan, "pro_plus");
     assert.equal(result.changed, true);
     assert.equal(writes[0].plan, "pro_plus");
+    const { getStatusResponse } = require("../api/subscription-status")._test;
+    const response = getStatusResponse(result.subscription, priceIds);
+    assert.equal(response.plan, "pro_plus");
+    assert.equal(response.displayName, "Pro Plus");
+    assert.equal(response.entitlements.ai, true);
 
     // A failed webhook write rejects so Stripe can retry. Repeating the same
     // delivery then upserts the same canonical record without corruption.
