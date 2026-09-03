@@ -83,6 +83,18 @@ assert.equal(portalTier.proPlusPriceMatch, false);
 assert.equal(portalTier.resolution, "configured_product");
 assert.equal(portalTier.tier, "pro_plus");
 assert.equal(toSubscriptionRecord(portalProPlus, userId, priceIds, catalog).plan, "pro_plus");
+const alternatePriceIds = {
+  ...priceIds,
+  pro_ids: [priceIds.pro],
+  pro_plus_ids: [priceIds.pro_plus, "price_actual_live_plus"],
+};
+const actualLiveProPlus = stripeSubscription({
+  price: "price_actual_live_plus",
+  product: "prod_unshared_legacy_plus",
+});
+const alternateTier = getTierFromStripeSubscription(actualLiveProPlus, alternatePriceIds);
+assert.equal(alternateTier.proPlusPriceMatch, true);
+assert.equal(alternateTier.tier, "pro_plus");
 
 // 5. An effective downgrade changes the normalized tier and removes AI.
 const downgraded = toSubscriptionRecord(stripeSubscription({ price: priceIds.pro }), userId, priceIds);
@@ -150,7 +162,7 @@ global.fetch = async (_url, options = {}) => {
   try {
     const stripe = {
       subscriptions: {
-        list: async () => ({ data: [portalProPlus] }),
+        list: async () => ({ data: [actualLiveProPlus] }),
       },
       customers: { list: async () => ({ data: [] }) },
       checkout: { sessions: { list: async () => ({ data: [] }) } },
@@ -159,10 +171,11 @@ global.fetch = async (_url, options = {}) => {
       stripe,
       { id: userId, email: "player@example.com" },
       freshLocal,
-      priceIds,
-      catalog,
+      alternatePriceIds,
+      {},
     );
     assert.equal(result.subscription.plan, "pro_plus");
+    assert.deepEqual(result.activePriceIds, ["price_actual_live_plus"]);
     assert.equal(result.changed, true);
     assert.equal(writes[0].plan, "pro_plus");
     const { getStatusResponse } = require("../api/subscription-status")._test;
@@ -273,6 +286,10 @@ global.fetch = async (_url, options = {}) => {
         changed: true,
         normalization: { resolution: "price_id" },
         subscription: upgraded,
+        activePriceIds: [priceIds.pro_plus],
+        stripeCustomerId: "cus_1",
+        stripeSubscriptionId: "sub_1",
+        activeSubscriptionStatus: "active",
       }),
     });
     assert.equal(routeResult.statusCode, 200);
@@ -300,10 +317,17 @@ global.fetch = async (_url, options = {}) => {
       method: "GET",
       headers: { authorization: "Bearer test-token" },
       query: { reconcile: "1" },
-    }, responseAdapter);
+    }, responseAdapter, {
+      createStripe: () => ({}),
+      reconcileSubscription: async () => {
+        throw Object.assign(new Error("Missing Pro Plus mapping"), {
+          code: "missing_stripe_price_config",
+        });
+      },
+    });
     assert.equal(routeResult.statusCode, 200);
     assert.equal(routeResult.body.plan, "pro");
-    assert.equal(routeResult.body.reconciliationError, "missing_stripe_config");
+    assert.equal(routeResult.body.reconciliationError, "missing_stripe_price_config");
     process.env.STRIPE_PRO_PLUS_PRICE_ID = priceIds.pro_plus;
     if (originalStripeSecret === undefined) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = originalStripeSecret;

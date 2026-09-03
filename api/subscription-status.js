@@ -136,11 +136,18 @@ async function handleRequest(req, res, dependencies = {}) {
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
-  if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) {
+  if (!stripeSecretKey) {
     const error = new Error("Subscription reconciliation configuration is incomplete.");
     error.code = "missing_stripe_config";
     logSubscriptionStatusError({ error, stage: "configuration", subscription, userId: user.id, priceIds });
     return sendResponse(res, 200, getFallbackResponse(subscription, priceIds, error.code));
+  }
+
+  const priceConfigurationComplete = Boolean(priceIds.pro && priceIds.pro_plus);
+  if (!priceConfigurationComplete) {
+    const error = new Error("One or more Stripe membership Price IDs are missing.");
+    error.code = "missing_stripe_price_config";
+    logSubscriptionStatusError({ error, stage: "configuration", subscription, userId: user.id, priceIds });
   }
 
   try {
@@ -150,14 +157,36 @@ async function handleRequest(req, res, dependencies = {}) {
       : new Stripe(stripeSecretKey);
     const loadCatalog = dependencies.loadStripePriceCatalog || loadStripePriceCatalog;
     const reconcile = dependencies.reconcileSubscription || reconcileSubscription;
-    const catalog = await loadCatalog(stripe, priceIds);
+    const catalog = priceConfigurationComplete
+      ? await loadCatalog(stripe, priceIds)
+      : {
+          proPriceFound: false,
+          proPlusPriceFound: false,
+          proPriceActive: false,
+          proPlusPriceActive: false,
+          productFallbackAvailable: false,
+          validationErrorCode: "missing_stripe_price_config",
+        };
     if (!catalog.proPriceFound || !catalog.proPlusPriceFound) {
       const error = new Error("One or more configured Stripe prices could not be retrieved.");
       error.code = catalog.validationErrorCode || "configured_price_lookup_failed";
       logSubscriptionStatusError({ error, stage: "price_catalog", subscription, userId: user.id, priceIds });
-      return sendResponse(res, 200, getFallbackResponse(subscription, priceIds, error.code));
     }
     const result = await reconcile(stripe, user, subscription, priceIds, catalog);
+    const activePriceIds = result.activePriceIds || [];
+    const proIds = priceIds.pro_ids || [priceIds.pro].filter(Boolean);
+    const proPlusIds = priceIds.pro_plus_ids || [priceIds.pro_plus].filter(Boolean);
+    console.info("SUBSCRIPTION_PRICE_DIAGNOSTIC", JSON.stringify({
+      stripeCustomerId: result.stripeCustomerId || subscription?.stripe_customer_id || null,
+      stripeSubscriptionId: result.stripeSubscriptionId || null,
+      activeSubscriptionStatus: result.activeSubscriptionStatus || "inactive",
+      activePriceIds,
+      proPriceConfigured: proIds.length > 0,
+      proPlusPriceConfigured: proPlusIds.length > 0,
+      matchesProPrice: activePriceIds.some((priceId) => proIds.includes(priceId)),
+      matchesProPlusPrice: activePriceIds.some((priceId) => proPlusIds.includes(priceId)),
+      normalizedTier: result.normalization?.tier || result.subscription?.plan || "free",
+    }));
     logSync({
       source: force ? "account_return" : "stale_cache",
       userId: user.id,
@@ -168,8 +197,8 @@ async function handleRequest(req, res, dependencies = {}) {
       subscriptionStatus: result.subscription?.subscription_status || "inactive",
       databaseChanged: result.changed,
       stripeCustomerFound: result.customerFound,
-      proPriceMatch: result.subscription?.stripe_price_id === priceIds.pro,
-      proPlusPriceMatch: result.subscription?.stripe_price_id === priceIds.pro_plus,
+      proPriceMatch: activePriceIds.some((priceId) => proIds.includes(priceId)),
+      proPlusPriceMatch: activePriceIds.some((priceId) => proPlusIds.includes(priceId)),
       configuredProPriceActive: catalog.proPriceActive,
       configuredProPlusPriceActive: catalog.proPlusPriceActive,
       productFallbackAvailable: catalog.productFallbackAvailable,

@@ -14,6 +14,23 @@ assert.equal(
 
 assert.equal(membership.getPlanForPriceId(priceIds.pro, priceIds), "pro");
 assert.equal(membership.getPlanForPriceId(priceIds.pro_plus, priceIds), "pro_plus");
+const configuredWithAliases = membership.getStripePriceIds({
+  STRIPE_PRO_PRICE_ID: priceIds.pro,
+  STRIPE_PRO_PLUS_PRICE_ID: priceIds.pro_plus,
+  STRIPE_PRO_PLUS_PRICE_IDS: "price_legacy_plus, price_yearly_plus",
+});
+assert.deepEqual(configuredWithAliases.pro_plus_ids, [
+  priceIds.pro_plus,
+  "price_legacy_plus",
+  "price_yearly_plus",
+]);
+assert.equal(membership.getPlanForPriceId("price_legacy_plus", configuredWithAliases), "pro_plus");
+assert.equal(membership.getPlanForPriceId("price_overlap", {
+  pro: "price_configured_pro",
+  pro_plus: "price_configured_pro_plus",
+  pro_ids: ["price_configured_pro", "price_overlap"],
+  pro_plus_ids: ["price_configured_pro_plus", "price_overlap"],
+}), "free", "A Price configured for both tiers must fail closed");
 assert.equal(membership.getPlanForPriceId("price_unknown", priceIds), "free");
 assert.equal(
   membership.getPlanForPriceId("price_same", { pro: "price_same", pro_plus: "price_same" }),
