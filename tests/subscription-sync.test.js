@@ -7,6 +7,7 @@ const {
 const {
   getPriceId,
   getTierFromStripeSubscription,
+  loadStripePriceCatalog,
   selectRelevantSubscription,
   subscriptionRecordChanged,
   toSubscriptionRecord,
@@ -129,11 +130,13 @@ assert.equal(isReconciliationDue({
 const originalEnvironment = {
   url: process.env.SUPABASE_URL,
   key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  publicKey: process.env.SUPABASE_ANON_KEY,
   proPrice: process.env.STRIPE_PRO_PRICE_ID,
   proPlusPrice: process.env.STRIPE_PRO_PLUS_PRICE_ID,
 };
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
+process.env.SUPABASE_ANON_KEY = "public-test-key";
 process.env.STRIPE_PRO_PRICE_ID = priceIds.pro;
 process.env.STRIPE_PRO_PLUS_PRICE_ID = priceIds.pro_plus;
 const writes = [];
@@ -167,6 +170,176 @@ global.fetch = async (_url, options = {}) => {
     assert.equal(response.plan, "pro_plus");
     assert.equal(response.displayName, "Pro Plus");
     assert.equal(response.entitlements.ai, true);
+
+    // Price-catalog enrichment is optional. A temporary configured-price
+    // lookup failure is represented in diagnostics instead of throwing and
+    // taking down the Account endpoint.
+    const partialCatalog = await loadStripePriceCatalog({
+      prices: {
+        retrieve: async (priceId) => {
+          if (priceId === "price_catalog_plus") throw Object.assign(new Error("temporary"), { code: "api_error" });
+          return { id: priceId, active: true, product: "prod_catalog_pro" };
+        },
+      },
+    }, { pro: "price_catalog_pro", pro_plus: "price_catalog_plus" });
+    assert.equal(partialCatalog.proPriceFound, true);
+    assert.equal(partialCatalog.proPlusPriceFound, false);
+    assert.equal(partialCatalog.validationErrorCode, "configured_price_lookup_failed");
+
+    const { getFallbackResponse } = require("../api/subscription-status")._test;
+    const proFallback = getFallbackResponse(freshLocal, priceIds, "api_error");
+    assert.equal(proFallback.plan, "pro");
+    assert.equal(proFallback.reconciliationPending, true);
+    assert.equal(proFallback.entitlements.ai, false);
+    const freeFallback = getFallbackResponse(null, priceIds, "missing_stripe_config");
+    assert.equal(freeFallback.plan, "free");
+
+    // The real authenticated route returns HTTP 200 with stored state when
+    // reconciliation configuration is unavailable.
+    const { handleRequest } = require("../api/subscription-status")._test;
+    const originalStripeSecret = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    let databaseRows = [{ ...freshLocal, user_id: userId }];
+    global.fetch = async (url) => {
+      const body = String(url).includes("/auth/v1/user")
+        ? { id: userId, email: "player@example.com" }
+        : databaseRows;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(body),
+        json: async () => body,
+      };
+    };
+    const routeResult = { statusCode: null, body: null, headers: {} };
+    const responseAdapter = {
+      setHeader: (name, value) => { routeResult.headers[name] = value; },
+      status: (statusCode) => {
+        routeResult.statusCode = statusCode;
+        return { json: (body) => { routeResult.body = body; return body; } };
+      },
+    };
+    await handleRequest({
+      method: "GET",
+      headers: { authorization: "Bearer test-token" },
+      query: { reconcile: "1" },
+    }, responseAdapter);
+    assert.equal(routeResult.statusCode, 200);
+    assert.equal(routeResult.body.plan, "pro");
+    assert.equal(routeResult.body.reconciliationPending, true);
+
+    process.env.STRIPE_SECRET_KEY = "sk_test_subscription_status";
+    routeResult.statusCode = null;
+    routeResult.body = null;
+    await handleRequest({
+      method: "GET",
+      headers: { authorization: "Bearer test-token" },
+      query: { reconcile: "1" },
+    }, responseAdapter, {
+      createStripe: () => ({}),
+      loadStripePriceCatalog: async () => ({
+        proPriceFound: true,
+        proPlusPriceFound: true,
+        productFallbackAvailable: true,
+      }),
+      reconcileSubscription: async () => {
+        throw Object.assign(new Error("Stripe temporarily unavailable"), {
+          code: "api_error",
+          statusCode: 503,
+        });
+      },
+    });
+    assert.equal(routeResult.statusCode, 200);
+    assert.equal(routeResult.body.plan, "pro");
+    assert.equal(routeResult.body.reconciliationError, "api_error");
+
+    routeResult.statusCode = null;
+    routeResult.body = null;
+    await handleRequest({
+      method: "GET",
+      headers: { authorization: "Bearer test-token" },
+      query: { reconcile: "1" },
+    }, responseAdapter, {
+      createStripe: () => ({}),
+      loadStripePriceCatalog: async () => ({
+        proPriceFound: true,
+        proPlusPriceFound: true,
+        proPriceActive: true,
+        proPlusPriceActive: true,
+        productFallbackAvailable: true,
+      }),
+      reconcileSubscription: async () => ({
+        customerFound: true,
+        changed: true,
+        normalization: { resolution: "price_id" },
+        subscription: upgraded,
+      }),
+    });
+    assert.equal(routeResult.statusCode, 200);
+    assert.equal(routeResult.body.plan, "pro_plus");
+    assert.equal(routeResult.body.entitlements.ai, true);
+
+    databaseRows = [];
+    delete process.env.STRIPE_SECRET_KEY;
+    routeResult.statusCode = null;
+    routeResult.body = null;
+    await handleRequest({
+      method: "GET",
+      headers: { authorization: "Bearer test-token" },
+      query: { reconcile: "1" },
+    }, responseAdapter);
+    assert.equal(routeResult.statusCode, 200);
+    assert.equal(routeResult.body.plan, "free");
+
+    databaseRows = [{ ...freshLocal, user_id: userId }];
+    process.env.STRIPE_SECRET_KEY = "sk_test_subscription_status";
+    delete process.env.STRIPE_PRO_PLUS_PRICE_ID;
+    routeResult.statusCode = null;
+    routeResult.body = null;
+    await handleRequest({
+      method: "GET",
+      headers: { authorization: "Bearer test-token" },
+      query: { reconcile: "1" },
+    }, responseAdapter);
+    assert.equal(routeResult.statusCode, 200);
+    assert.equal(routeResult.body.plan, "pro");
+    assert.equal(routeResult.body.reconciliationError, "missing_stripe_config");
+    process.env.STRIPE_PRO_PLUS_PRICE_ID = priceIds.pro_plus;
+    if (originalStripeSecret === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = originalStripeSecret;
+
+    global.fetch = async (_url, options = {}) => {
+      if (options.method === "POST") writes.push(JSON.parse(options.body));
+      return { ok: true, status: 201, text: async () => "[]" };
+    };
+
+    // No stored customer and no Stripe match safely creates the canonical Free
+    // state. A Stripe outage propagates to the endpoint, which uses the tested
+    // stored-state fallback above.
+    const noSubscription = await reconcileSubscription(
+      stripe,
+      { id: userId, email: "new-player@example.com" },
+      null,
+      priceIds,
+      catalog,
+    );
+    assert.equal(noSubscription.subscription.plan, "free");
+    await assert.rejects(reconcileSubscription(
+      {
+        subscriptions: { list: async () => { throw Object.assign(new Error("Stripe unavailable"), { code: "api_error" }); } },
+        customers: { list: async () => ({ data: [] }) },
+        checkout: { sessions: { list: async () => ({ data: [] }) } },
+      },
+      { id: userId, email: "player@example.com" },
+      freshLocal,
+      priceIds,
+      catalog,
+    ));
+
+    await assert.rejects(
+      loadStripePriceCatalog({ prices: { retrieve: async () => ({}) } }, { pro: "", pro_plus: "" }),
+      (error) => error.code === "stripe_price_config_invalid",
+    );
 
     // A failed webhook write rejects so Stripe can retry. Repeating the same
     // delivery then upserts the same canonical record without corruption.
@@ -207,6 +380,8 @@ global.fetch = async (_url, options = {}) => {
     else process.env.SUPABASE_URL = originalEnvironment.url;
     if (originalEnvironment.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     else process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnvironment.key;
+    if (originalEnvironment.publicKey === undefined) delete process.env.SUPABASE_ANON_KEY;
+    else process.env.SUPABASE_ANON_KEY = originalEnvironment.publicKey;
     if (originalEnvironment.proPrice === undefined) delete process.env.STRIPE_PRO_PRICE_ID;
     else process.env.STRIPE_PRO_PRICE_ID = originalEnvironment.proPrice;
     if (originalEnvironment.proPlusPrice === undefined) delete process.env.STRIPE_PRO_PLUS_PRICE_ID;

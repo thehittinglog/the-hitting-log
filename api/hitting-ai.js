@@ -62,7 +62,9 @@ async function reconcileAiSubscription(user, subscription) {
   if (entitlementDenied && !shouldReconcileDeniedUser(user.id)) return subscription;
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
-  if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) return subscription;
+  if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) {
+    return entitlementDenied ? subscription : null;
+  }
   requireSupabaseServerConfig();
   const stripe = new Stripe(stripeSecretKey);
   const catalog = await loadStripePriceCatalog(stripe, priceIds);

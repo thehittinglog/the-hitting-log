@@ -56,17 +56,46 @@ function logSync(details) {
   console.info("subscription_sync", JSON.stringify(details));
 }
 
-async function handleRequest(req, res) {
+function getFallbackResponse(subscription, priceIds, reason) {
+  return {
+    ...getStatusResponse(subscription, priceIds),
+    reconciliationPending: true,
+    reconciliationError: reason,
+  };
+}
+
+function logSubscriptionStatusError({ error, stage, subscription, userId, priceIds }) {
+  console.error("SUBSCRIPTION_STATUS_ERROR", JSON.stringify({
+    userId: userId || null,
+    stage,
+    stripeCustomerIdPresent: Boolean(subscription?.stripe_customer_id),
+    stripeSubscriptionIdPresent: Boolean(subscription?.stripe_subscription_id),
+    proPriceEnvPresent: Boolean(priceIds?.pro),
+    proPlusPriceEnvPresent: Boolean(priceIds?.pro_plus),
+    errorName: error?.name || "Error",
+    errorCode: error?.code || null,
+    httpStatus: error?.statusCode || error?.status || null,
+  }));
+}
+
+async function handleRequest(req, res, dependencies = {}) {
   res.setHeader("Cache-Control", "private, no-store, max-age=0");
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return sendResponse(res, 405, { error: "Method not allowed", code: "method_not_allowed" });
   }
+  const priceIds = getStripePriceIds();
 
   try {
     requireSupabasePublicConfig();
   } catch (error) {
-    console.error("Subscription status Supabase configuration error:", error.message);
+    logSubscriptionStatusError({
+      error,
+      stage: "authentication_configuration",
+      subscription: null,
+      userId: null,
+      priceIds,
+    });
     return sendResponse(res, 500, {
       error: "Subscription authentication is not configured",
       code: "missing_supabase_config",
@@ -82,7 +111,7 @@ async function handleRequest(req, res) {
   try {
     authentication = await verifySupabaseUserWithDetails(accessToken);
   } catch (error) {
-    console.error("Subscription status authentication error:", error.message);
+    logSubscriptionStatusError({ error, stage: "authentication", subscription: null, userId: null, priceIds });
     return sendResponse(res, 500, { error: "Unable to load subscription status", code: "subscription_status_failed" });
   }
   if (!authentication.user) {
@@ -97,11 +126,10 @@ async function handleRequest(req, res) {
   try {
     subscription = await getAuthenticatedUserSubscription(accessToken, user.id);
   } catch (error) {
-    console.error("Subscription status database lookup failed:", error.message);
+    logSubscriptionStatusError({ error, stage: "database_read", subscription: null, userId: user.id, priceIds });
     return sendResponse(res, 500, { error: "Unable to load subscription status", code: "subscription_status_failed" });
   }
 
-  const priceIds = getStripePriceIds();
   const force = req.query?.reconcile === "1";
   if (!isReconciliationDue(subscription, { force, priceIds })) {
     return sendResponse(res, 200, getStatusResponse(subscription, priceIds));
@@ -109,15 +137,27 @@ async function handleRequest(req, res) {
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
   if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) {
-    console.error("Subscription reconciliation configuration is incomplete.");
-    return sendResponse(res, 502, { error: "Stripe subscription lookup failed", code: "stripe_lookup_failed" });
+    const error = new Error("Subscription reconciliation configuration is incomplete.");
+    error.code = "missing_stripe_config";
+    logSubscriptionStatusError({ error, stage: "configuration", subscription, userId: user.id, priceIds });
+    return sendResponse(res, 200, getFallbackResponse(subscription, priceIds, error.code));
   }
 
   try {
     requireSupabaseServerConfig();
-    const stripe = new Stripe(stripeSecretKey);
-    const catalog = await loadStripePriceCatalog(stripe, priceIds);
-    const result = await reconcileSubscription(stripe, user, subscription, priceIds, catalog);
+    const stripe = dependencies.createStripe
+      ? dependencies.createStripe(stripeSecretKey)
+      : new Stripe(stripeSecretKey);
+    const loadCatalog = dependencies.loadStripePriceCatalog || loadStripePriceCatalog;
+    const reconcile = dependencies.reconcileSubscription || reconcileSubscription;
+    const catalog = await loadCatalog(stripe, priceIds);
+    if (!catalog.proPriceFound || !catalog.proPlusPriceFound) {
+      const error = new Error("One or more configured Stripe prices could not be retrieved.");
+      error.code = catalog.validationErrorCode || "configured_price_lookup_failed";
+      logSubscriptionStatusError({ error, stage: "price_catalog", subscription, userId: user.id, priceIds });
+      return sendResponse(res, 200, getFallbackResponse(subscription, priceIds, error.code));
+    }
+    const result = await reconcile(stripe, user, subscription, priceIds, catalog);
     logSync({
       source: force ? "account_return" : "stale_cache",
       userId: user.id,
@@ -132,6 +172,8 @@ async function handleRequest(req, res) {
       proPlusPriceMatch: result.subscription?.stripe_price_id === priceIds.pro_plus,
       configuredProPriceActive: catalog.proPriceActive,
       configuredProPlusPriceActive: catalog.proPlusPriceActive,
+      productFallbackAvailable: catalog.productFallbackAvailable,
+      priceCatalogValidationError: catalog.validationErrorCode,
       databaseTierBefore: subscription?.plan || "free",
       databaseTierAfter: result.subscription?.plan || "free",
       aiEntitlement: result.subscription?.plan === "pro_plus" && new Set(["active", "trialing"]).has(result.subscription?.subscription_status),
@@ -139,12 +181,22 @@ async function handleRequest(req, res) {
     });
     return sendResponse(res, 200, getStatusResponse(result.subscription, priceIds));
   } catch (error) {
-    console.error("Subscription reconciliation failed:", error.message);
-    const databaseFailure = error.code === "subscription_upsert_failed";
-    return sendResponse(res, databaseFailure ? 500 : 502, {
-      error: databaseFailure ? "Unable to load subscription status" : "Stripe subscription lookup failed",
-      code: databaseFailure ? "subscription_status_failed" : "stripe_lookup_failed",
+    logSubscriptionStatusError({
+      error,
+      stage: error.code === "SUPABASE_ENVIRONMENT_MISSING" || error.code === "subscription_upsert_failed"
+        ? "database_write"
+        : error.code === "stripe_price_config_invalid"
+          ? "price_catalog"
+          : "stripe_reconciliation",
+      subscription,
+      userId: user.id,
+      priceIds,
     });
+    return sendResponse(res, 200, getFallbackResponse(
+      subscription,
+      priceIds,
+      error.code || "subscription_reconciliation_failed",
+    ));
   }
 }
 
@@ -158,4 +210,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._test = { getStatusResponse };
+module.exports._test = { getFallbackResponse, getStatusResponse, handleRequest };

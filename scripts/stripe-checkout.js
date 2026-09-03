@@ -232,7 +232,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderBillingState(data);
 
-      if (checkoutResult === "success" && data.plan !== "free") {
+      if (data.reconciliationPending) {
+        setMessage("Your saved membership is shown. Stripe synchronization is temporarily unavailable.");
+      } else if (checkoutResult === "success" && data.plan !== "free") {
         setMessage(`Your ${data.plan === "pro_plus" ? "Pro Plus" : "Pro"} subscription is active.`);
       } else if (billingReturn) {
         setMessage(`Your ${data.plan === "pro_plus" ? "Pro Plus" : data.plan === "pro" ? "Pro" : "Free"} membership is up to date.`);
