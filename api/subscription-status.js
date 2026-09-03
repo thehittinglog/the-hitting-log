@@ -212,7 +212,7 @@ async function handleRequest(req, res, dependencies = {}) {
   } catch (error) {
     logSubscriptionStatusError({
       error,
-      stage: error.code === "SUPABASE_ENVIRONMENT_MISSING" || error.code === "subscription_upsert_failed"
+      stage: error.code === "SUPABASE_ENVIRONMENT_MISSING" || error.subscriptionWriteFailed
         ? "database_write"
         : error.code === "stripe_price_config_invalid"
           ? "price_catalog"

@@ -16,6 +16,8 @@ const {
   isReconciliationDue,
   reconcileSubscription,
 } = require("../lib/subscription-reconciliation");
+const { upsertSubscription } = require("../lib/supabase-server");
+const fs = require("node:fs");
 
 const priceIds = { pro: "price_pro", pro_plus: "price_pro_plus" };
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -160,6 +162,60 @@ global.fetch = async (_url, options = {}) => {
 
 (async () => {
   try {
+    // Subscription writes use the user_id primary key as their conflict target.
+    const databaseRequests = [];
+    global.fetch = async (url, options = {}) => {
+      databaseRequests.push({ url: String(url), options });
+      return { ok: true, status: 204, text: async () => "" };
+    };
+    await upsertSubscription(upgraded);
+    const upsertRequest = databaseRequests.find((request) => request.options.method === "POST");
+    assert.ok(upsertRequest.url.includes("subscriptions?on_conflict=user_id"));
+    assert.equal(upsertRequest.options.headers.Prefer, "resolution=merge-duplicates,return=minimal");
+    assert.equal(upsertRequest.options.headers.apikey, "service-role-test-key");
+    assert.equal(upsertRequest.options.headers.Authorization, "Bearer service-role-test-key");
+    assert.equal(JSON.parse(upsertRequest.options.body).plan, "pro_plus");
+
+    // The checked-in migration explicitly admits the canonical pro_plus value.
+    const migrationSql = fs.readFileSync(
+      "supabase/migrations/20260903_allow_pro_plus_subscription_plan.sql",
+      "utf8",
+    );
+    assert.match(migrationSql, /'free',\s*'pro',\s*'pro_plus'/);
+
+    // Supabase's original structured constraint error survives the write layer
+    // and is emitted without record values or credentials.
+    const databaseLogs = [];
+    const originalConsoleError = console.error;
+    console.error = (...values) => databaseLogs.push(values.join(" "));
+    global.fetch = async () => ({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({
+        code: "23514",
+        message: "new row violates check constraint subscriptions_plan_check",
+        details: "Failing row contains a disallowed plan value.",
+        hint: "Apply the Pro Plus plan migration.",
+      }),
+    });
+    try {
+      await assert.rejects(upsertSubscription(upgraded), (error) => {
+        return error.code === "23514" && error.subscriptionWriteFailed === true;
+      });
+    } finally {
+      console.error = originalConsoleError;
+    }
+    assert.ok(databaseLogs.some((entry) => entry.includes("SUBSCRIPTION_DATABASE_WRITE_ERROR")));
+    assert.ok(databaseLogs.some((entry) => entry.includes('"supabaseErrorCode":"23514"')));
+    assert.ok(databaseLogs.some((entry) => entry.includes('"operation":"upsert"')));
+    assert.ok(databaseLogs.some((entry) => entry.includes('"conflictTarget":"user_id"')));
+    assert.equal(databaseLogs.some((entry) => entry.includes("Failing row")), false);
+
+    global.fetch = async (_url, options = {}) => {
+      if (options.method === "POST") writes.push(JSON.parse(options.body));
+      return { ok: true, status: 201, text: async () => "[]" };
+    };
+
     const stripe = {
       subscriptions: {
         list: async () => ({ data: [actualLiveProPlus] }),

@@ -2,7 +2,9 @@
 
 ## Database migration
 
-Run `supabase/subscriptions.sql`, then `supabase/hitting-log-data.sql`, in the Supabase SQL Editor. They safely create or update the
+Run `supabase/migrations/20260903_allow_pro_plus_subscription_plan.sql` on an
+existing production database, or run `supabase/subscriptions.sql` for a new
+installation, then run `supabase/hitting-log-data.sql`, in the Supabase SQL Editor. They safely create or update the
 membership and hitting-log tables, enable Row Level Security, let authenticated users
 read only their own subscription row, and reserve subscription writes for the server-side
 service role. The hitting-log migration adds the trusted Free 10-game insert limit.
