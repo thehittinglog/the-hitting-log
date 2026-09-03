@@ -16,6 +16,11 @@ assert.equal(membership.getPlanForPriceId(priceIds.pro, priceIds), "pro");
 assert.equal(membership.getPlanForPriceId(priceIds.pro_plus, priceIds), "pro_plus");
 assert.equal(membership.getPlanForPriceId("price_unknown", priceIds), "free");
 assert.equal(
+  membership.getPlanForPriceId("price_same", { pro: "price_same", pro_plus: "price_same" }),
+  "free",
+  "An ambiguous duplicate Price configuration must never grant AI",
+);
+assert.equal(
   membership.getPlanForPriceId(priceIds.pro, { pro: priceIds.pro_plus, pro_plus: priceIds.pro }),
   "pro",
   "The finalized Pro Price must never be reclassified as Pro Plus by swapped configuration",

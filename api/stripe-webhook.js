@@ -6,9 +6,14 @@ const {
   upsertSubscription,
 } = require("../lib/supabase-server");
 const {
-  getPlanForSubscription,
   getStripePriceIds,
 } = require("../lib/membership");
+const {
+  objectId,
+  selectRelevantSubscription,
+  subscriptionRecordChanged,
+  toSubscriptionRecord,
+} = require("../lib/stripe-subscription");
 
 const HANDLED_EVENT_TYPES = new Set([
   "checkout.session.completed",
@@ -18,43 +23,6 @@ const HANDLED_EVENT_TYPES = new Set([
   "invoice.paid",
   "invoice.payment_failed",
 ]);
-
-function objectId(value) {
-  return typeof value === "string" ? value : value?.id || null;
-}
-
-function unixTimestampToIso(value) {
-  return Number.isFinite(value) ? new Date(value * 1000).toISOString() : null;
-}
-
-function getCurrentPeriodEnd(subscription) {
-  const itemPeriodEnds = (subscription.items?.data || [])
-    .map((item) => item.current_period_end)
-    .filter(Number.isFinite);
-
-  if (itemPeriodEnds.length > 0) {
-    return Math.max(...itemPeriodEnds);
-  }
-
-  return subscription.current_period_end || null;
-}
-
-function getCurrentPeriodStart(subscription) {
-  const itemPeriodStarts = (subscription.items?.data || [])
-    .map((item) => item.current_period_start)
-    .filter(Number.isFinite);
-
-  if (itemPeriodStarts.length > 0) {
-    return Math.min(...itemPeriodStarts);
-  }
-
-  return subscription.current_period_start || null;
-}
-
-function getPriceId(subscription) {
-  const firstItem = subscription.items?.data?.[0];
-  return objectId(firstItem?.price) || firstItem?.pricing?.price_details?.price || null;
-}
 
 function getInvoiceSubscriptionId(invoice) {
   if (invoice.parent?.type === "subscription_details") {
@@ -114,27 +82,23 @@ async function resolveSupabaseUserId(subscription, hintedUserId) {
   return [...candidateUserIds][0];
 }
 
-async function syncSubscription(subscription, hintedUserId) {
+async function syncSubscription(subscription, hintedUserId, eventType = "unknown") {
   const userId = await resolveSupabaseUserId(subscription, hintedUserId);
-  const status = subscription.status || "inactive";
-  const priceId = getPriceId(subscription);
-  const plan = getPlanForSubscription({
-    subscription_status: status,
-    stripe_price_id: priceId,
-  });
-
-  await upsertSubscription({
-    user_id: userId,
-    stripe_customer_id: objectId(subscription.customer),
-    stripe_subscription_id: objectId(subscription.id),
-    subscription_status: status,
-    stripe_price_id: priceId,
-    current_period_start: unixTimestampToIso(getCurrentPeriodStart(subscription)),
-    current_period_end: unixTimestampToIso(getCurrentPeriodEnd(subscription)),
-    cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
-    created_at: unixTimestampToIso(subscription.created) || new Date().toISOString(),
-    plan,
-  });
+  const existing = await getSubscriptionBy("user_id", userId);
+  const record = toSubscriptionRecord(subscription, userId, getStripePriceIds());
+  const changed = subscriptionRecordChanged(existing, record);
+  await upsertSubscription(record);
+  console.info("subscription_sync", JSON.stringify({
+    source: "webhook",
+    eventType,
+    userId,
+    stripeCustomerId: record.stripe_customer_id,
+    stripeSubscriptionId: record.stripe_subscription_id,
+    stripePriceId: record.stripe_price_id,
+    normalizedTier: record.plan,
+    subscriptionStatus: record.subscription_status,
+    databaseChanged: changed,
+  }));
 }
 
 async function retrieveSubscription(stripe, subscriptionId) {
@@ -147,6 +111,18 @@ async function retrieveSubscription(stripe, subscriptionId) {
   });
 }
 
+async function retrieveCurrentCustomerSubscription(stripe, subscription, priceIds) {
+  const customerId = objectId(subscription?.customer);
+  if (!customerId) return subscription;
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 100,
+    expand: ["data.items.data.price"],
+  });
+  return selectRelevantSubscription(subscriptions.data, priceIds) || subscription;
+}
+
 async function processEvent(stripe, event) {
   const stripeObject = event.data.object;
 
@@ -154,16 +130,21 @@ async function processEvent(stripe, event) {
     const subscription = await retrieveSubscription(stripe, objectId(stripeObject.subscription));
     const hintedUserId =
       stripeObject.metadata?.supabase_user_id || stripeObject.client_reference_id || null;
-    await syncSubscription(subscription, hintedUserId);
+    await syncSubscription(subscription, hintedUserId, event.type);
     return;
   }
 
   if (event.type.startsWith("customer.subscription.")) {
-    const subscription =
+    const eventSubscription =
       event.type === "customer.subscription.deleted"
         ? stripeObject
         : await retrieveSubscription(stripe, objectId(stripeObject.id));
-    await syncSubscription(subscription);
+    const subscription = await retrieveCurrentCustomerSubscription(
+      stripe,
+      eventSubscription,
+      getStripePriceIds(),
+    );
+    await syncSubscription(subscription, null, event.type);
     return;
   }
 
@@ -174,8 +155,13 @@ async function processEvent(stripe, event) {
       return;
     }
 
-    const subscription = await retrieveSubscription(stripe, subscriptionId);
-    await syncSubscription(subscription);
+    const invoiceSubscription = await retrieveSubscription(stripe, subscriptionId);
+    const subscription = await retrieveCurrentCustomerSubscription(
+      stripe,
+      invoiceSubscription,
+      getStripePriceIds(),
+    );
+    await syncSubscription(subscription, null, event.type);
   }
 }
 
@@ -252,3 +238,4 @@ module.exports.config = {
     bodyParser: false,
   },
 };
+module.exports._test = { processEvent, retrieveCurrentCustomerSubscription, syncSubscription };

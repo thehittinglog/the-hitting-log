@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const billingCopy = document.getElementById("billing-section-copy");
   const billingMessage = document.getElementById("billing-message");
   const checkoutResult = new URLSearchParams(window.location.search).get("checkout");
+  const billingReturn = new URLSearchParams(window.location.search).get("billing") === "return";
 
   if (!billingButton) {
     return;
@@ -179,8 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
       console.info("Subscription status authenticated user ID:", session.user?.id || "unavailable");
       console.info("Subscription status requested API endpoint:", subscriptionStatusEndpoint);
 
-      const response = await fetch(subscriptionStatusEndpoint, {
+      const shouldForceReconcile = checkoutResult === "success" || billingReturn;
+      const endpoint = shouldForceReconcile
+        ? `${subscriptionStatusEndpoint}?reconcile=1`
+        : subscriptionStatusEndpoint;
+      const response = await fetch(endpoint, {
         method: "GET",
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -216,10 +222,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      if (billingReturn && attempt < 2) {
+        setMessage("Refreshing your Stripe membership...");
+        window.setTimeout(() => loadBillingState(attempt + 1), 1500);
+        return;
+      }
+
       renderBillingState(data);
 
       if (checkoutResult === "success" && data.plan !== "free") {
         setMessage(`Your ${data.plan === "pro_plus" ? "Pro Plus" : "Pro"} subscription is active.`);
+      } else if (billingReturn) {
+        setMessage(`Your ${data.plan === "pro_plus" ? "Pro Plus" : data.plan === "pro" ? "Pro" : "Free"} membership is up to date.`);
       } else if (checkoutResult === "success") {
         setMessage("Your subscription is still syncing. Refresh this page in a moment.");
       } else if (checkoutResult === "cancelled") {

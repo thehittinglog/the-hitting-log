@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
     const stripe = new Stripe(stripeSecretKey);
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
-      return_url: `${getApplicationOrigin()}/account`,
+      return_url: `${getApplicationOrigin()}/account?billing=return`,
     });
 
     return res.status(200).json({ url: portalSession.url });

@@ -44,7 +44,9 @@
         throw new Error("Your login session has expired.");
       }
 
-      const response = await fetch("/api/subscription-status", {
+      const endpoint = force ? "/api/subscription-status?reconcile=1" : "/api/subscription-status";
+      const response = await fetch(endpoint, {
+        cache: "no-store",
         headers: { Authorization: `Bearer ${data.session.access_token}` },
       });
       const responseData = await response.json().catch(() => ({}));

@@ -2,6 +2,9 @@
   "name": "the-hitting-log",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "test": "node tests/membership.test.js && node tests/subscription-sync.test.js"
+  },
   "dependencies": {
     "stripe": "^18.0.0"
   }

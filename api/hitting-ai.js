@@ -1,18 +1,23 @@
+const Stripe = require("stripe");
 const {
   getAuthenticatedUserSubscription,
   getBearerToken,
   requireSupabasePublicConfig,
+  requireSupabaseServerConfig,
   verifySupabaseUserWithDetails,
 } = require("../lib/supabase-server");
 const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
-const { hasSubscriptionEntitlement } = require("../lib/membership");
+const { getStripePriceIds, hasSubscriptionEntitlement } = require("../lib/membership");
+const { isReconciliationDue, reconcileSubscription } = require("../lib/subscription-reconciliation");
 
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_HISTORY_ITEMS = 6;
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_REQUESTS = 12;
 const rateLimits = new Map();
+const deniedReconciliationTimes = new Map();
+const DENIED_RECONCILIATION_COOLDOWN_MS = 60 * 1000;
 
 function send(res, status, body) {
   res.setHeader("Cache-Control", "no-store");
@@ -38,6 +43,38 @@ function consumeRateLimit(userId) {
   if (current.count >= RATE_LIMIT_REQUESTS) return false;
   current.count += 1;
   return true;
+}
+
+function shouldReconcileDeniedUser(userId) {
+  const now = Date.now();
+  const lastChecked = deniedReconciliationTimes.get(userId) || 0;
+  if (now - lastChecked < DENIED_RECONCILIATION_COOLDOWN_MS) return false;
+  deniedReconciliationTimes.set(userId, now);
+  return true;
+}
+
+async function reconcileAiSubscription(user, subscription) {
+  const priceIds = getStripePriceIds();
+  const entitlementDenied = !hasSubscriptionEntitlement(subscription, "ai", priceIds);
+  const due = isReconciliationDue(subscription, { priceIds });
+  if (!entitlementDenied && !due) return subscription;
+  if (entitlementDenied && !shouldReconcileDeniedUser(user.id)) return subscription;
+
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
+  if (!stripeSecretKey || !priceIds.pro || !priceIds.pro_plus) return subscription;
+  requireSupabaseServerConfig();
+  const result = await reconcileSubscription(new Stripe(stripeSecretKey), user, subscription, priceIds);
+  console.info("subscription_sync", JSON.stringify({
+    source: "ai_authorization",
+    userId: user.id,
+    stripeCustomerId: result.subscription?.stripe_customer_id || subscription?.stripe_customer_id || null,
+    stripeSubscriptionId: result.subscription?.stripe_subscription_id || null,
+    stripePriceId: result.subscription?.stripe_price_id || null,
+    normalizedTier: result.subscription?.plan || "free",
+    subscriptionStatus: result.subscription?.subscription_status || "inactive",
+    databaseChanged: result.changed,
+  }));
+  return result.subscription;
 }
 
 async function readUserHittingData(accessToken, userId) {
@@ -115,6 +152,7 @@ module.exports = async function handler(req, res) {
   let subscription;
   try {
     subscription = await getAuthenticatedUserSubscription(accessToken, authentication.user.id);
+    subscription = await reconcileAiSubscription(authentication.user, subscription);
   } catch (error) {
     console.error("Hitting Log AI subscription lookup failed:", error.message);
     return send(res, 503, { error: "We couldn’t verify your membership right now.", code: "subscription_check_failed" });
@@ -174,4 +212,10 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._test = { consumeRateLimit, directAnswer, modelFailureAnswer, sanitizeHistory };
+module.exports._test = {
+  consumeRateLimit,
+  directAnswer,
+  modelFailureAnswer,
+  sanitizeHistory,
+  shouldReconcileDeniedUser,
+};

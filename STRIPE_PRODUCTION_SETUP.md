@@ -70,7 +70,14 @@ consistent.
   managed subscriptions.
 - `lib/supabase-server.js` contains server-only authentication and database helpers.
 - `lib/membership.js` maps trusted Stripe Price IDs and statuses to entitlements.
+- `lib/stripe-subscription.js` normalizes Stripe subscription items into the canonical `free`, `pro`, or `pro_plus` tier.
+- `lib/subscription-reconciliation.js` periodically and on billing returns reconciles Stripe into Supabase so missed webhooks self-heal.
 - `supabase/subscriptions.sql` defines the subscription schema and RLS policy.
 - `supabase/hitting-log-data.sql` enforces the Free 10-game limit for direct authenticated inserts.
 - `account.html` contains dynamic plan and billing UI targets.
 - `scripts/stripe-checkout.js` loads subscription state and opens Checkout or Portal.
+
+Subscription status responses are private and uncached. Checkout and Billing Portal
+returns force an immediate Stripe reconciliation; otherwise a valid local record is
+rechecked after five minutes. The webhook and reconciliation paths emit a structured
+`subscription_sync` log without payment details or secrets.
