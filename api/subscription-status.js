@@ -52,10 +52,6 @@ function getStatusResponse(subscription, priceIds = getStripePriceIds()) {
   };
 }
 
-function logSync(details) {
-  console.info("subscription_sync", JSON.stringify(details));
-}
-
 function getFallbackResponse(subscription, priceIds, reason) {
   return {
     ...getStatusResponse(subscription, priceIds),
@@ -173,41 +169,6 @@ async function handleRequest(req, res, dependencies = {}) {
       logSubscriptionStatusError({ error, stage: "price_catalog", subscription, userId: user.id, priceIds });
     }
     const result = await reconcile(stripe, user, subscription, priceIds, catalog);
-    const activePriceIds = result.activePriceIds || [];
-    const proIds = priceIds.pro_ids || [priceIds.pro].filter(Boolean);
-    const proPlusIds = priceIds.pro_plus_ids || [priceIds.pro_plus].filter(Boolean);
-    console.info("SUBSCRIPTION_PRICE_DIAGNOSTIC", JSON.stringify({
-      stripeCustomerId: result.stripeCustomerId || subscription?.stripe_customer_id || null,
-      stripeSubscriptionId: result.stripeSubscriptionId || null,
-      activeSubscriptionStatus: result.activeSubscriptionStatus || "inactive",
-      activePriceIds,
-      proPriceConfigured: proIds.length > 0,
-      proPlusPriceConfigured: proPlusIds.length > 0,
-      matchesProPrice: activePriceIds.some((priceId) => proIds.includes(priceId)),
-      matchesProPlusPrice: activePriceIds.some((priceId) => proPlusIds.includes(priceId)),
-      normalizedTier: result.normalization?.tier || result.subscription?.plan || "free",
-    }));
-    logSync({
-      source: force ? "account_return" : "stale_cache",
-      userId: user.id,
-      stripeCustomerId: result.subscription?.stripe_customer_id || subscription?.stripe_customer_id || null,
-      stripeSubscriptionId: result.subscription?.stripe_subscription_id || null,
-      stripePriceId: result.subscription?.stripe_price_id || null,
-      normalizedTier: result.subscription?.plan || "free",
-      subscriptionStatus: result.subscription?.subscription_status || "inactive",
-      databaseChanged: result.changed,
-      stripeCustomerFound: result.customerFound,
-      proPriceMatch: activePriceIds.some((priceId) => proIds.includes(priceId)),
-      proPlusPriceMatch: activePriceIds.some((priceId) => proPlusIds.includes(priceId)),
-      configuredProPriceActive: catalog.proPriceActive,
-      configuredProPlusPriceActive: catalog.proPlusPriceActive,
-      productFallbackAvailable: catalog.productFallbackAvailable,
-      priceCatalogValidationError: catalog.validationErrorCode,
-      databaseTierBefore: subscription?.plan || "free",
-      databaseTierAfter: result.subscription?.plan || "free",
-      aiEntitlement: result.subscription?.plan === "pro_plus" && new Set(["active", "trialing"]).has(result.subscription?.subscription_status),
-      tierResolution: result.normalization?.resolution || "no_active_subscription",
-    });
     return sendResponse(res, 200, getStatusResponse(result.subscription, priceIds));
   } catch (error) {
     logSubscriptionStatusError({
