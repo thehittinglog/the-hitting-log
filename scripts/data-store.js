@@ -118,6 +118,10 @@
     return String(email || "").trim().toLowerCase();
   }
 
+  function normalizeHandedness(handedness) {
+    return handedness === "right" || handedness === "left" ? handedness : null;
+  }
+
   function logOperation(operation, details = {}) {
     console.info(`[DataStore] ${operation}`, {
       userId: authenticatedUser?.id || null,
@@ -230,7 +234,7 @@
     logOperation("profile load started");
     const { data, error } = await client
       .from(profilesTable)
-      .select("user_id, athlete_name, sport_type, updated_at")
+      .select("user_id, athlete_name, sport_type, handedness, updated_at")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -243,6 +247,7 @@
           userId: data.user_id,
           athleteName: data.athlete_name || "",
           sportType: data.sport_type === "softball" ? "softball" : "baseball",
+          handedness: normalizeHandedness(data.handedness),
         }
       : null;
     logOperation("profile load succeeded", { found: Boolean(data) });
@@ -255,6 +260,7 @@
     const savedProfile = {
       athleteName: String(profile?.athleteName || "").trim(),
       sportType: profile?.sportType === "softball" ? "softball" : "baseball",
+      handedness: normalizeHandedness(profile?.handedness),
     };
     logOperation("profile save started");
 
@@ -265,9 +271,10 @@
           user_id: user.id,
           athlete_name: savedProfile.athleteName,
           sport_type: savedProfile.sportType,
+          handedness: savedProfile.handedness,
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id" })
-        .select("user_id, athlete_name, sport_type")
+        .select("user_id, athlete_name, sport_type, handedness")
         .single();
 
       if (error) {
@@ -281,6 +288,7 @@
         userId: data.user_id,
         athleteName: data.athlete_name || "",
         sportType: data.sport_type === "softball" ? "softball" : "baseball",
+        handedness: normalizeHandedness(data.handedness),
       };
       logOperation("profile save succeeded");
       return profileCache;
@@ -305,6 +313,7 @@
         metadata.full_name ||
         "",
       sportType: legacyAccount?.sportType || metadata.sport_type || "baseball",
+      handedness: null,
     };
     await saveProfile(profile, client);
     if (legacyAccount) {

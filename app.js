@@ -268,6 +268,10 @@ function normalizeSportType(sportType) {
   return sportType === "softball" ? "softball" : DEFAULT_SPORT_TYPE;
 }
 
+function normalizeHitterHandedness(handedness) {
+  return handedness === "right" || handedness === "left" ? handedness : null;
+}
+
 function getCurrentUser() {
   if (!currentSupabaseUser?.id || typeof currentSupabaseUser.email !== "string") {
     return null;
@@ -306,16 +310,18 @@ async function updateCurrentAccountSportType(sportType) {
   return updateCurrentAccountProfile({
     athleteName: profile.athleteName || "",
     sportType,
+    handedness: profile.handedness,
   });
 }
 
-async function updateCurrentAccountProfile({ athleteName, sportType }) {
+async function updateCurrentAccountProfile({ athleteName, sportType, handedness }) {
   if (typeof window.saveHittingLogProfile !== "function") {
     throw new Error("Supabase profile storage is unavailable.");
   }
   return window.saveHittingLogProfile({
     athleteName: String(athleteName || "").trim(),
     sportType: normalizeSportType(sportType),
+    handedness: normalizeHitterHandedness(handedness),
   });
 }
 
@@ -6070,6 +6076,7 @@ function initAccountPage() {
   const emailInput = document.getElementById("profile-email-input");
   const athleteNameInput = document.getElementById("profile-athlete-name-input");
   const sportTypeInput = document.getElementById("profile-sport-type-input");
+  const handednessInput = document.getElementById("profile-handedness-input");
   const saveButton = document.getElementById("profile-save-button");
   const cancelButton = document.getElementById("profile-cancel-button");
   const profileMessage = document.getElementById("profile-message");
@@ -6077,7 +6084,7 @@ function initAccountPage() {
   const securityMessage = document.getElementById("security-message");
   const accountLogoutButton = document.getElementById("account-logout-button");
 
-  if (!sportTypeValue || !editButton || !profileForm) {
+  if (!sportTypeValue || !editButton || !profileForm || !handednessInput) {
     return;
   }
 
@@ -6086,6 +6093,7 @@ function initAccountPage() {
     email: getCurrentUser()?.email || "",
     athleteName: localAccount?.athleteName || "",
     sportType: getCurrentSportType(),
+    handedness: normalizeHitterHandedness(localAccount?.handedness),
     metadata: {},
   };
   let isSaving = false;
@@ -6102,6 +6110,7 @@ function initAccountPage() {
     emailInput.value = profile.email;
     athleteNameInput.value = profile.athleteName;
     sportTypeInput.value = normalizeSportType(profile.sportType);
+    handednessInput.value = normalizeHitterHandedness(profile.handedness) || "";
   }
 
   function setProfileFormOpen(isOpen) {
@@ -6138,6 +6147,7 @@ function initAccountPage() {
 
     const athleteName = athleteNameInput.value.trim();
     const sportType = normalizeSportType(sportTypeInput.value);
+    const handedness = normalizeHitterHandedness(handednessInput.value);
 
     if (!athleteName) {
       setAuthFormMessage(profileMessage, "Enter an athlete name before saving.", "error");
@@ -6170,9 +6180,10 @@ function initAccountPage() {
         email: data?.user?.email || profile.email,
         athleteName,
         sportType,
+        handedness,
         metadata: data?.user?.user_metadata || metadata,
       };
-      await updateCurrentAccountProfile({ athleteName, sportType });
+      await updateCurrentAccountProfile({ athleteName, sportType, handedness });
       renderProfile();
       setProfileFormOpen(false);
       setAuthFormMessage(profileMessage, "Profile updated successfully.", "success");
@@ -6244,6 +6255,7 @@ function initAccountPage() {
           metadata.full_name ||
           profile.athleteName,
         sportType: normalizeSportType(cloudProfile?.sportType || metadata.sport_type || profile.sportType),
+        handedness: normalizeHitterHandedness(cloudProfile?.handedness),
         metadata,
       };
       renderProfile();
