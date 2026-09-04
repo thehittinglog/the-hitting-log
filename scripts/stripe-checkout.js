@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
   const billingButton = document.getElementById("upgrade-button");
-  const planButtons = Array.from(document.querySelectorAll("[data-plan-action]"));
   const planCards = Array.from(document.querySelectorAll("[data-membership-card]"));
   const planValue = document.getElementById("account-plan-value");
   const gameAccessValue = document.getElementById("account-game-access-value");
@@ -148,26 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (label) label.hidden = !isCurrent;
     });
 
-    planButtons.forEach((button) => {
-      const targetPlan = button.dataset.planAction;
-      const isCurrent = targetPlan === currentPlan;
-      button.hidden = isCurrent;
-      button.disabled = isCurrent;
-
-      if (!isCurrent) {
-        button.textContent = planChangesUsePortal
-          ? "Manage in Stripe"
-          : currentPlan === "free"
-          ? `Upgrade to ${targetPlan === "pro_plus" ? "Pro Plus" : "Pro"}`
-          : targetPlan === "pro_plus"
-            ? "Upgrade in Stripe"
-            : "Change Plan in Stripe";
-        button.disabled = false;
-      }
-    });
-
     billingButton.hidden = !hasStripeCustomer;
-    billingButton.textContent = "Manage Billing";
+    billingButton.textContent = "Manage Subscription";
     billingButton.disabled = !hasStripeCustomer;
   }
 
@@ -297,9 +278,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   billingButton.addEventListener("click", () => openBilling(billingButton));
-  planButtons.forEach((button) => {
-    button.addEventListener("click", () => openBilling(button, button.dataset.planAction));
-  });
 
   loadBillingState();
 });

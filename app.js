@@ -6076,12 +6076,6 @@ function initAccountPage() {
   const passwordResetButton = document.getElementById("password-reset-button");
   const securityMessage = document.getElementById("security-message");
   const accountLogoutButton = document.getElementById("account-logout-button");
-  const deleteButton = document.getElementById("delete-account-button");
-  const deleteModal = document.getElementById("delete-account-modal");
-  const deleteConfirmation = document.getElementById("delete-account-confirmation");
-  const confirmDeleteButton = document.getElementById("confirm-delete-account-button");
-  const cancelDeleteButton = document.getElementById("cancel-delete-account-button");
-  const deleteMessage = document.getElementById("delete-account-message");
 
   if (!sportTypeValue || !editButton || !profileForm) {
     return;
@@ -6095,7 +6089,6 @@ function initAccountPage() {
     metadata: {},
   };
   let isSaving = false;
-  let lastModalFocus = null;
 
   function sportLabel(sportType) {
     return normalizeSportType(sportType) === "softball" ? "Softball" : "Baseball";
@@ -6119,14 +6112,6 @@ function initAccountPage() {
     if (isOpen) {
       athleteNameInput.focus();
     }
-  }
-
-  function closeDeleteModal() {
-    deleteModal.hidden = true;
-    document.body.classList.remove("has-account-modal");
-    deleteConfirmation.value = "";
-    confirmDeleteButton.disabled = true;
-    lastModalFocus?.focus();
   }
 
   renderProfile();
@@ -6233,42 +6218,6 @@ function initAccountPage() {
 
   accountLogoutButton.addEventListener("click", () => {
     document.getElementById("logout-button")?.click();
-  });
-
-  deleteButton.addEventListener("click", () => {
-    lastModalFocus = document.activeElement;
-    deleteModal.hidden = false;
-    document.body.classList.add("has-account-modal");
-    deleteConfirmation.focus();
-  });
-
-  deleteConfirmation.addEventListener("input", () => {
-    confirmDeleteButton.disabled = deleteConfirmation.value !== "DELETE";
-  });
-
-  cancelDeleteButton.addEventListener("click", closeDeleteModal);
-  deleteModal.addEventListener("click", (event) => {
-    if (event.target === deleteModal) {
-      closeDeleteModal();
-    }
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !deleteModal.hidden) {
-      closeDeleteModal();
-    }
-  });
-
-  confirmDeleteButton.addEventListener("click", () => {
-    if (deleteConfirmation.value !== "DELETE") {
-      return;
-    }
-
-    // TODO: Call a secure server-side account deletion endpoint here when one is available.
-    closeDeleteModal();
-    setAuthFormMessage(
-      deleteMessage,
-      "Account deletion is not available yet. Your account and data were not deleted.",
-    );
   });
 
   (async () => {

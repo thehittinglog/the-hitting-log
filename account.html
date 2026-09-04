@@ -142,7 +142,6 @@
               <li>Heat Maps &amp; Spray Charts</li>
               <li>AI Hitting Assistant is not included</li>
             </ul>
-            <button type="button" data-plan-action="pro" disabled>Loading...</button>
             <span class="membership-current-label" data-current-plan-label hidden>Current Plan</span>
           </article>
           <article class="membership-plan-card membership-plan-card--plus" data-membership-card="pro_plus">
@@ -153,40 +152,13 @@
               <li>Everything in Pro</li>
               <li>AI Hitting Assistant</li>
             </ul>
-            <button type="button" data-plan-action="pro_plus" disabled>Loading...</button>
             <span class="membership-current-label" data-current-plan-label hidden>Current Plan</span>
           </article>
         </div>
-        <button id="upgrade-button" class="secondary-button membership-manage-button" type="button" disabled hidden>Manage Billing</button>
+        <button id="upgrade-button" class="secondary-button membership-manage-button" type="button" disabled hidden>Manage Subscription</button>
         <p id="billing-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
       </section>
     </section>
-
-    <section class="panel account-delete-card">
-      <div class="section-heading">
-        <div>
-          <h2>Delete Account</h2>
-          <p class="section-copy">Permanently remove your account and all associated hitting data.</p>
-        </div>
-      </div>
-      <button id="delete-account-button" class="danger-button" type="button">Delete Account</button>
-      <p id="delete-account-message" class="form-message" role="status" aria-live="polite" aria-atomic="true"></p>
-    </section>
-
-    <div id="delete-account-modal" class="account-delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-modal-title" hidden>
-      <div class="account-delete-dialog">
-        <h2 id="delete-account-modal-title">Delete Account</h2>
-        <p>This permanently deletes your account, athlete profile, games, at-bats, and recorded statistics. This cannot be undone.</p>
-        <label for="delete-account-confirmation">
-          <span>Type DELETE to confirm</span>
-          <input id="delete-account-confirmation" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
-        </label>
-        <div class="account-form-actions">
-          <button id="confirm-delete-account-button" class="danger-button" type="button" disabled>Delete Account</button>
-          <button id="cancel-delete-account-button" class="secondary-button" type="button">Cancel</button>
-        </div>
-      </div>
-    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

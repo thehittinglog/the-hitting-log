@@ -1919,10 +1919,6 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   box-shadow: none;
 }
 
-.account-delete-card {
-  margin-top: 20px;
-}
-
 .danger-button {
   background: var(--accent);
 }
