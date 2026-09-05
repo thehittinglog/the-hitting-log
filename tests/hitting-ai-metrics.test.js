@@ -79,16 +79,16 @@ assert.deepEqual(generalCoaching.coachingDiagnostic.framework, [
 for (const prompt of ["How can I improve my timing?", "I'm always late. What should I do?"]) {
   const result = stats.analyzeQuestion({ message: prompt, games });
   const answer = stats.formatDeterministicAnswer(result);
-  assert.match(answer, /load slow and early/i, prompt);
+  assert.match(answer, /gather early and slow/i, prompt);
   assert.doesNotMatch(answer, /start (?:the |your )?load later|load faster/i, prompt);
 }
 
 const slowTiming = stats.analyzeQuestion({ message: "I'm early on slow pitching. What should I do?", games });
-assert.match(stats.formatDeterministicAnswer(slowTiming), /stride develop longer.*lands later/is);
+assert.match(stats.formatDeterministicAnswer(slowTiming), /move develop longer.*front foot lands somewhat after/is);
 assert.doesNotMatch(stats.formatDeterministicAnswer(slowTiming), /start (?:the |your )?load later|load faster/i);
 
 const fastTiming = stats.analyzeQuestion({ message: "I'm late against faster pitching. What should I do?", games });
-assert.match(stats.formatDeterministicAnswer(fastTiming), /stride foot down slightly sooner.*before.*halfway-home/is);
+assert.match(stats.formatDeterministicAnswer(fastTiming), /front foot down somewhat before.*halfway home/is);
 assert.doesNotMatch(stats.formatDeterministicAnswer(fastTiming), /start (?:the |your )?load later|load faster/i);
 
 const unnamedComparison = stats.analyzeQuestion({ message: "Compare my last game versus the previous game.", games: [games[0], { ...games[0], id: "metric-game-2", date: "2026-09-04" }] });
@@ -99,6 +99,87 @@ Object.entries(stats.METRIC_KNOWLEDGE).forEach(([key, metric]) => {
   assert.ok(metric.definition, `${key} needs a definition`);
   assert.ok(metric.formula, `${key} needs a formula`);
   assert.ok(metric.desirability, `${key} needs desirability guidance`);
+  assert.ok(metric.improvement, `${key} needs improvement guidance`);
 });
+
+const forbiddenSummary = /AVG:|Hits:|At-bats:|\bOBP:|\bSLG:/i;
+const forbiddenMechanics = /keep your hands inside|use your lower half|stay through the ball|rotate harder|change your bat path|change your launch angle|keep your back shoulder up|shorten your swing|squish the bug/i;
+const instructionalPrompts = [
+  "how do I get better timing?",
+  "how can I improve my timing?",
+  "I'm late a lot, what do I do?",
+  "I'm always early",
+  "how do I adjust to slow pitching?",
+  "how do I time up a faster pitcher?",
+  "what does on time mean?",
+  "what is timing quality?",
+  "why am I late?",
+  "how do I lower my chase rate?",
+  "why is my chase rate bad?",
+  "what does chase rate mean?",
+  "how do I swing at better pitches?",
+  "how do I improve my hard hit percentage?",
+  "why am I making weak contact?",
+  "how do I make better contact?",
+  "how do I lower my two strike percentage?",
+  "why do I keep getting to two strikes?",
+  "how do I get better with two strikes?",
+  "how do I improve my performance score?",
+  "what is hurting my performance score?",
+  "what does my performance score mean?",
+];
+
+instructionalPrompts.forEach((prompt) => {
+  const result = stats.analyzeQuestion({ message: prompt, games });
+  const answer = stats.formatDeterministicAnswer(result);
+  assert.ok(answer, `${prompt} produced no answer`);
+  assert.doesNotMatch(answer, forbiddenSummary, `${prompt} fell back to traditional stats`);
+  assert.doesNotMatch(answer, forbiddenMechanics, `${prompt} produced unsupported mechanical coaching`);
+});
+
+const timingInstruction = stats.analyzeQuestion({ message: "how do I get better timing?", games });
+assert.equal(stats.classifyQuestionAction("how do I get better timing?"), "metric_improvement");
+assert.equal(timingInstruction.type, "instructional_guidance");
+assert.equal(timingInstruction.topic, "timing");
+const timingInstructionAnswer = stats.formatDeterministicAnswer(timingInstruction);
+assert.match(timingInstructionAnswer, /gather early and slow/i);
+assert.match(timingInstructionAnswer, /front foot/i);
+assert.match(timingInstructionAnswer, /comfortable speed.*halfway home/is);
+assert.match(timingInstructionAnswer, /faster pitching.*before halfway/is);
+assert.match(timingInstructionAnswer, /slower pitching.*after halfway/is);
+assert.match(timingInstructionAnswer, /20\.0% early, 60\.0% on time, and 20\.0% late/i);
+assert.doesNotMatch(timingInstructionAnswer, /start (?:the |your )?(?:load|gather) later|load faster/i);
+assert.doesNotMatch(timingInstructionAnswer, forbiddenSummary);
+assert.doesNotMatch(timingInstructionAnswer, forbiddenMechanics);
+
+const gamesWithoutTiming = [{
+  ...games[0],
+  atBats: games[0].atBats.map(({ timing, ...atBat }) => atBat),
+}];
+const noTimingInstruction = stats.analyzeQuestion({ message: "how do I get better timing?", games: gamesWithoutTiming });
+const noTimingAnswer = stats.formatDeterministicAnswer(noTimingInstruction);
+assert.match(noTimingAnswer, /gather early and slow/i);
+assert.match(noTimingAnswer, /front foot/i);
+assert.match(noTimingAnswer, /don't have enough recorded timing data/i);
+assert.doesNotMatch(noTimingAnswer, forbiddenSummary);
+
+const noDataTiming = stats.analyzeQuestion({ message: "how do I get better timing?", games: [] });
+assert.equal(noDataTiming.type, "instructional_guidance");
+assert.match(stats.formatDeterministicAnswer(noDataTiming), /gather early and slow/i);
+
+for (const prompt of ["how do I lower my chase rate?", "how do I improve my hard hit percentage?"]) {
+  const noDataMetricAnswer = stats.formatDeterministicAnswer(stats.analyzeQuestion({ message: prompt, games: [] }));
+  assert.ok(noDataMetricAnswer, `${prompt} with no data produced no guidance`);
+  assert.doesNotMatch(noDataMetricAnswer, forbiddenSummary, `${prompt} with no data fell back to traditional stats`);
+}
+
+const chaseDefinition = stats.formatDeterministicAnswer(stats.analyzeQuestion({ message: "what is chase rate?", games }));
+assert.match(chaseDefinition, /out-of-zone pitches/i);
+assert.match(chaseDefinition, /lower is generally better/i);
+
+const twoStrikeInterpretation = stats.analyzeQuestion({ message: "what should my two-strike percentage be telling me?", games });
+assert.equal(twoStrikeInterpretation.type, "metric_guidance");
+assert.equal(twoStrikeInterpretation.requestMode, "interpretation");
+assert.doesNotMatch(stats.formatDeterministicAnswer(twoStrikeInterpretation), forbiddenSummary);
 
 console.log("Hitting Log AI metric knowledge tests passed");

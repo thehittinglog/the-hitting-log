@@ -205,14 +205,14 @@
   assert(!/For your next training session/.test(broadAnalysisAnswer), "analysis added unsolicited coaching");
 
   const fastTiming = stats.analyzeQuestion({ message: "I'm late against faster pitching.", games });
-  assert(fastTiming.coachingDiagnostic.priority === "timing", "faster-pitching question did not prioritize timing");
-  assert(/load slow and early/.test(fastTiming.coachingDiagnostic.adjustment), "timing advice contradicted the early-load philosophy");
-  assert(/stride foot down slightly sooner/.test(fastTiming.coachingDiagnostic.adjustment), "faster-pitching timing adjustment is incorrect");
+  assert(fastTiming.topic === "timing", "faster-pitching question did not preserve its timing topic");
+  assert(/gather early and slow/.test(stats.formatDeterministicAnswer(fastTiming)), "timing advice contradicted the early-load philosophy");
+  assert(/front foot down somewhat before/.test(stats.formatDeterministicAnswer(fastTiming)), "faster-pitching timing adjustment is incorrect");
 
   const slowTiming = stats.analyzeQuestion({ message: "I'm way out front against a slow pitcher.", games });
-  assert(slowTiming.coachingDiagnostic.priority === "timing", "slow-pitching question did not prioritize timing");
-  assert(/stride develop longer/.test(slowTiming.coachingDiagnostic.adjustment), "slow-pitching timing adjustment is incorrect");
-  assert(!/start your load later/i.test(slowTiming.coachingDiagnostic.adjustment), "slow-pitching advice told the hitter to load later");
+  assert(slowTiming.topic === "timing", "slow-pitching question did not preserve its timing topic");
+  assert(/move develop longer/.test(stats.formatDeterministicAnswer(slowTiming)), "slow-pitching timing adjustment is incorrect");
+  assert(!/start your load later/i.test(stats.formatDeterministicAnswer(slowTiming)), "slow-pitching advice told the hitter to load later");
 
   const popupGames = [{
     id: "popup-game",
