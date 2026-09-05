@@ -1294,6 +1294,25 @@ body[data-page="landing"] {
   margin-top: 16px;
 }
 
+.landing-copy .landing-free-note {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 0.45rem;
+  margin-top: 14px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.landing-free-note strong {
+  font-weight: 900;
+}
+
+.landing-free-note span {
+  color: var(--muted);
+}
+
 .landing-button {
   min-height: 50px;
   padding: 13px 24px;
