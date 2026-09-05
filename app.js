@@ -944,6 +944,55 @@ function loadRawGames() {
   return loadGames();
 }
 
+let hlpScores = { overallScore: null, gameScores: {}, tournamentScores: {} };
+
+function normalizeHlpScore(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 100 ? value : null;
+}
+
+async function refreshHlpScores() {
+  if (!window.hittingLogAuth?.getCurrentSession) {
+    hlpScores = { overallScore: null, gameScores: {}, tournamentScores: {} };
+    return;
+  }
+  const { data, error } = await window.hittingLogAuth.getCurrentSession();
+  if (error || !data?.session?.access_token) {
+    hlpScores = { overallScore: null, gameScores: {}, tournamentScores: {} };
+    return;
+  }
+  const response = await fetch("/api/hlp-scores", {
+    headers: { Authorization: `Bearer ${data.session.access_token}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Unable to load HLP scores.");
+  const body = await response.json();
+  hlpScores = {
+    overallScore: normalizeHlpScore(body?.overallScore),
+    gameScores: body?.gameScores && typeof body.gameScores === "object" ? body.gameScores : {},
+    tournamentScores: body?.tournamentScores && typeof body.tournamentScores === "object" ? body.tournamentScores : {},
+  };
+}
+
+async function refreshHlpScoresSafely() {
+  try {
+    await refreshHlpScores();
+  } catch (error) {
+    console.error("[HLP] Scores are temporarily unavailable", { code: "score_load_failed" });
+  }
+}
+
+function getGameHlpScore(gameId) {
+  return normalizeHlpScore(hlpScores.gameScores?.[gameId]);
+}
+
+function getTournamentHlpScore(tournamentId) {
+  return normalizeHlpScore(hlpScores.tournamentScores?.[tournamentId]);
+}
+
+function getOverallHlpScore() {
+  return normalizeHlpScore(hlpScores.overallScore);
+}
+
 async function upsertSavedGame(games, game) {
   const savedGame = normalizeGame(game);
   const existingIndex = games.findIndex((saved) => saved.id === savedGame.id);
@@ -968,6 +1017,8 @@ async function upsertSavedGame(games, game) {
     }
     throw error;
   }
+
+  await refreshHlpScoresSafely();
 
   return savedGame;
 }
@@ -1149,7 +1200,7 @@ function appendCells(row, values) {
 function appendGameCells(row, gameStats, options = {}) {
   const opponentLabel = options.opponentLabel || gameStats.opponent;
   const performanceScore = options.compact
-    ? calculateHittingLogPerformanceScore(gameStats)
+    ? getGameHlpScore(gameStats.id)
     : undefined;
   const values = options.compact
     ? [
@@ -1213,7 +1264,7 @@ function appendSimpleGameRow(tableBody, gameStats, opponentLabel = gameStats.opp
   const average = document.createElement("p");
   const averageValue = document.createElement("span");
   const performanceScore = document.createElement("p");
-  const score = calculateHittingLogPerformanceScore(gameStats);
+  const score = getGameHlpScore(gameStats.id);
 
   row.className = "logged-game-card-row";
   if (options.clickable) {
@@ -1269,7 +1320,7 @@ function appendRecentGameRow(tableBody, gameStats) {
   const opponent = document.createElement("td");
   const average = document.createElement("td");
   const performanceScore = document.createElement("td");
-  const score = calculateHittingLogPerformanceScore(gameStats);
+  const score = getGameHlpScore(gameStats.id);
 
   row.className = "recent-game-row clickable-game-row";
   row.tabIndex = 0;
@@ -1306,7 +1357,7 @@ function appendTournamentGameRow(tableBody, gameStats, index) {
   const opponent = document.createElement("td");
   const average = document.createElement("td");
   const performanceScore = document.createElement("td");
-  const score = calculateHittingLogPerformanceScore(gameStats);
+  const score = getGameHlpScore(gameStats.id);
 
   row.className = "tournament-game-row clickable-game-row";
   row.tabIndex = 0;
@@ -1502,7 +1553,7 @@ function renderGameSummaryRow(tableBody, game, options = {}) {
   const opponentCell = document.createElement("td");
   const averageCell = document.createElement("td");
   const scoreCell = document.createElement("td");
-  const score = calculateHittingLogPerformanceScore(gameStats);
+  const score = getGameHlpScore(gameStats.id);
 
   dateCell.textContent = formatDisplayDate(gameStats.date);
   opponentCell.textContent = gameStats.opponent || "Opponent";
@@ -2236,13 +2287,7 @@ function initGamesPage(games, membershipState = null) {
       const name = document.createElement("td");
       const totalGames = document.createElement("td");
       const performanceScore = document.createElement("td");
-      const tournamentAtBats = tournament.games.flatMap((game) => (
-        Array.isArray(game.atBats) ? game.atBats : []
-      ));
-      const score = calculateHittingLogPerformanceScore({
-        atBats: tournamentAtBats,
-        stats: getRateStats(tournament.games),
-      });
+      const score = getTournamentHlpScore(tournament.id);
 
       row.className = "recent-tournament-row";
       row.tabIndex = 0;
@@ -4843,6 +4888,7 @@ function initGamesPage(games, membershipState = null) {
         throw new Error("Supabase game storage is unavailable.");
       }
       await window.deleteGameFromCloud(deletedGame.id);
+      await refreshHlpScoresSafely();
       closeDeleteGameModal({ restoreFocus: false });
       window.history.replaceState(null, "", "games.html");
       showHomeView();
@@ -5166,7 +5212,7 @@ function initAdvancedPage(games) {
   const hardHitMetrics = getHardHitMetrics(allAtBats);
   const advancedPercentMetrics = getAdvancedPercentMetrics(allAtBats, totals);
   const timingMetrics = getTimingMetrics(allAtBats);
-  const performanceScore = calculateHittingLogPerformanceScore({ atBats: allAtBats, stats: totals });
+  const performanceScore = getOverallHlpScore();
   const gameCount = games.length;
   const hitGames = games.filter((game) => getGameStats(game).hits > 0);
   const multiHitGames = games.filter((game) => getGameStats(game).hits >= 2);
@@ -5393,66 +5439,6 @@ function getTimingMetrics(atBats) {
     earlyPercent: calculateRateMetric(metrics.early, metrics.total),
     latePercent: calculateRateMetric(metrics.late, metrics.total),
   };
-}
-
-function calculateHittingLogPerformanceScore(source) {
-  const atBats = Array.isArray(source?.atBats) ? source.atBats : [];
-
-  if (atBats.length === 0) {
-    return null;
-  }
-
-  const totals = source?.stats || getRateStats([{ atBats }]);
-  const hardHitMetrics = getHardHitMetrics(atBats);
-  const advancedPercentMetrics = getAdvancedPercentMetrics(atBats, totals);
-  const totalOuts = atBats.filter((atBat) => isOutOutcome(atBat.outcome)).length;
-  const twoStrikePercent = hardHitMetrics.twoStrikePercent === null
-    ? null
-    : hardHitMetrics.twoStrikePercent * 100;
-  const hasHardHitTwoStrikePercent = hardHitMetrics.hardHitTwoStrikePercent !== null;
-  const hardHitTwoStrikePercent = hasHardHitTwoStrikePercent
-    ? hardHitMetrics.hardHitTwoStrikePercent * 100
-    : null;
-  const twoStrikeAdjustment = twoStrikePercent === null
-    ? null
-    : hasHardHitTwoStrikePercent
-      ? 100 - (twoStrikePercent * ((100 - hardHitTwoStrikePercent) / 100))
-      : 100 - twoStrikePercent;
-  const components = [
-    {
-      value: hardHitMetrics.hardHitPercent === null
-        ? null
-        : hardHitMetrics.hardHitPercent * 100,
-      weight: 0.45,
-    },
-    {
-      value: advancedPercentMetrics.qualityAtBatPercent === null
-        ? null
-        : advancedPercentMetrics.qualityAtBatPercent * 100,
-      weight: 0.25,
-    },
-    { value: twoStrikeAdjustment, weight: 0.10 },
-  ];
-
-  if (totalOuts > 0) {
-    components.splice(2, 0, {
-      value: advancedPercentMetrics.productiveOutPercent * 100,
-      weight: 0.20,
-    });
-  }
-
-  const availableComponents = components.filter((component) => Number.isFinite(component.value));
-
-  if (availableComponents.length === 0) {
-    return null;
-  }
-
-  const totalWeight = availableComponents.reduce((sum, component) => sum + component.weight, 0);
-  const rawScore = availableComponents.reduce((sum, component) => {
-    return sum + (component.value * (component.weight / totalWeight));
-  }, 0);
-
-  return Math.min(100, Math.max(0, Math.round(rawScore)));
 }
 
 const performanceScoreClasses = [
@@ -6845,6 +6831,10 @@ async function bootstrapApplication() {
 
   updateAuthUI();
   const games = loadGames();
+
+  if (session?.user && new Set(["dashboard", "games", "all-games", "advanced"]).has(page)) {
+    await refreshHlpScoresSafely();
+  }
 
   if (page === "dashboard") {
     initDashboard(games);

@@ -1,6 +1,10 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "routes": [
+    { "src": "/lib(?:/.*)?", "status": 404 },
+    { "src": "/tests(?:/.*)?", "status": 404 }
+  ],
   "rewrites": [
     { "source": "/login", "destination": "/login.html" },
     { "source": "/signup", "destination": "/signup.html" },

@@ -53,15 +53,16 @@ assert.equal(performanceScore.value, "72/100");
 assert.match(stats.formatDeterministicAnswer(performanceScore), /72\/100/);
 
 const performanceFormula = stats.analyzeQuestion({ message: "How is my Hitting Log Performance Score calculated?", games: [] });
-assert.equal(performanceFormula.type, "formula");
-assert.match(performanceFormula.formula, /45% Hard Hit Ball %/);
-assert.match(performanceFormula.formula, /remaining weights are proportionally rebalanced/);
+assert.equal(performanceFormula.type, "hlp_proprietary");
+assert.match(stats.formatDeterministicAnswer(performanceFormula), /proprietary/i);
+assert.doesNotMatch(stats.formatDeterministicAnswer(performanceFormula), /\b(?:45|25|20|10)\s*%/i);
 
 const improveScore = stats.analyzeQuestion({ message: "How do I improve my Performance Score?", games });
 assert.equal(improveScore.type, "metric_guidance");
 assert.equal(improveScore.metricKey, "performanceScore");
-assert.ok(improveScore.performanceComponents.length >= 3);
-assert.match(stats.formatDeterministicAnswer(improveScore), /biggest calculated opportunity/i);
+assert.equal(improveScore.performanceComponents.length, 0);
+assert.ok(improveScore.scoreInfluences.length >= 3);
+assert.doesNotMatch(stats.formatDeterministicAnswer(improveScore), /\b(?:45|25|20|10)\s*%|coefficient\s*[=:]|weight\s*[=:]/i);
 
 const contactQuality = stats.analyzeQuestion({ message: "Why is my contact quality bad?", games });
 assert.equal(contactQuality.type, "metric_guidance");

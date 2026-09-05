@@ -30,6 +30,12 @@
   });
   assert(directFormula.includes("hits divided by official at-bats"), "formula request still depended on OpenAI");
 
+  const protectedHlp = api.directAnswer({
+    type: "hlp_proprietary",
+    answer: "The HLP Score is proprietary and its formula is not publicly disclosed.",
+  });
+  assert(protectedHlp.includes("proprietary"), "HLP non-disclosure did not bypass the model");
+
   const coachingFallback = api.modelFailureAnswer({
     type: "performance_analysis",
     formattedAnswer: "Your biggest area for improvement is contact quality. 6 of 9 balls in play were not hard-hit.",
