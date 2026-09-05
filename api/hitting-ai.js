@@ -54,6 +54,16 @@ function shouldReconcileDeniedUser(userId) {
   return true;
 }
 
+function isMissingHandednessColumnError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    ["42703", "PGRST204"].includes(error?.code) && message.includes("handedness")
+  ) || (
+    message.includes("handedness") &&
+    (message.includes("does not exist") || message.includes("could not find"))
+  );
+}
+
 async function reconcileAiSubscription(user, subscription) {
   const priceIds = getStripePriceIds();
   const entitlementDenied = !hasSubscriptionEntitlement(subscription, "ai", priceIds);
@@ -86,7 +96,7 @@ async function readUserHittingData(accessToken, userId) {
   const { url, publicKey } = requireSupabasePublicConfig();
   const headers = { Authorization: `Bearer ${accessToken}`, apikey: publicKey };
   const profileParams = new URLSearchParams({
-    select: "athlete_name,sport_type",
+    select: "athlete_name,sport_type,handedness",
     user_id: `eq.${userId}`,
     limit: "1",
   });
@@ -95,16 +105,34 @@ async function readUserHittingData(accessToken, userId) {
     user_id: `eq.${userId}`,
     order: "updated_at.asc",
   });
-  const [profileResponse, gamesResponse] = await Promise.all([
+  let [profileResponse, gamesResponse] = await Promise.all([
     fetch(`${url}/rest/v1/hitting_log_profiles?${profileParams}`, { headers }),
     fetch(`${url}/rest/v1/hitting_log_games?${gamesParams}`, { headers }),
   ]);
+
+  if (!profileResponse.ok) {
+    const profileError = await profileResponse.clone().json().catch(() => null);
+    if (isMissingHandednessColumnError(profileError)) {
+      console.warn("Hitting Log AI profile schema does not include handedness; using neutral location descriptions.", {
+        userId,
+        code: profileError.code || null,
+      });
+      const legacyProfileParams = new URLSearchParams({
+        select: "athlete_name,sport_type",
+        user_id: `eq.${userId}`,
+        limit: "1",
+      });
+      profileResponse = await fetch(`${url}/rest/v1/hitting_log_profiles?${legacyProfileParams}`, { headers });
+    }
+  }
+
   if (!profileResponse.ok || !gamesResponse.ok) {
     throw new Error("Unable to load the authenticated hitter's data.");
   }
   const [profiles, gameRows] = await Promise.all([profileResponse.json(), gamesResponse.json()]);
   return {
     athleteName: profiles?.[0]?.athlete_name || "Your hitter",
+    handedness: ["right", "left"].includes(profiles?.[0]?.handedness) ? profiles[0].handedness : null,
     games: (Array.isArray(gameRows) ? gameRows : []).map((row) => row?.payload).filter(Boolean),
   };
 }
@@ -188,7 +216,7 @@ module.exports = async function handler(req, res) {
     return send(res, 503, { error: "We couldn’t load this hitter’s data right now.", code: "data_load_failed" });
   }
 
-  const result = analyzeQuestion({ message, history, games: hitterData.games });
+  const result = analyzeQuestion({ message, history, games: hitterData.games, handedness: hitterData.handedness });
   const immediateAnswer = directAnswer(result);
   if (immediateAnswer) {
     return send(res, 200, { answer: immediateAnswer, athleteName: hitterData.athleteName });
@@ -220,6 +248,7 @@ module.exports = async function handler(req, res) {
 module.exports._test = {
   consumeRateLimit,
   directAnswer,
+  isMissingHandednessColumnError,
   modelFailureAnswer,
   sanitizeHistory,
   shouldReconcileDeniedUser,

@@ -233,38 +233,7 @@ function renderChartStrikeZone() {
 
   zoneMap.innerHTML = "";
 
-  const chartPitchLocations =
-    Array.isArray(window.pitchLocations) && window.pitchLocations.length
-      ? window.pitchLocations
-      : Array.isArray(window.dataStorePitchLocations) && window.dataStorePitchLocations.length
-        ? window.dataStorePitchLocations
-      : [
-          { id: "top-left-out", label: "Top Left", isZone: false },
-          { id: "high-left-out", label: "High Left", isZone: false },
-          { id: "high-mid-out", label: "High", isZone: false },
-          { id: "high-right-out", label: "High Right", isZone: false },
-          { id: "top-right-out", label: "Top Right", isZone: false },
-          { id: "far-left-high-out", label: "Far Inside High", isZone: false },
-          { id: "zone-1", label: "Zone 1", isZone: true },
-          { id: "zone-2", label: "Zone 2", isZone: true },
-          { id: "zone-3", label: "Zone 3", isZone: true },
-          { id: "far-right-high-out", label: "Far Outside High", isZone: false },
-          { id: "left-out", label: "Inside", isZone: false },
-          { id: "zone-4", label: "Zone 4", isZone: true },
-          { id: "zone-5", label: "Zone 5", isZone: true },
-          { id: "zone-6", label: "Zone 6", isZone: true },
-          { id: "right-out", label: "Outside", isZone: false },
-          { id: "far-left-low-out", label: "Far Inside Low", isZone: false },
-          { id: "zone-7", label: "Zone 7", isZone: true },
-          { id: "zone-8", label: "Zone 8", isZone: true },
-          { id: "zone-9", label: "Zone 9", isZone: true },
-          { id: "far-right-low-out", label: "Far Outside Low", isZone: false },
-          { id: "bottom-left-out", label: "Bottom Left", isZone: false },
-          { id: "low-left-out", label: "Low Left", isZone: false },
-          { id: "low-mid-out", label: "Low", isZone: false },
-          { id: "low-right-out", label: "Low Right", isZone: false },
-          { id: "bottom-right-out", label: "Bottom Right", isZone: false },
-        ];
+  const chartPitchLocations = window.hittingLogPitchGrid?.locations || [];
 
   chartPitchLocations.forEach((location) => {
     const cell = document.createElement("div");
