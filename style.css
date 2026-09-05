@@ -1237,6 +1237,55 @@ body[data-page="landing"] {
   width: min(1040px, calc(100% - 36px));
 }
 
+.free-games-banner {
+  border-bottom: 1px solid rgba(243, 234, 219, 0.2);
+  background: var(--navy);
+  color: var(--bg);
+}
+
+.free-games-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 18px;
+  min-height: 54px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.free-games-banner-title {
+  flex: 0 0 auto;
+  letter-spacing: 0.035em;
+}
+
+.free-games-banner-copy {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.94rem;
+}
+
+.free-games-banner-cta {
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border: 1px solid rgba(243, 234, 219, 0.55);
+  border-radius: 999px;
+  color: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 900;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.free-games-banner-cta:hover,
+.free-games-banner-cta:focus-visible {
+  border-color: var(--bg);
+  background: var(--bg);
+  color: var(--navy);
+}
+
+.free-games-banner-cta:focus-visible {
+  outline: 2px solid var(--bg);
+  outline-offset: 2px;
+}
+
 .landing-hero {
   padding: 58px 0 84px;
   border-bottom: 0;
@@ -1593,6 +1642,37 @@ body[data-page="landing"] {
     width: min(100% - 28px, 1040px);
   }
 
+  .free-games-banner-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 12px;
+    min-height: 0;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .free-games-banner-title,
+  .free-games-banner-copy {
+    grid-column: 1;
+  }
+
+  .free-games-banner-title {
+    font-size: 0.88rem;
+  }
+
+  .free-games-banner-copy {
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .free-games-banner-cta {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
   .landing-hero {
     padding: 34px 0 68px;
   }
@@ -1631,6 +1711,22 @@ body[data-page="landing"] {
 
   .development-list li {
     font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .free-games-banner-title {
+    grid-column: 1 / -1;
+  }
+
+  .free-games-banner-copy {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .free-games-banner-cta {
+    grid-column: 2;
+    grid-row: 2;
   }
 }
 
