@@ -183,8 +183,8 @@
   assert(stats.formatDeterministicAnswer(opponentAverage) === "Your batting average against A was .000.", "opponent stat answer is not concise");
 
   const recentHardHit = stats.analyzeQuestion({ message: "What was my hard-hit percentage in my last two games?", games });
-  assert(recentHardHit.type === "stat_lookup" && recentHardHit.value === "22%", "recent-game hard-hit lookup is incorrect");
-  assert(stats.formatDeterministicAnswer(recentHardHit) === "Your hard-hit percentage over your last 2 games was 22%.", "recent hard-hit answer included extra data");
+  assert(recentHardHit.type === "stat_lookup" && recentHardHit.value === "22.2%", "recent-game hard-hit lookup is incorrect");
+  assert(stats.formatDeterministicAnswer(recentHardHit) === "Your hard-hit percentage over your last 2 games was 22.2%. It measures the share of eligible balls in play marked hard hit.", "recent hard-hit answer included extra data");
 
   const formula = stats.analyzeQuestion({ message: "How do you calculate batting average?", games: [] });
   assert(formula.type === "formula", "formula request incorrectly required hitting data");
