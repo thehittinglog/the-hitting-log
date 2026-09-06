@@ -6087,12 +6087,13 @@ function initAccountPage() {
 
   function renderGuardianConfirmation() {
     const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirthInput.value);
-    const requiresConfirmation = age !== null && age < 18;
+    const requiresConfirmation = age !== null && age >= 13 && age < 18;
+    const isUnderMinimumAge = age !== null && age < 13;
     guardianConfirmation.hidden = !requiresConfirmation;
     guardianPermissionInput.required = requiresConfirmation;
-    guardianCopy.textContent = age !== null && age < 13
-      ? "I am the parent or legal guardian creating and managing this account."
-      : "I have permission from a parent or legal guardian to use Hitting Log AI.";
+    guardianCopy.textContent = "I have permission from my parent or legal guardian to use The Hitting Log.";
+    if (!requiresConfirmation) guardianPermissionInput.checked = false;
+    dateOfBirthInput.setCustomValidity(isUnderMinimumAge ? "Account owners must be 13 years of age or older." : "");
   }
 
   function setProfileFormOpen(isOpen) {
@@ -6166,15 +6167,21 @@ function initAccountPage() {
       return;
     }
 
+    if (age !== null && age < 13) {
+      setAuthFormMessage(profileMessage, "Account owners must be 13 years of age or older.", "error");
+      dateOfBirthInput.focus();
+      return;
+    }
+
     if (age !== null && age < 18 && !guardianPermissionInput.checked) {
       setAuthFormMessage(profileMessage, "Confirm the parent or legal guardian requirement before saving.", "error");
       guardianPermissionInput.focus();
       return;
     }
 
-    const guardianPermissionConfirmedAt = age !== null && age < 18
+    const guardianPermissionConfirmedAt = age !== null && age >= 13 && age < 18
       ? profile.guardianPermissionConfirmedAt || new Date().toISOString()
-      : profile.guardianPermissionConfirmedAt || null;
+      : null;
 
     isSaving = true;
     saveButton.disabled = true;
@@ -6675,13 +6682,13 @@ function initSignupPage() {
 
   function renderSignupGuardianConfirmation() {
     const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirthInput.value);
-    const requiresConfirmation = age !== null && age < 18;
+    const requiresConfirmation = age !== null && age >= 13 && age < 18;
+    const isUnderMinimumAge = age !== null && age < 13;
     guardianConfirmation.hidden = !requiresConfirmation;
     guardianPermissionInput.required = requiresConfirmation;
     if (!requiresConfirmation) guardianPermissionInput.checked = false;
-    guardianCopy.textContent = age !== null && age < 13
-      ? "I am the parent or legal guardian creating and managing this account."
-      : "I have permission from a parent or legal guardian to create this account and use Hitting Log AI.";
+    guardianCopy.textContent = "I have permission from my parent or legal guardian to use The Hitting Log.";
+    dateOfBirthInput.setCustomValidity(isUnderMinimumAge ? "Account owners must be 13 years of age or older." : "");
   }
 
   dateOfBirthInput.addEventListener("input", renderSignupGuardianConfirmation);
@@ -6762,6 +6769,12 @@ function initSignupPage() {
 
     if (!dateOfBirth || age === null) {
       signupMessage.textContent = "Enter a valid date of birth that is not in the future.";
+      dateOfBirthInput.focus();
+      return;
+    }
+
+    if (age < 13) {
+      signupMessage.textContent = "Account owners must be 13 years of age or older.";
       dateOfBirthInput.focus();
       return;
     }
@@ -6957,6 +6970,14 @@ async function bootstrapApplication() {
       throw new Error("Supabase data storage is unavailable on this page.");
     }
     await window.initializeHittingLogDataStore();
+
+    const accountEligibility = window.hittingLogAgeEligibility?.getAccountEligibility(
+      window.getHittingLogProfile?.() || {},
+    );
+    if (accountEligibility?.code === "account_age_restricted" && page !== "account") {
+      redirectTo("account.html#profile-date-of-birth-input");
+      return;
+    }
 
     if (new Set(["games", "advanced", "charts"]).has(page)) {
       try {

@@ -2185,7 +2185,7 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
 }
 
 .account-help-popover[hidden],
-.age-guardian-confirmation[hidden] {
+.checkbox-label.age-guardian-confirmation[hidden] {
   display: none;
 }
 

@@ -75,25 +75,39 @@ function birthDateYearsAgo(years) {
   assert.equal(result.body.code, "date_of_birth_required");
   assert.equal(openAIRequests, 0);
 
-  profile = { athlete_name: "Young Player", date_of_birth: birthDateYearsAgo(10) };
+  profile = { athlete_name: "Young Player", date_of_birth: birthDateYearsAgo(12) };
   result = await invoke();
   assert.equal(result.body.code, "ai_age_restricted");
   assert.equal(openAIRequests, 0);
 
-  profile = { athlete_name: "Teen Player", date_of_birth: birthDateYearsAgo(15), guardian_permission_confirmed_at: null };
+  profile = { athlete_name: "Teen Player", date_of_birth: birthDateYearsAgo(13), guardian_permission_confirmed_at: null };
   result = await invoke();
   assert.equal(result.body.code, "guardian_permission_required");
   assert.equal(openAIRequests, 0);
 
-  profile = { athlete_name: "Teen Player", date_of_birth: birthDateYearsAgo(15), guardian_permission_confirmed_at: "2026-09-06T00:00:00Z" };
+  profile = { athlete_name: "Teen Player", date_of_birth: birthDateYearsAgo(17), guardian_permission_confirmed_at: null };
+  result = await invoke();
+  assert.equal(result.body.code, "guardian_permission_required");
+  assert.equal(openAIRequests, 0);
+
+  profile = { athlete_name: "Teen Player", date_of_birth: birthDateYearsAgo(17), guardian_permission_confirmed_at: "2026-09-06T00:00:00Z" };
   result = await invoke();
   assert.equal(result.status, 200);
   assert.equal(openAIRequests, 1);
 
-  profile = { athlete_name: "Adult Player", date_of_birth: "1990-01-01" };
+  profile = { athlete_name: "Adult Player", date_of_birth: birthDateYearsAgo(18) };
   result = await invoke();
   assert.equal(result.status, 200);
   assert.equal(openAIRequests, 2);
+
+  profile = {
+    athlete_name: "Adult Player",
+    date_of_birth: birthDateYearsAgo(29),
+    guardian_permission_confirmed_at: "2020-01-01T00:00:00Z",
+  };
+  result = await invoke();
+  assert.equal(result.status, 200);
+  assert.equal(openAIRequests, 3);
   assert.doesNotMatch(lastOpenAIInput, /dateOfBirth|date_of_birth|guardianPermission|guardian_permission|\bage\b/i);
 
   console.log("Hitting Log AI age-gate tests passed");
