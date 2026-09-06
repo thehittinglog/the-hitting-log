@@ -103,7 +103,7 @@
       },
       ai_age_restricted: {
         title: "Hitting Log AI is available for ages 13+",
-        copy: "You can continue using the rest of The Hitting Log with a parent or legal guardian managing the account.",
+        copy: "Account owners must be 13 years of age or older.",
       },
     }[code] || {
       title: "Confirm your eligibility",

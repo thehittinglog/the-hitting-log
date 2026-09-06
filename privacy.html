@@ -44,8 +44,8 @@
           <li>Email address</li>
           <li>Password (encrypted through our authentication provider)</li>
           <li>Sport selection</li>
-          <li>Date of Birth</li>
-          <li>Parent or legal guardian permission confirmation, when applicable</li>
+          <li>Date of birth</li>
+          <li>A user's affirmation of parent or legal guardian permission, when applicable</li>
         </ul>
         <h3>Athlete Information</h3>
         <p>Users may choose to enter:</p>
@@ -86,7 +86,7 @@
           <li>Store hitting data</li>
           <li>Calculate statistics</li>
           <li>Provide analytics</li>
-          <li>Apply age-based account-management and Hitting Log AI eligibility rules</li>
+          <li>Use date of birth to determine age eligibility, apply age-appropriate account requirements, and determine whether parent or legal guardian permission is required</li>
           <li>Provide, secure, and operate Hitting Log AI and generate responses about recorded hitting performance</li>
           <li>Process subscriptions</li>
           <li>Send account emails</li>
@@ -130,7 +130,7 @@
           <li>Hitter handedness, when recorded and relevant to interpreting pitch locations</li>
           <li>A pseudonymous account identifier used for safety and abuse-prevention purposes</li>
         </ul>
-        <p>We use Date of Birth and, when applicable, parent or legal guardian permission confirmation to apply age-based account-management and Hitting Log AI eligibility rules. Date of Birth, exact age, age category, and guardian-permission information are not intentionally sent to OpenAI.</p>
+        <p>We use date of birth and, when applicable, the user's affirmation of parent or legal guardian permission to determine age eligibility and apply account and Hitting Log AI requirements. Date of birth, exact age, age category, and guardian-permission information are not intentionally sent to OpenAI.</p>
         <p>The current implementation does not intentionally send OpenAI the athlete's name, email address, date of birth, the player's team information, or raw database records containing complete games, at-bats, or pitches. However, information a user voluntarily includes in a question will be transmitted as part of that question. Users should not include unnecessary sensitive personal information in Hitting Log AI prompts.</p>
         <p>The Hitting Log processes raw game, at-bat, and pitch records within its own application logic and provides OpenAI with selected calculated information needed to generate the response. AI-generated output is then returned to the user through The Hitting Log.</p>
         <p>OpenAI states that data submitted through its API is not used to train or improve its models by default unless the API customer has explicitly opted in to data sharing. The Hitting Log configures its OpenAI requests with response storage disabled. This does not necessarily prevent separate temporary retention for security or abuse-prevention purposes. Under OpenAI's standard API data controls, OpenAI may retain API inputs, outputs, and related metadata in abuse-monitoring logs for up to 30 days, unless a different approved retention configuration applies or longer retention is required for legal or safety reasons. Additional information is available in OpenAI's <a class="privacy-contact-link" href="https://developers.openai.com/api/docs/guides/your-data">API data controls documentation</a>.</p>
@@ -152,9 +152,9 @@
 
       <section class="privacy-section" aria-labelledby="childrens-privacy">
         <h2 id="childrens-privacy">Children's Privacy</h2>
-        <p>The general Hitting Log application supports baseball and softball players of all ages. Athletes under 13 may use the general application only through an account created and managed by a parent or legal guardian.</p>
-        <p>Hitting Log AI is available only to users who are at least 13 years old. Users ages 13 through 17 may use Hitting Log AI only with permission from a parent or legal guardian.</p>
-        <p>If you believe a child under 13 has used Hitting Log AI or provided personal information through Hitting Log AI, please contact us so we can review the matter and take appropriate action.</p>
+        <p>Account owners must be at least 13 years old. Users under 13 are not permitted to create or maintain an account with The Hitting Log, and parent or legal guardian permission does not override this minimum age requirement.</p>
+        <p>Users ages 13 through 17 may use The Hitting Log, including Hitting Log AI, only with permission from a parent or legal guardian. The application requires these users to affirm that they have received permission; The Hitting Log does not independently verify the identity of the parent or legal guardian or independently verify that permission.</p>
+        <p>Users age 18 or older may create and use an account without parent or legal guardian permission. If you believe a child under 13 has created or maintained an account or provided personal information through The Hitting Log, please contact us so we can review the matter and take appropriate action.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="cookies">
