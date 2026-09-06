@@ -9,6 +9,7 @@ const {
 const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
 const { getStripePriceIds, hasSubscriptionEntitlement } = require("../lib/membership");
+const { getAiEligibility } = require("../lib/age-eligibility");
 const { loadStripePriceCatalog } = require("../lib/stripe-subscription");
 const { isReconciliationDue, reconcileSubscription } = require("../lib/subscription-reconciliation");
 
@@ -54,14 +55,23 @@ function shouldReconcileDeniedUser(userId) {
   return true;
 }
 
-function isMissingHandednessColumnError(error) {
+function isMissingProfileColumnError(error, columnName) {
   const message = String(error?.message || "").toLowerCase();
   return (
-    ["42703", "PGRST204"].includes(error?.code) && message.includes("handedness")
+    ["42703", "PGRST204"].includes(error?.code) && message.includes(columnName)
   ) || (
-    message.includes("handedness") &&
+    message.includes(columnName) &&
     (message.includes("does not exist") || message.includes("could not find"))
   );
+}
+
+function isMissingEligibilityColumnError(error) {
+  return isMissingProfileColumnError(error, "date_of_birth")
+    || isMissingProfileColumnError(error, "guardian_permission_confirmed_at");
+}
+
+function isMissingHandednessColumnError(error) {
+  return isMissingProfileColumnError(error, "handedness");
 }
 
 async function reconcileAiSubscription(user, subscription) {
@@ -96,7 +106,7 @@ async function readUserHittingData(accessToken, userId) {
   const { url, publicKey } = requireSupabasePublicConfig();
   const headers = { Authorization: `Bearer ${accessToken}`, apikey: publicKey };
   const profileParams = new URLSearchParams({
-    select: "athlete_name,sport_type,handedness",
+    select: "athlete_name,sport_type,handedness,date_of_birth,guardian_permission_confirmed_at",
     user_id: `eq.${userId}`,
     limit: "1",
   });
@@ -109,6 +119,22 @@ async function readUserHittingData(accessToken, userId) {
     fetch(`${url}/rest/v1/hitting_log_profiles?${profileParams}`, { headers }),
     fetch(`${url}/rest/v1/hitting_log_games?${gamesParams}`, { headers }),
   ]);
+
+  if (!profileResponse.ok) {
+    const profileError = await profileResponse.clone().json().catch(() => null);
+    if (isMissingEligibilityColumnError(profileError)) {
+      console.warn("Hitting Log AI profile schema does not include age eligibility fields; treating date of birth as missing.", {
+        userId,
+        code: profileError.code || null,
+      });
+      const compatibleProfileParams = new URLSearchParams({
+        select: "athlete_name,sport_type,handedness",
+        user_id: `eq.${userId}`,
+        limit: "1",
+      });
+      profileResponse = await fetch(`${url}/rest/v1/hitting_log_profiles?${compatibleProfileParams}`, { headers });
+    }
+  }
 
   if (!profileResponse.ok) {
     const profileError = await profileResponse.clone().json().catch(() => null);
@@ -133,6 +159,8 @@ async function readUserHittingData(accessToken, userId) {
   return {
     athleteName: profiles?.[0]?.athlete_name || "Your hitter",
     handedness: ["right", "left"].includes(profiles?.[0]?.handedness) ? profiles[0].handedness : null,
+    dateOfBirth: profiles?.[0]?.date_of_birth || null,
+    guardianPermissionConfirmedAt: profiles?.[0]?.guardian_permission_confirmed_at || null,
     games: (Array.isArray(gameRows) ? gameRows : []).map((row) => row?.payload).filter(Boolean),
   };
 }
@@ -182,6 +210,35 @@ module.exports = async function handler(req, res) {
     return send(res, 401, { error: "Your session has expired. Please sign in again.", code: "invalid_auth_token" });
   }
 
+  let hitterData;
+  try {
+    hitterData = await readUserHittingData(accessToken, authentication.user.id);
+  } catch (error) {
+    console.error("Hitting Log AI data lookup failed:", error.message);
+    return send(res, 503, { error: "We couldn’t load this hitter’s data right now.", code: "data_load_failed" });
+  }
+
+  const eligibility = getAiEligibility(hitterData);
+  if (!eligibility.eligible) {
+    const responses = {
+      date_of_birth_required: {
+        error: "We need your date of birth to confirm eligibility for Hitting Log AI. You can add it in My Account.",
+        code: "date_of_birth_required",
+        actionUrl: "/account.html#profile-date-of-birth-input",
+      },
+      guardian_permission_required: {
+        error: "Parent or legal guardian permission is required to use Hitting Log AI. Confirm permission in My Account.",
+        code: "guardian_permission_required",
+        actionUrl: "/account.html#profile-date-of-birth-input",
+      },
+      ai_age_restricted: {
+        error: "Hitting Log AI is available only to users age 13 or older.",
+        code: "ai_age_restricted",
+      },
+    };
+    return send(res, 403, responses[eligibility.code] || responses.date_of_birth_required);
+  }
+
   let subscription;
   try {
     subscription = await getAuthenticatedUserSubscription(accessToken, authentication.user.id);
@@ -203,17 +260,9 @@ module.exports = async function handler(req, res) {
   if (message.length > MAX_MESSAGE_LENGTH) {
     return send(res, 400, { error: `Keep questions under ${MAX_MESSAGE_LENGTH} characters.`, code: "message_too_long" });
   }
+  const history = sanitizeHistory(req.body?.history);
   if (!consumeRateLimit(authentication.user.id)) {
     return send(res, 429, { error: "You’ve asked several questions quickly. Please wait a few minutes and try again.", code: "rate_limited" });
-  }
-
-  const history = sanitizeHistory(req.body?.history);
-  let hitterData;
-  try {
-    hitterData = await readUserHittingData(accessToken, authentication.user.id);
-  } catch (error) {
-    console.error("Hitting Log AI data lookup failed:", error.message);
-    return send(res, 503, { error: "We couldn’t load this hitter’s data right now.", code: "data_load_failed" });
   }
 
   const result = analyzeQuestion({ message, history, games: hitterData.games, handedness: hitterData.handedness });
@@ -248,7 +297,9 @@ module.exports = async function handler(req, res) {
 module.exports._test = {
   consumeRateLimit,
   directAnswer,
+  isMissingEligibilityColumnError,
   isMissingHandednessColumnError,
+  isMissingProfileColumnError,
   modelFailureAnswer,
   sanitizeHistory,
   shouldReconcileDeniedUser,

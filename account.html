@@ -77,6 +77,7 @@
           <div class="account-profile-details" aria-live="polite">
             <p><span>Athlete Name</span><strong id="profile-athlete-name">Loading...</strong></p>
             <p><span>Account Email</span><strong id="profile-email">Loading...</strong></p>
+            <p><span>Date of Birth</span><strong id="profile-date-of-birth">Loading...</strong></p>
           </div>
           <button id="edit-profile-button" type="button" aria-expanded="false" aria-controls="profile-edit-form">Edit Profile</button>
           <form id="profile-edit-form" class="account-profile-form" hidden>
@@ -102,6 +103,21 @@
                 <option value="right">Right-handed</option>
                 <option value="left">Left-handed</option>
               </select>
+            </label>
+            <div class="account-profile-field">
+              <div class="account-profile-label-row">
+                <label for="profile-date-of-birth-input">Date of Birth</label>
+                <button id="date-of-birth-help-button" class="metric-info-button" type="button" aria-label="Why do we ask for this?" title="Why do we ask for this?" aria-expanded="false" aria-controls="date-of-birth-help">?</button>
+              </div>
+              <div id="date-of-birth-help" class="account-help-popover" role="tooltip" hidden>
+                <strong>Why do we ask for this?</strong>
+                <p>We use your date of birth to apply age-based account and AI access rules. Players under 13 need a parent or legal guardian to manage their account, and Hitting Log AI is only available to eligible users. Your date of birth is not sent to OpenAI.</p>
+              </div>
+              <input id="profile-date-of-birth-input" name="dateOfBirth" type="date" autocomplete="bday">
+            </div>
+            <label id="profile-guardian-confirmation" class="checkbox-label age-guardian-confirmation" for="profile-guardian-permission" hidden>
+              <input type="checkbox" id="profile-guardian-permission">
+              <span id="profile-guardian-copy">I have permission from a parent or legal guardian to use Hitting Log AI.</span>
             </label>
             <div class="account-form-actions">
               <button id="profile-save-button" type="submit">Save Changes</button>
@@ -177,6 +193,7 @@
   <script src="scripts/supabase-client.js"></script>
   <script src="scripts/auth.js"></script>
   <script src="lib/pitch-location-grid.js"></script>
+  <script src="lib/age-eligibility.js"></script>
   <script src="scripts/data-store.js"></script>
   <script src="scripts/membership.js"></script>
   <script src="scripts/stripe-checkout.js"></script>

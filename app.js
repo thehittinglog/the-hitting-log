@@ -261,10 +261,12 @@ async function updateCurrentAccountSportType(sportType) {
     athleteName: profile.athleteName || "",
     sportType,
     handedness: profile.handedness,
+    dateOfBirth: profile.dateOfBirth,
+    guardianPermissionConfirmedAt: profile.guardianPermissionConfirmedAt,
   });
 }
 
-async function updateCurrentAccountProfile({ athleteName, sportType, handedness }) {
+async function updateCurrentAccountProfile({ athleteName, sportType, handedness, dateOfBirth, guardianPermissionConfirmedAt }) {
   if (typeof window.saveHittingLogProfile !== "function") {
     throw new Error("Supabase profile storage is unavailable.");
   }
@@ -272,6 +274,8 @@ async function updateCurrentAccountProfile({ athleteName, sportType, handedness 
     athleteName: String(athleteName || "").trim(),
     sportType: normalizeSportType(sportType),
     handedness: normalizeHitterHandedness(handedness),
+    dateOfBirth: window.hittingLogAgeEligibility?.normalizeDateOfBirth(dateOfBirth) || null,
+    guardianPermissionConfirmedAt: guardianPermissionConfirmedAt || null,
   });
 }
 
@@ -6006,6 +6010,7 @@ function initAccountPage() {
   const sportTypeValue = document.getElementById("sport-type-value");
   const athleteNameValue = document.getElementById("profile-athlete-name");
   const profileEmailValue = document.getElementById("profile-email");
+  const dateOfBirthValue = document.getElementById("profile-date-of-birth");
   const securityEmailValue = document.getElementById("security-email");
   const editButton = document.getElementById("edit-profile-button");
   const profileForm = document.getElementById("profile-edit-form");
@@ -6013,6 +6018,12 @@ function initAccountPage() {
   const athleteNameInput = document.getElementById("profile-athlete-name-input");
   const sportTypeInput = document.getElementById("profile-sport-type-input");
   const handednessInput = document.getElementById("profile-handedness-input");
+  const dateOfBirthInput = document.getElementById("profile-date-of-birth-input");
+  const guardianConfirmation = document.getElementById("profile-guardian-confirmation");
+  const guardianPermissionInput = document.getElementById("profile-guardian-permission");
+  const guardianCopy = document.getElementById("profile-guardian-copy");
+  const dateOfBirthHelpButton = document.getElementById("date-of-birth-help-button");
+  const dateOfBirthHelp = document.getElementById("date-of-birth-help");
   const saveButton = document.getElementById("profile-save-button");
   const cancelButton = document.getElementById("profile-cancel-button");
   const profileMessage = document.getElementById("profile-message");
@@ -6020,7 +6031,26 @@ function initAccountPage() {
   const securityMessage = document.getElementById("security-message");
   const accountLogoutButton = document.getElementById("account-logout-button");
 
-  if (!sportTypeValue || !editButton || !profileForm || !handednessInput) {
+  if (
+    !sportTypeValue ||
+    !athleteNameValue ||
+    !profileEmailValue ||
+    !dateOfBirthValue ||
+    !securityEmailValue ||
+    !editButton ||
+    !profileForm ||
+    !emailInput ||
+    !athleteNameInput ||
+    !sportTypeInput ||
+    !handednessInput ||
+    !dateOfBirthInput ||
+    !guardianConfirmation ||
+    !guardianPermissionInput ||
+    !guardianCopy ||
+    !saveButton ||
+    !cancelButton ||
+    !profileMessage
+  ) {
     return;
   }
 
@@ -6030,6 +6060,8 @@ function initAccountPage() {
     athleteName: localAccount?.athleteName || "",
     sportType: getCurrentSportType(),
     handedness: normalizeHitterHandedness(localAccount?.handedness),
+    dateOfBirth: localAccount?.dateOfBirth || null,
+    guardianPermissionConfirmedAt: localAccount?.guardianPermissionConfirmedAt || null,
     metadata: {},
   };
   let isSaving = false;
@@ -6042,11 +6074,25 @@ function initAccountPage() {
     sportTypeValue.textContent = sportLabel(profile.sportType);
     athleteNameValue.textContent = profile.athleteName || "Not set";
     profileEmailValue.textContent = profile.email || "Unavailable";
+    dateOfBirthValue.textContent = profile.dateOfBirth || "Not set";
     securityEmailValue.textContent = profile.email || "your account email";
     emailInput.value = profile.email;
     athleteNameInput.value = profile.athleteName;
     sportTypeInput.value = normalizeSportType(profile.sportType);
     handednessInput.value = normalizeHitterHandedness(profile.handedness) || "";
+    dateOfBirthInput.value = profile.dateOfBirth || "";
+    guardianPermissionInput.checked = Boolean(profile.guardianPermissionConfirmedAt);
+    renderGuardianConfirmation();
+  }
+
+  function renderGuardianConfirmation() {
+    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirthInput.value);
+    const requiresConfirmation = age !== null && age < 18;
+    guardianConfirmation.hidden = !requiresConfirmation;
+    guardianPermissionInput.required = requiresConfirmation;
+    guardianCopy.textContent = age !== null && age < 13
+      ? "I am the parent or legal guardian creating and managing this account."
+      : "I have permission from a parent or legal guardian to use Hitting Log AI.";
   }
 
   function setProfileFormOpen(isOpen) {
@@ -6060,6 +6106,27 @@ function initAccountPage() {
   }
 
   renderProfile();
+  dateOfBirthInput.max = new Date().toISOString().slice(0, 10);
+  dateOfBirthInput.addEventListener("input", renderGuardianConfirmation);
+
+  dateOfBirthHelpButton?.addEventListener("click", () => {
+    const willOpen = dateOfBirthHelp.hidden;
+    dateOfBirthHelp.hidden = !willOpen;
+    dateOfBirthHelpButton.setAttribute("aria-expanded", String(willOpen));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!dateOfBirthHelp || dateOfBirthHelp.hidden || dateOfBirthHelp.contains(event.target) || dateOfBirthHelpButton?.contains(event.target)) return;
+    dateOfBirthHelp.hidden = true;
+    dateOfBirthHelpButton?.setAttribute("aria-expanded", "false");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !dateOfBirthHelp || dateOfBirthHelp.hidden) return;
+    dateOfBirthHelp.hidden = true;
+    dateOfBirthHelpButton?.setAttribute("aria-expanded", "false");
+    dateOfBirthHelpButton?.focus();
+  });
 
   editButton.addEventListener("click", () => {
     renderProfile();
@@ -6084,12 +6151,30 @@ function initAccountPage() {
     const athleteName = athleteNameInput.value.trim();
     const sportType = normalizeSportType(sportTypeInput.value);
     const handedness = normalizeHitterHandedness(handednessInput.value);
+    const dateOfBirth = window.hittingLogAgeEligibility?.normalizeDateOfBirth(dateOfBirthInput.value) || null;
+    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirth);
 
     if (!athleteName) {
       setAuthFormMessage(profileMessage, "Enter an athlete name before saving.", "error");
       athleteNameInput.focus();
       return;
     }
+
+    if (dateOfBirthInput.value && age === null) {
+      setAuthFormMessage(profileMessage, "Enter a valid date of birth that is not in the future.", "error");
+      dateOfBirthInput.focus();
+      return;
+    }
+
+    if (age !== null && age < 18 && !guardianPermissionInput.checked) {
+      setAuthFormMessage(profileMessage, "Confirm the parent or legal guardian requirement before saving.", "error");
+      guardianPermissionInput.focus();
+      return;
+    }
+
+    const guardianPermissionConfirmedAt = age !== null && age < 18
+      ? profile.guardianPermissionConfirmedAt || new Date().toISOString()
+      : profile.guardianPermissionConfirmedAt || null;
 
     isSaving = true;
     saveButton.disabled = true;
@@ -6101,10 +6186,20 @@ function initAccountPage() {
         throw new Error("Profile updates are temporarily unavailable.");
       }
 
+      await updateCurrentAccountProfile({
+        athleteName,
+        sportType,
+        handedness,
+        dateOfBirth,
+        guardianPermissionConfirmedAt,
+      });
+
       const metadata = {
         ...profile.metadata,
         athlete_name: athleteName,
         sport_type: sportType,
+        date_of_birth: dateOfBirth,
+        guardian_permission_confirmed_at: guardianPermissionConfirmedAt,
       };
       const { data, error } = await window.hittingLogAuth.updateProfile(metadata);
 
@@ -6117,9 +6212,10 @@ function initAccountPage() {
         athleteName,
         sportType,
         handedness,
+        dateOfBirth,
+        guardianPermissionConfirmedAt,
         metadata: data?.user?.user_metadata || metadata,
       };
-      await updateCurrentAccountProfile({ athleteName, sportType, handedness });
       renderProfile();
       setProfileFormOpen(false);
       setAuthFormMessage(profileMessage, "Profile updated successfully.", "success");
@@ -6192,9 +6288,15 @@ function initAccountPage() {
           profile.athleteName,
         sportType: normalizeSportType(cloudProfile?.sportType || metadata.sport_type || profile.sportType),
         handedness: normalizeHitterHandedness(cloudProfile?.handedness),
+        dateOfBirth: cloudProfile?.dateOfBirth || metadata.date_of_birth || null,
+        guardianPermissionConfirmedAt: cloudProfile?.guardianPermissionConfirmedAt || metadata.guardian_permission_confirmed_at || null,
         metadata,
       };
       renderProfile();
+      if (window.location.hash === "#profile-date-of-birth-input") {
+        setProfileFormOpen(true);
+        dateOfBirthInput.focus();
+      }
     } catch (error) {
       console.error("Unable to load account profile:", error);
       setAuthFormMessage(profileMessage, error.message || "Unable to load your profile.", "error");
@@ -6543,6 +6645,10 @@ function initSignupPage() {
   const passwordInput = document.getElementById("signup-password");
   const confirmPasswordInput = document.getElementById("signup-confirm-password");
   const sportTypeInput = document.getElementById("signup-sport-type");
+  const dateOfBirthInput = document.getElementById("signup-date-of-birth");
+  const guardianConfirmation = document.getElementById("signup-guardian-confirmation");
+  const guardianPermissionInput = document.getElementById("signup-guardian-permission");
+  const guardianCopy = document.getElementById("signup-guardian-copy");
   const signupMessage = document.getElementById("signup-message");
   const passwordError = document.getElementById("signup-password-error");
   const submitButton = signupForm?.querySelector("button[type='submit']");
@@ -6554,6 +6660,10 @@ function initSignupPage() {
     !passwordInput ||
     !confirmPasswordInput ||
     !sportTypeInput ||
+    !dateOfBirthInput ||
+    !guardianConfirmation ||
+    !guardianPermissionInput ||
+    !guardianCopy ||
     !passwordError ||
     !submitButton
   ) {
@@ -6561,6 +6671,21 @@ function initSignupPage() {
   }
 
   let isSubmitting = false;
+  dateOfBirthInput.max = new Date().toISOString().slice(0, 10);
+
+  function renderSignupGuardianConfirmation() {
+    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirthInput.value);
+    const requiresConfirmation = age !== null && age < 18;
+    guardianConfirmation.hidden = !requiresConfirmation;
+    guardianPermissionInput.required = requiresConfirmation;
+    if (!requiresConfirmation) guardianPermissionInput.checked = false;
+    guardianCopy.textContent = age !== null && age < 13
+      ? "I am the parent or legal guardian creating and managing this account."
+      : "I have permission from a parent or legal guardian to create this account and use Hitting Log AI.";
+  }
+
+  dateOfBirthInput.addEventListener("input", renderSignupGuardianConfirmation);
+  renderSignupGuardianConfirmation();
 
   function setPasswordMismatchError(hasMismatch) {
     passwordError.textContent = hasMismatch ? "Passwords do not match." : "";
@@ -6618,6 +6743,8 @@ function initSignupPage() {
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
     const sportType = normalizeSportType(sportTypeInput.value);
+    const dateOfBirth = window.hittingLogAgeEligibility?.normalizeDateOfBirth(dateOfBirthInput.value);
+    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirth);
 
     signupMessage.classList.remove("is-success");
     signupMessage.textContent = "";
@@ -6632,6 +6759,20 @@ function initSignupPage() {
       signupMessage.textContent = "Enter a valid email address.";
       return;
     }
+
+    if (!dateOfBirth || age === null) {
+      signupMessage.textContent = "Enter a valid date of birth that is not in the future.";
+      dateOfBirthInput.focus();
+      return;
+    }
+
+    if (age < 18 && !guardianPermissionInput.checked) {
+      signupMessage.textContent = "Confirm the parent or legal guardian requirement to continue.";
+      guardianPermissionInput.focus();
+      return;
+    }
+
+    const guardianPermissionConfirmedAt = age < 18 ? new Date().toISOString() : null;
 
     if (!password || !confirmPassword) {
       updateSubmitButtonState();
@@ -6664,7 +6805,11 @@ function initSignupPage() {
         email,
         password,
         options: {
-          data: { sport_type: sportType },
+          data: {
+            sport_type: sportType,
+            date_of_birth: dateOfBirth,
+            guardian_permission_confirmed_at: guardianPermissionConfirmedAt,
+          },
           emailRedirectTo: `${window.location.origin}/login.html`,
         },
       });

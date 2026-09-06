@@ -53,6 +53,14 @@
             <option value="softball">Softball</option>
           </select>
         </label>
+        <label for="signup-date-of-birth">
+          <span>Date of Birth</span>
+          <input type="date" id="signup-date-of-birth" autocomplete="bday" required>
+        </label>
+        <label id="signup-guardian-confirmation" class="checkbox-label age-guardian-confirmation" for="signup-guardian-permission" hidden>
+          <input type="checkbox" id="signup-guardian-permission">
+          <span id="signup-guardian-copy">I have permission from a parent or legal guardian to create this account.</span>
+        </label>
         <button type="submit" disabled>Create Account</button>
       </form>
       <p id="signup-message" class="form-message" aria-live="polite"></p>
@@ -63,6 +71,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="scripts/supabase-client.js"></script>
   <script src="scripts/auth.js"></script>
+  <script src="lib/age-eligibility.js"></script>
   <script src="app.js"></script>
 
   <footer class="site-footer">

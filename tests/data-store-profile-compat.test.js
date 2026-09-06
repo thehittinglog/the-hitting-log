@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const dataStoreSource = fs.readFileSync(require.resolve("../scripts/data-store.js"), "utf8");
+const ageEligibilitySource = fs.readFileSync(require.resolve("../lib/age-eligibility.js"), "utf8");
 
 function createStorage() {
   const values = new Map();
@@ -13,7 +14,7 @@ function createStorage() {
   };
 }
 
-function createClient({ supportsHandedness, initialProfile, games = [] }) {
+function createClient({ supportsHandedness, supportsEligibility = false, initialProfile, games = [] }) {
   let profile = initialProfile;
   const operations = [];
 
@@ -24,6 +25,21 @@ function createClient({ supportsHandedness, initialProfile, games = [] }) {
     }
 
     const requestsHandedness = columns?.includes("handedness") || Object.hasOwn(payload || {}, "handedness");
+    const requestsEligibility = columns?.includes("date_of_birth")
+      || columns?.includes("guardian_permission_confirmed_at")
+      || Object.hasOwn(payload || {}, "date_of_birth")
+      || Object.hasOwn(payload || {}, "guardian_permission_confirmed_at");
+    if (requestsEligibility && !supportsEligibility) {
+      return {
+        data: null,
+        error: {
+          code: operation === "upsert" ? "PGRST204" : "42703",
+          message: operation === "upsert"
+            ? "Could not find the 'date_of_birth' column of 'hitting_log_profiles' in the schema cache"
+            : "column hitting_log_profiles.date_of_birth does not exist",
+        },
+      };
+    }
     if (requestsHandedness && !supportsHandedness) {
       return {
         data: null,
@@ -78,6 +94,7 @@ async function initialize(options) {
       hittingLogSupabaseReady: Promise.resolve(client),
     },
   };
+  vm.runInNewContext(ageEligibilitySource, context, { filename: "lib/age-eligibility.js" });
   vm.runInNewContext(dataStoreSource, context, { filename: "scripts/data-store.js" });
   const result = await context.window.initializeHittingLogDataStore();
   return { client, context, result };
@@ -129,6 +146,51 @@ async function initialize(options) {
     initialProfile: { user_id: "user-1", athlete_name: "Player", sport_type: "baseball", handedness: "unknown-value" },
   });
   assert.equal(malformed.result.profile.handedness, null);
+
+  const nullableDateOfBirth = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: true,
+    initialProfile: {
+      user_id: "user-1",
+      athlete_name: "Existing Player",
+      sport_type: "softball",
+      handedness: "left",
+      date_of_birth: null,
+      guardian_permission_confirmed_at: null,
+    },
+  });
+  assert.equal(nullableDateOfBirth.result.profile.dateOfBirth, null);
+  assert.equal(nullableDateOfBirth.result.profile.handedness, "left");
+
+  const savedWithDateOfBirth = await nullableDateOfBirth.context.window.saveHittingLogProfile({
+    athleteName: "Existing Player",
+    sportType: "softball",
+    handedness: "left",
+    dateOfBirth: "2008-09-06",
+  });
+  assert.equal(savedWithDateOfBirth.dateOfBirth, "2008-09-06");
+  assert.equal(savedWithDateOfBirth.handedness, "left");
+  const savedOperations = nullableDateOfBirth.client.operations.filter((item) => item.operation === "upsert");
+  const savedPayload = savedOperations[savedOperations.length - 1].payload;
+  assert.equal(savedPayload.sport_type, "softball");
+  assert.equal(savedPayload.handedness, "left");
+
+  const compatibleMissingEligibilitySchema = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: false,
+    initialProfile: { user_id: "user-1", athlete_name: "Existing Player", sport_type: "baseball", handedness: "right" },
+  });
+  assert.equal(compatibleMissingEligibilitySchema.result.profile.dateOfBirth, null);
+  assert.equal(compatibleMissingEligibilitySchema.result.profile.handedness, "right");
+  await assert.rejects(
+    compatibleMissingEligibilitySchema.context.window.saveHittingLogProfile({
+      athleteName: "Existing Player",
+      sportType: "baseball",
+      handedness: "right",
+      dateOfBirth: "2000-01-01",
+    }),
+    (error) => error.code === "PROFILE_DATE_OF_BIRTH_SCHEMA_MISSING",
+  );
 
   console.log("Data-store profile schema compatibility tests passed");
 })().catch((error) => {

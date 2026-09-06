@@ -72,14 +72,27 @@
     return handedness === "right" || handedness === "left" ? handedness : null;
   }
 
-  function isMissingHandednessColumnError(error) {
+  function normalizeDateOfBirth(dateOfBirth) {
+    return window.hittingLogAgeEligibility?.normalizeDateOfBirth(dateOfBirth) || null;
+  }
+
+  function normalizeGuardianPermission(value) {
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  }
+
+  function isMissingProfileColumnError(error, columnName) {
     const message = String(error?.message || "").toLowerCase();
     return (
-      ["42703", "PGRST204"].includes(error?.code) && message.includes("handedness")
+      ["42703", "PGRST204"].includes(error?.code) && message.includes(columnName)
     ) || (
-      message.includes("handedness") &&
+      message.includes(columnName) &&
       (message.includes("does not exist") || message.includes("could not find"))
     );
+  }
+
+  function isMissingEligibilityColumnError(error) {
+    return isMissingProfileColumnError(error, "date_of_birth")
+      || isMissingProfileColumnError(error, "guardian_permission_confirmed_at");
   }
 
   function logOperation(operation, details = {}) {
@@ -194,11 +207,23 @@
     logOperation("profile load started");
     let result = await client
       .from(profilesTable)
-      .select("user_id, athlete_name, sport_type, handedness, updated_at")
+      .select("user_id, athlete_name, sport_type, handedness, date_of_birth, guardian_permission_confirmed_at, updated_at")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (isMissingHandednessColumnError(result.error)) {
+    if (isMissingEligibilityColumnError(result.error)) {
+      console.warn("[DataStore] Profile schema does not include age eligibility fields; loading the backwards-compatible profile shape.", {
+        userId: user.id,
+        code: result.error.code || null,
+      });
+      result = await client
+        .from(profilesTable)
+        .select("user_id, athlete_name, sport_type, handedness, updated_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+    }
+
+    if (isMissingProfileColumnError(result.error, "handedness")) {
       console.warn("[DataStore] Profile schema does not include handedness; loading the backwards-compatible profile shape.", {
         userId: user.id,
         code: result.error.code || null,
@@ -221,6 +246,8 @@
           athleteName: data.athlete_name || "",
           sportType: data.sport_type === "softball" ? "softball" : "baseball",
           handedness: normalizeHandedness(data.handedness),
+          dateOfBirth: normalizeDateOfBirth(data.date_of_birth),
+          guardianPermissionConfirmedAt: normalizeGuardianPermission(data.guardian_permission_confirmed_at),
         }
       : null;
     logOperation("profile load succeeded", { found: Boolean(data) });
@@ -234,6 +261,8 @@
       athleteName: String(profile?.athleteName || "").trim(),
       sportType: profile?.sportType === "softball" ? "softball" : "baseball",
       handedness: normalizeHandedness(profile?.handedness),
+      dateOfBirth: normalizeDateOfBirth(profile?.dateOfBirth),
+      guardianPermissionConfirmedAt: normalizeGuardianPermission(profile?.guardianPermissionConfirmedAt),
     };
     logOperation("profile save started");
 
@@ -245,12 +274,38 @@
           athlete_name: savedProfile.athleteName,
           sport_type: savedProfile.sportType,
           handedness: savedProfile.handedness,
+          date_of_birth: savedProfile.dateOfBirth,
+          guardian_permission_confirmed_at: savedProfile.guardianPermissionConfirmedAt,
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id" })
-        .select("user_id, athlete_name, sport_type, handedness")
+        .select("user_id, athlete_name, sport_type, handedness, date_of_birth, guardian_permission_confirmed_at")
         .single();
 
-      if (isMissingHandednessColumnError(result.error)) {
+      if (isMissingEligibilityColumnError(result.error)) {
+        if (savedProfile.dateOfBirth || savedProfile.guardianPermissionConfirmedAt) {
+          const schemaError = new Error("Date of birth cannot be saved until the profile database update is applied.");
+          schemaError.code = "PROFILE_DATE_OF_BIRTH_SCHEMA_MISSING";
+          throw schemaError;
+        }
+
+        console.warn("[DataStore] Profile schema does not include age eligibility fields; saving the backwards-compatible profile shape.", {
+          userId: user.id,
+          code: result.error.code || null,
+        });
+        result = await client
+          .from(profilesTable)
+          .upsert({
+            user_id: user.id,
+            athlete_name: savedProfile.athleteName,
+            sport_type: savedProfile.sportType,
+            handedness: savedProfile.handedness,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" })
+          .select("user_id, athlete_name, sport_type, handedness")
+          .single();
+      }
+
+      if (isMissingProfileColumnError(result.error, "handedness")) {
         if (savedProfile.handedness) {
           const schemaError = new Error("Hitter handedness cannot be saved until the profile database update is applied.");
           schemaError.code = "PROFILE_HANDEDNESS_SCHEMA_MISSING";
@@ -286,6 +341,8 @@
         athleteName: data.athlete_name || "",
         sportType: data.sport_type === "softball" ? "softball" : "baseball",
         handedness: normalizeHandedness(data.handedness),
+        dateOfBirth: normalizeDateOfBirth(data.date_of_birth),
+        guardianPermissionConfirmedAt: normalizeGuardianPermission(data.guardian_permission_confirmed_at),
       };
       logOperation("profile save succeeded");
       return profileCache;
@@ -311,6 +368,8 @@
         "",
       sportType: legacyAccount?.sportType || metadata.sport_type || "baseball",
       handedness: null,
+      dateOfBirth: normalizeDateOfBirth(metadata.date_of_birth),
+      guardianPermissionConfirmedAt: normalizeGuardianPermission(metadata.guardian_permission_confirmed_at),
     };
     await saveProfile(profile, client);
     if (legacyAccount) {

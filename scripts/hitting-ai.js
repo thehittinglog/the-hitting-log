@@ -86,6 +86,40 @@
     setSending(false);
   }
 
+  function renderEligibilityGate(code, serverMessage = "", actionUrl = "") {
+    isPro = false;
+    conversation.replaceChildren();
+    const card = createElement("section", "hitting-ai-upgrade");
+    const icon = createElement("span", "hitting-ai-upgrade-icon", "✦");
+    icon.setAttribute("aria-hidden", "true");
+    const content = {
+      date_of_birth_required: {
+        title: "Add your date of birth to continue",
+        copy: "We need your date of birth to confirm eligibility for Hitting Log AI. You can add it in My Account.",
+      },
+      guardian_permission_required: {
+        title: "Guardian permission required",
+        copy: "A parent or legal guardian must confirm permission before you can use Hitting Log AI.",
+      },
+      ai_age_restricted: {
+        title: "Hitting Log AI is available for ages 13+",
+        copy: "You can continue using the rest of The Hitting Log with a parent or legal guardian managing the account.",
+      },
+    }[code] || {
+      title: "Confirm your eligibility",
+      copy: serverMessage || "Update your account information before using Hitting Log AI.",
+    };
+    card.append(icon, createElement("h3", "", content.title), createElement("p", "", serverMessage || content.copy));
+    const destination = actionUrl || (code === "ai_age_restricted" ? "" : "/account.html#profile-date-of-birth-input");
+    if (destination) {
+      const link = createElement("a", "hitting-ai-upgrade-link", "Go to My Account");
+      link.href = destination;
+      card.appendChild(link);
+    }
+    conversation.appendChild(card);
+    setSending(false);
+  }
+
   function renderStatus(message) {
     conversation.replaceChildren(createElement("p", "hitting-ai-panel-status", message));
   }
@@ -93,6 +127,12 @@
   async function checkAccess() {
     renderStatus("Checking your membership…");
     try {
+      await window.hittingLogDataReady;
+      const eligibility = window.hittingLogAgeEligibility?.getAiEligibility(window.getHittingLogProfile?.() || {});
+      if (eligibility && !eligibility.eligible) {
+        renderEligibilityGate(eligibility.code);
+        return;
+      }
       const membership = await window.hittingLogMembership?.loadStatus({ force: true });
       if (!membership) throw new Error("We couldn’t verify your membership.");
       isPro = membership.entitlements.ai === true;
@@ -160,6 +200,10 @@
       });
       const data = await response.json().catch(() => ({}));
       loading.remove();
+      if (response.status === 403 && ["date_of_birth_required", "guardian_permission_required", "ai_age_restricted"].includes(data.code)) {
+        renderEligibilityGate(data.code, data.error, data.actionUrl);
+        return;
+      }
       if (response.status === 402 || data.code === "upgrade_required") {
         isPro = false;
         renderUpgrade();

@@ -2160,6 +2160,65 @@ body[data-page="games"] .games-season-snapshot-grid .stat-card:nth-child(7) {
   cursor: default;
 }
 
+.account-profile-field {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-profile-label-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.account-help-popover {
+  padding: 14px;
+  border: 1px solid rgba(7, 50, 79, 0.18);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(7, 50, 79, 0.12);
+}
+
+.account-help-popover[hidden],
+.age-guardian-confirmation[hidden] {
+  display: none;
+}
+
+.account-help-popover strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.account-help-popover p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.checkbox-label.age-guardian-confirmation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.checkbox-label.age-guardian-confirmation input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  padding: 0;
+}
+
 .account-form-actions {
   display: flex;
   flex-wrap: wrap;

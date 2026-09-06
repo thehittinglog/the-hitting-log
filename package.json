@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/membership.test.js && node tests/subscription-sync.test.js && node tests/data-store-profile-compat.test.js && node tests/hitter-relative-location.test.js && node tests/hitting-ai-metrics.test.js && node tests/hlp-security.test.js"
+    "test": "node tests/membership.test.js && node tests/subscription-sync.test.js && node tests/data-store-profile-compat.test.js && node tests/age-eligibility.test.js && node tests/hitting-ai-age-gate.test.js && node tests/hitter-relative-location.test.js && node tests/hitting-ai-metrics.test.js && node tests/hlp-security.test.js"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

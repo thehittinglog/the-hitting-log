@@ -26,7 +26,7 @@
       <p class="eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
       <p class="hero-copy">Your privacy matters to us. This page explains what information we collect, how we use it, and how we protect your data.</p>
-      <p class="privacy-effective-date">Effective Date: July 21, 2026</p>
+      <p class="privacy-effective-date">Effective Date: September 6, 2026</p>
     </section>
 
     <div class="panel privacy-panel">
@@ -44,6 +44,8 @@
           <li>Email address</li>
           <li>Password (encrypted through our authentication provider)</li>
           <li>Sport selection</li>
+          <li>Date of Birth</li>
+          <li>Parent or legal guardian permission confirmation, when applicable</li>
         </ul>
         <h3>Athlete Information</h3>
         <p>Users may choose to enter:</p>
@@ -72,6 +74,8 @@
           <li>App usage</li>
           <li>Error logs</li>
         </ul>
+        <h3>AI Interaction Information</h3>
+        <p>When you use Hitting Log AI, we process the question you submit, AI-generated responses, and information derived from your recorded hitting data that is relevant to your question. Up to six previous messages from the current browser session may be sent to The Hitting Log to help interpret follow-up questions. Those previous messages are not currently forwarded verbatim to OpenAI.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="how-we-use-information">
@@ -82,6 +86,8 @@
           <li>Store hitting data</li>
           <li>Calculate statistics</li>
           <li>Provide analytics</li>
+          <li>Apply age-based account-management and Hitting Log AI eligibility rules</li>
+          <li>Provide, secure, and operate Hitting Log AI and generate responses about recorded hitting performance</li>
           <li>Process subscriptions</li>
           <li>Send account emails</li>
           <li>Improve the app</li>
@@ -107,8 +113,28 @@
           <li>Cloudflare for domain services, website security, traffic routing, caching, and related network services</li>
           <li>Resend for transactional email delivery</li>
           <li>GitHub for source-code hosting and deployment integration</li>
+          <li>OpenAI for artificial intelligence processing and generation of Hitting Log AI responses</li>
         </ul>
         <p>We may also disclose information when required by law.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="artificial-intelligence-services">
+        <h2 id="artificial-intelligence-services">Artificial Intelligence and Third-Party AI Services</h2>
+        <p>The Hitting Log includes an AI-powered feature called Hitting Log AI. We use application programming interface services provided by OpenAI to generate certain Hitting Log AI responses. OpenAI acts as a third-party service provider involved in providing this functionality.</p>
+        <p>Many direct statistical questions are calculated and answered by The Hitting Log without requesting an AI-generated response from OpenAI. When OpenAI processing is used, The Hitting Log may transmit:</p>
+        <ul>
+          <li>The current question or prompt</li>
+          <li>Selected, calculated summaries of relevant hitting statistics and performance metrics</li>
+          <li>Aggregated information about game counts, plate appearances, outcomes, timing, contact, swing decisions, and pitch-location patterns</li>
+          <li>Relevant sample descriptions, which may include an opponent or tournament name</li>
+          <li>Hitter handedness, when recorded and relevant to interpreting pitch locations</li>
+          <li>A pseudonymous account identifier used for safety and abuse-prevention purposes</li>
+        </ul>
+        <p>We use Date of Birth and, when applicable, parent or legal guardian permission confirmation to apply age-based account-management and Hitting Log AI eligibility rules. Date of Birth, exact age, age category, and guardian-permission information are not intentionally sent to OpenAI.</p>
+        <p>The current implementation does not intentionally send OpenAI the athlete's name, email address, date of birth, the player's team information, or raw database records containing complete games, at-bats, or pitches. However, information a user voluntarily includes in a question will be transmitted as part of that question. Users should not include unnecessary sensitive personal information in Hitting Log AI prompts.</p>
+        <p>The Hitting Log processes raw game, at-bat, and pitch records within its own application logic and provides OpenAI with selected calculated information needed to generate the response. AI-generated output is then returned to the user through The Hitting Log.</p>
+        <p>OpenAI states that data submitted through its API is not used to train or improve its models by default unless the API customer has explicitly opted in to data sharing. The Hitting Log configures its OpenAI requests with response storage disabled. This does not necessarily prevent separate temporary retention for security or abuse-prevention purposes. Under OpenAI's standard API data controls, OpenAI may retain API inputs, outputs, and related metadata in abuse-monitoring logs for up to 30 days, unless a different approved retention configuration applies or longer retention is required for legal or safety reasons. Additional information is available in OpenAI's <a class="privacy-contact-link" href="https://developers.openai.com/api/docs/guides/your-data">API data controls documentation</a>.</p>
+        <p>Hitting Log AI may produce inaccurate, incomplete, unexpected, or inappropriate responses. Users should independently evaluate AI-generated information before relying on it.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="data-security">
@@ -120,13 +146,15 @@
       <section class="privacy-section" aria-labelledby="data-retention">
         <h2 id="data-retention">Data Retention</h2>
         <p>We retain your information while your account remains active or as necessary to provide our services and comply with legal obligations.</p>
+        <p>The Hitting Log does not currently save Hitting Log AI conversation transcripts to its database or browser storage. Messages are held temporarily in browser memory during the current page session, and a limited number of previous messages are processed by The Hitting Log's server when needed to understand a follow-up question. OpenAI may retain information submitted through its API in accordance with the OpenAI API data controls described above.</p>
         <p>You may request deletion of your account by contacting us.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="childrens-privacy">
         <h2 id="childrens-privacy">Children's Privacy</h2>
-        <p>The Hitting Log is intended for baseball and softball players of all ages.</p>
-        <p>If required by applicable law, parents or guardians should create and manage accounts for younger athletes.</p>
+        <p>The general Hitting Log application supports baseball and softball players of all ages. Athletes under 13 may use the general application only through an account created and managed by a parent or legal guardian.</p>
+        <p>Hitting Log AI is available only to users who are at least 13 years old. Users ages 13 through 17 may use Hitting Log AI only with permission from a parent or legal guardian.</p>
+        <p>If you believe a child under 13 has used Hitting Log AI or provided personal information through Hitting Log AI, please contact us so we can review the matter and take appropriate action.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="cookies">
@@ -143,7 +171,7 @@
 
       <section class="privacy-section" aria-labelledby="third-party-services">
         <h2 id="third-party-services">Third-Party Services</h2>
-        <p>The Hitting Log LLC uses third-party providers for authentication and database services (Supabase); payment and subscription processing (Stripe); application hosting and deployment (Vercel); domain services, website security, traffic routing, caching, and related network services (Cloudflare); transactional email delivery (Resend); and source-code hosting and deployment integration (GitHub).</p>
+        <p>The Hitting Log LLC uses third-party providers for authentication and database services (Supabase); payment and subscription processing (Stripe); application hosting and deployment (Vercel); domain services, website security, traffic routing, caching, and related network services (Cloudflare); transactional email delivery (Resend); source-code hosting and deployment integration (GitHub); and artificial intelligence processing and generation of Hitting Log AI responses (OpenAI).</p>
         <p>When you access The Hitting Log, certain technical information—such as your IP address, browser information, device information, and request data—may be processed by infrastructure and security providers such as Cloudflare and Vercel to deliver, protect, and maintain the service.</p>
       </section>
 

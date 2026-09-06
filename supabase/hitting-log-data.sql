@@ -3,6 +3,8 @@ create table if not exists public.hitting_log_profiles (
   athlete_name text not null default '',
   sport_type text not null default 'baseball' check (sport_type in ('baseball', 'softball')),
   handedness text check (handedness in ('right', 'left')),
+  date_of_birth date,
+  guardian_permission_confirmed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
