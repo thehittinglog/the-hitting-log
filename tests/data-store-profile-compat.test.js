@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const dataStoreSource = fs.readFileSync(require.resolve("../scripts/data-store.js"), "utf8");
-const ageEligibilitySource = fs.readFileSync(require.resolve("../lib/age-eligibility.js"), "utf8");
+const ageEligibilitySource = fs.readFileSync(require.resolve("../scripts/age-eligibility.js"), "utf8");
 
 function createStorage() {
   const values = new Map();
@@ -94,7 +94,7 @@ async function initialize(options) {
       hittingLogSupabaseReady: Promise.resolve(client),
     },
   };
-  vm.runInNewContext(ageEligibilitySource, context, { filename: "lib/age-eligibility.js" });
+  vm.runInNewContext(ageEligibilitySource, context, { filename: "scripts/age-eligibility.js" });
   vm.runInNewContext(dataStoreSource, context, { filename: "scripts/data-store.js" });
   const result = await context.window.initializeHittingLogDataStore();
   return { client, context, result };

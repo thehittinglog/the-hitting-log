@@ -9,7 +9,7 @@ const {
 const { analyzeQuestion, formatDeterministicAnswer, isDirectStatisticalResult } = require("../lib/hitting-ai-stats");
 const { explainCalculatedResult, getSafeOpenAIErrorLog } = require("../lib/openai-hitting-client");
 const { getStripePriceIds, hasSubscriptionEntitlement } = require("../lib/membership");
-const { getAiEligibility } = require("../lib/age-eligibility");
+const { getAiEligibility } = require("../scripts/age-eligibility");
 const { loadStripePriceCatalog } = require("../lib/stripe-subscription");
 const { isReconciliationDue, reconcileSubscription } = require("../lib/subscription-reconciliation");
 

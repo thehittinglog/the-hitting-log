@@ -6677,11 +6677,21 @@ function initSignupPage() {
     return;
   }
 
+  const ageEligibility = window.hittingLogAgeEligibility;
+  if (
+    typeof ageEligibility?.normalizeDateOfBirth !== "function"
+    || typeof ageEligibility?.calculateAge !== "function"
+  ) {
+    signupMessage.textContent = "Account creation is temporarily unavailable. Reload the page and try again.";
+    submitButton.disabled = true;
+    return;
+  }
+
   let isSubmitting = false;
   dateOfBirthInput.max = new Date().toISOString().slice(0, 10);
 
   function renderSignupGuardianConfirmation() {
-    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirthInput.value);
+    const age = ageEligibility.calculateAge(dateOfBirthInput.value);
     const requiresConfirmation = age !== null && age >= 13 && age < 18;
     const isUnderMinimumAge = age !== null && age < 13;
     guardianConfirmation.hidden = !requiresConfirmation;
@@ -6750,8 +6760,8 @@ function initSignupPage() {
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
     const sportType = normalizeSportType(sportTypeInput.value);
-    const dateOfBirth = window.hittingLogAgeEligibility?.normalizeDateOfBirth(dateOfBirthInput.value);
-    const age = window.hittingLogAgeEligibility?.calculateAge(dateOfBirth);
+    const dateOfBirth = ageEligibility.normalizeDateOfBirth(dateOfBirthInput.value);
+    const age = ageEligibility.calculateAge(dateOfBirth);
 
     signupMessage.classList.remove("is-success");
     signupMessage.textContent = "";

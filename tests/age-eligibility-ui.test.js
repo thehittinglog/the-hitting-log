@@ -5,11 +5,17 @@ const appSource = fs.readFileSync(require.resolve("../app.js"), "utf8");
 const accountHtml = fs.readFileSync(require.resolve("../account.html"), "utf8");
 const signupHtml = fs.readFileSync(require.resolve("../signup.html"), "utf8");
 const styles = fs.readFileSync(require.resolve("../style.css"), "utf8");
+const vercelConfig = fs.readFileSync(require.resolve("../vercel.json"), "utf8");
 
 const permissionCopy = "I have permission from my parent or legal guardian to use The Hitting Log.";
 
 assert.match(accountHtml, new RegExp(permissionCopy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.match(signupHtml, new RegExp(permissionCopy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.match(signupHtml, /<input type="date" id="signup-date-of-birth"[^>]*>/);
+assert.match(signupHtml, /<script src="scripts\/age-eligibility\.js"><\/script>/);
+assert.doesNotMatch(signupHtml, /<script src="lib\/age-eligibility\.js"><\/script>/);
+assert.match(vercelConfig, /"src": "\/lib\(\?:\/\.\*\)\?", "status": 404/);
+assert.match(appSource, /Account creation is temporarily unavailable\. Reload the page and try again\./);
 assert.equal((appSource.match(/age >= 13 && age < 18/g) || []).length, 3);
 assert.equal((appSource.match(/Account owners must be 13 years of age or older\./g) || []).length, 4);
 assert.equal((appSource.match(/if \(!requiresConfirmation\) guardianPermissionInput\.checked = false;/g) || []).length, 2);
