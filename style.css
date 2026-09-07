@@ -4219,7 +4219,15 @@ body[data-page="games"] #game-choice-view .choice-card-button {
 
   .location-grid {
     --zone-gap: 5px;
+    width: min(100%, 420px);
+    aspect-ratio: 1 / 1;
     grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: repeat(7, minmax(0, 1fr));
+  }
+
+  .location-grid .zone-cell {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
   }
 }
 
