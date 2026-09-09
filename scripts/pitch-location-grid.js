@@ -1,3 +1,4 @@
+// Shared by browser pitch selectors and server-side location analysis.
 (function (root, factory) {
   const api = factory();
 

@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const pitchGrid = require("../lib/pitch-location-grid");
+const pitchGrid = require("../scripts/pitch-location-grid");
 const hittingAIStats = require("../lib/hitting-ai-stats");
 const hittingAIClient = require("../lib/openai-hitting-client");
 const hittingAIApi = require("../api/hitting-ai")._test;

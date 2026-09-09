@@ -83,4 +83,17 @@ const vercelConfig = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), 
 const privateRoute = vercelConfig.routes?.find((route) => route.src.includes("/lib"));
 assert.equal(privateRoute?.status, 404, "server-only lib files are not denied at the deployment boundary");
 
+const pitchGridModule = require("../scripts/pitch-location-grid");
+assert.equal(pitchGridModule.locations.length, 49, "the public pitch-grid module must provide every selectable zone");
+const browserPages = ["games.html", "dashboard.html", "all-games.html", "advanced-stats.html", "charts.html", "account.html"];
+browserPages.forEach((fileName) => {
+  const html = fs.readFileSync(path.join(root, fileName), "utf8");
+  assert.match(html, /scripts\/pitch-location-grid\.js/, `${fileName} must load the public pitch-grid module`);
+  assert.doesNotMatch(html, /lib\/pitch-location-grid\.js/, `${fileName} must not request the protected lib route`);
+  assert.ok(
+    html.indexOf('src="scripts/pitch-location-grid.js"') < html.indexOf('src="app.js"'),
+    `${fileName} must load the pitch-grid module before app.js`
+  );
+});
+
 console.log("HLP security and regression tests passed");
