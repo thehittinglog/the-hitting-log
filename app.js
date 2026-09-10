@@ -2136,6 +2136,8 @@ function initGamesPage(games, membershipState = null) {
     gameDetailsEditing: false,
     gameDetailsSaving: false,
     gameDeleting: false,
+    deletingAtBatIndex: null,
+    atBatDeleting: false,
     workflowEditAtBatIndex: null,
     workflowEditOriginalAtBat: null,
     editingWorkflowPitchId: "",
@@ -2483,6 +2485,8 @@ function initGamesPage(games, membershipState = null) {
     state.gameDetailsEditing = false;
     state.gameDetailsSaving = false;
     state.gameDeleting = false;
+    state.deletingAtBatIndex = null;
+    state.atBatDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -2503,6 +2507,8 @@ function initGamesPage(games, membershipState = null) {
     state.gameDetailsEditing = false;
     state.gameDetailsSaving = false;
     state.gameDeleting = false;
+    state.deletingAtBatIndex = null;
+    state.atBatDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -4070,6 +4076,95 @@ function initGamesPage(games, membershipState = null) {
     return form;
   }
 
+  function renderAtBatDeleteConfirmation(atBatIndex) {
+    const confirmation = document.createElement("div");
+    const prompt = document.createElement("p");
+    const actions = document.createElement("div");
+    const confirmButton = document.createElement("button");
+    const cancelButton = document.createElement("button");
+
+    confirmation.className = "review-at-bat-delete-confirmation";
+    prompt.textContent = `Delete At-Bat ${atBatIndex + 1} and all of its pitches? This action cannot be undone.`;
+    actions.className = "builder-actions review-at-bat-delete-actions";
+    confirmButton.type = "button";
+    confirmButton.className = "danger-button";
+    confirmButton.textContent = "Delete At-Bat";
+    cancelButton.type = "button";
+    cancelButton.className = "secondary-button";
+    cancelButton.textContent = "Cancel";
+
+    confirmButton.addEventListener("click", async () => {
+      if (state.atBatDeleting) {
+        return;
+      }
+
+      if (!currentUserOwnsLoadedGames()) {
+        reviewMessage.textContent = "Your session changed. Please reload the page before deleting this at-bat.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+        return;
+      }
+
+      const game = getReviewGame();
+      if (!game || !Array.isArray(game.atBats) || !game.atBats[atBatIndex]) {
+        reviewMessage.textContent = "We couldn't find that at-bat. Please try again.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+        return;
+      }
+
+      const updatedGame = {
+        ...game,
+        atBats: game.atBats.filter((atBat, index) => index !== atBatIndex),
+      };
+      state.atBatDeleting = true;
+      confirmButton.disabled = true;
+      cancelButton.disabled = true;
+      confirmButton.textContent = "Deleting...";
+      reviewMessage.textContent = "";
+      reviewMessage.classList.remove("is-success", "is-error");
+
+      try {
+        const savedGame = await upsertSavedGame(games, updatedGame);
+        state.reviewGameId = savedGame.id;
+        state.deletingAtBatIndex = null;
+        state.editingAtBatIndex = null;
+        state.editingAtBatDraft = null;
+        resetPitchReviewState();
+        reviewMessage.textContent = "At-bat deleted successfully.";
+        reviewMessage.classList.remove("is-error");
+        reviewMessage.classList.add("is-success");
+        renderGamesHome();
+        renderGamesTable(games, "review-games-table-body", "review-games-empty");
+        renderReviewGame();
+      } catch (deleteError) {
+        console.error("Unable to delete at-bat:", deleteError);
+        reviewMessage.textContent = "We couldn't delete this at-bat. Please try again.";
+        reviewMessage.classList.remove("is-success");
+        reviewMessage.classList.add("is-error");
+        confirmButton.disabled = false;
+        cancelButton.disabled = false;
+        confirmButton.textContent = "Delete At-Bat";
+      } finally {
+        state.atBatDeleting = false;
+      }
+    });
+
+    cancelButton.addEventListener("click", () => {
+      if (state.atBatDeleting) {
+        return;
+      }
+      state.deletingAtBatIndex = null;
+      reviewMessage.textContent = "";
+      reviewMessage.classList.remove("is-success", "is-error");
+      renderReviewGame();
+    });
+
+    actions.append(confirmButton, cancelButton);
+    confirmation.append(prompt, actions);
+    return confirmation;
+  }
+
   function renderReviewGame() {
     const game = getReviewGame();
 
@@ -4101,32 +4196,54 @@ function initGamesPage(games, membershipState = null) {
       const card = document.createElement("article");
       const heading = document.createElement("div");
       const title = document.createElement("strong");
+      const headingActions = document.createElement("div");
       const editButton = document.createElement("button");
+      const deleteButton = document.createElement("button");
       const sequence = document.createElement("div");
 
       card.className = "saved-at-bat review-at-bat-card";
       heading.className = "review-at-bat-heading";
       title.className = "saved-at-bat-title";
       title.textContent = `At-Bat ${index + 1} • ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+      headingActions.className = "review-at-bat-heading-actions";
       editButton.type = "button";
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
       editButton.addEventListener("click", () => {
         resetPitchReviewState();
+        state.deletingAtBatIndex = null;
         state.editingAtBatIndex = index;
         state.editingAtBatDraft = createEditDraft(atBat);
         reviewMessage.textContent = "";
         reviewMessage.classList.remove("is-success", "is-error");
         renderReviewGame();
       });
+      deleteButton.type = "button";
+      deleteButton.className = "saved-at-bat-delete-link";
+      deleteButton.textContent = "Delete";
+      deleteButton.setAttribute("aria-label", `Delete At-Bat ${index + 1}`);
+      deleteButton.addEventListener("click", () => {
+        resetPitchReviewState();
+        state.editingAtBatIndex = null;
+        state.editingAtBatDraft = null;
+        state.deletingAtBatIndex = index;
+        reviewMessage.textContent = "";
+        reviewMessage.classList.remove("is-success", "is-error");
+        renderReviewGame();
+      });
+      headingActions.append(editButton, deleteButton);
       heading.appendChild(title);
-      heading.appendChild(editButton);
+      heading.appendChild(headingActions);
 
       sequence.className = "pitch-sequence";
       renderEditablePitchSequence(sequence, atBat, index);
 
       card.appendChild(heading);
       card.appendChild(sequence);
+
+      if (state.deletingAtBatIndex === index) {
+        card.appendChild(renderAtBatDeleteConfirmation(index));
+      }
 
       if (state.editingAtBatIndex === index && state.editingAtBatDraft) {
         card.appendChild(renderEditAtBatForm(atBat, index));
@@ -4142,6 +4259,8 @@ function initGamesPage(games, membershipState = null) {
     state.gameDetailsEditing = false;
     state.gameDetailsSaving = false;
     state.gameDeleting = false;
+    state.deletingAtBatIndex = null;
+    state.atBatDeleting = false;
     state.editingAtBatIndex = null;
     state.editingAtBatDraft = null;
     resetPitchReviewState();
@@ -4155,6 +4274,16 @@ function initGamesPage(games, membershipState = null) {
     reviewMessage.textContent = "";
     reviewMessage.classList.remove("is-success", "is-error");
     renderReviewGame();
+  }
+
+  function returnFromGameReview() {
+    if (state.reviewReturnView === "tournament" && state.selectedTournamentId) {
+      showTournamentDetails(state.selectedTournamentId);
+    } else if (state.reviewReturnView === "home") {
+      showHomeView();
+    } else {
+      showReviewListView();
+    }
   }
 
   function renderAtBats() {
@@ -4886,24 +5015,19 @@ function initGamesPage(games, membershipState = null) {
     const deletedGame = games[gameIndex];
 
     try {
-      await new Promise((resolve) => window.requestAnimationFrame(resolve));
-      games.splice(gameIndex, 1);
       if (typeof window.deleteGameFromCloud !== "function") {
         throw new Error("Supabase game storage is unavailable.");
       }
       await window.deleteGameFromCloud(deletedGame.id);
+      games.splice(gameIndex, 1);
       await refreshHlpScoresSafely();
       closeDeleteGameModal({ restoreFocus: false });
       window.history.replaceState(null, "", "games.html");
-      showHomeView();
+      returnFromGameReview();
       gamesMessage.textContent = "Game deleted successfully.";
       gamesMessage.classList.remove("is-error");
       gamesMessage.classList.add("is-success");
     } catch (deleteError) {
-      if (!games.some((savedGame) => savedGame.id === deletedGame.id)) {
-        games.splice(gameIndex, 0, deletedGame);
-      }
-
       console.error("Unable to delete game:", deleteError);
       deleteGameMessage.textContent = "We couldn't delete this game. Please try again.";
       deleteGameMessage.classList.add("is-error");
@@ -4974,15 +5098,7 @@ function initGamesPage(games, membershipState = null) {
 
   reviewGamesButton.addEventListener("click", showReviewListView);
   reviewListBackButton.addEventListener("click", showHomeView);
-  reviewBackButton.addEventListener("click", () => {
-    if (state.reviewReturnView === "tournament" && state.selectedTournamentId) {
-      showTournamentDetails(state.selectedTournamentId);
-    } else if (state.reviewReturnView === "home") {
-      showHomeView();
-    } else {
-      showReviewListView();
-    }
-  });
+  reviewBackButton.addEventListener("click", returnFromGameReview);
   addGameButton.addEventListener("click", () => {
     if (ensureCanCreateGame(gamesMessage)) {
       showChoiceView();

@@ -14,15 +14,25 @@ function createStorage() {
   };
 }
 
-function createClient({ supportsHandedness, supportsEligibility = false, initialProfile, games = [] }) {
+function createClient({
+  supportsHandedness,
+  supportsEligibility = false,
+  initialProfile,
+  games = [],
+  userMetadata = {},
+  profileReadError = null,
+  gamesReadError = null,
+}) {
   let profile = initialProfile;
   const operations = [];
 
   function execute(table, operation, columns, payload) {
     operations.push({ table, operation, columns, payload });
     if (table === "hitting_log_games") {
+      if (operation === "select" && gamesReadError) return { data: null, error: gamesReadError };
       return { data: games, error: null };
     }
+    if (operation === "select" && profileReadError) return { data: null, error: profileReadError };
 
     const requestsHandedness = columns?.includes("handedness") || Object.hasOwn(payload || {}, "handedness");
     const requestsEligibility = columns?.includes("date_of_birth")
@@ -76,7 +86,16 @@ function createClient({ supportsHandedness, supportsEligibility = false, initial
   return {
     auth: {
       async getUser() {
-        return { data: { user: { id: "user-1", email: "player@example.com", user_metadata: { sport_type: "softball" } } }, error: null };
+        return {
+          data: {
+            user: {
+              id: "user-1",
+              email: "player@example.com",
+              user_metadata: { sport_type: "softball", ...userMetadata },
+            },
+          },
+          error: null,
+        };
       },
     },
     from,
@@ -126,6 +145,84 @@ async function initialize(options) {
   assert.equal(newlyCreated.result.profile.handedness, null);
   const legacyUpsert = newlyCreated.client.operations.find((item) => item.operation === "upsert" && !Object.hasOwn(item.payload, "handedness"));
   assert(legacyUpsert, "new profile did not retry with the backwards-compatible shape");
+
+  const newAdult = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: true,
+    initialProfile: null,
+    games: [],
+    userMetadata: { date_of_birth: "1990-06-09", guardian_permission_confirmed_at: null },
+  });
+  assert.equal(newAdult.result.games.length, 0);
+  assert.equal(newAdult.result.profile.dateOfBirth, "1990-06-09");
+  assert.equal(newAdult.result.profile.guardianPermissionConfirmedAt, null);
+
+  const newTeen = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: true,
+    initialProfile: null,
+    games: [],
+    userMetadata: {
+      date_of_birth: "2010-06-09",
+      guardian_permission_confirmed_at: "2026-09-06T00:00:00.000Z",
+    },
+  });
+  assert.equal(newTeen.result.games.length, 0);
+  assert.equal(newTeen.result.profile.dateOfBirth, "2010-06-09");
+  assert.equal(newTeen.result.profile.guardianPermissionConfirmedAt, "2026-09-06T00:00:00.000Z");
+
+  const newUserWithoutAgeSchema = initialize({
+    supportsHandedness: true,
+    supportsEligibility: false,
+    initialProfile: null,
+    games: [],
+    userMetadata: { date_of_birth: "1990-06-09", guardian_permission_confirmed_at: null },
+  });
+  await assert.rejects(
+    newUserWithoutAgeSchema,
+    (error) => error.code === "PROFILE_DATE_OF_BIRTH_SCHEMA_MISSING"
+      && error.supabaseCode === "PGRST204"
+      && error.table === "hitting_log_profiles",
+  );
+
+  const missingOptionalProfileValues = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: true,
+    initialProfile: { user_id: "user-1", athlete_name: null, sport_type: null },
+    games: [],
+  });
+  assert.equal(missingOptionalProfileValues.result.profile.athleteName, "");
+  assert.equal(missingOptionalProfileValues.result.profile.sportType, "baseball");
+  assert.equal(missingOptionalProfileValues.result.profile.handedness, null);
+  assert.equal(missingOptionalProfileValues.result.profile.dateOfBirth, null);
+
+  await assert.rejects(
+    initialize({
+      supportsHandedness: true,
+      supportsEligibility: true,
+      initialProfile: null,
+      games: [],
+      profileReadError: { code: "PGRST000", message: "Database connection failed", status: 503 },
+    }),
+    (error) => error.code === "PGRST000" && error.status === 503,
+  );
+
+  const existingWithEmptyNestedData = await initialize({
+    supportsHandedness: true,
+    supportsEligibility: true,
+    initialProfile: {
+      user_id: "user-1",
+      athlete_name: "Existing Player",
+      sport_type: "baseball",
+      handedness: "right",
+      date_of_birth: "1990-06-09",
+      guardian_permission_confirmed_at: null,
+    },
+    games: [{ game_id: "game-1", payload: { id: "game-1", tournaments: [], atBats: [] } }],
+  });
+  assert.equal(existingWithEmptyNestedData.result.games.length, 1);
+  assert.deepEqual(existingWithEmptyNestedData.result.games[0].tournaments, []);
+  assert.deepEqual(existingWithEmptyNestedData.result.games[0].atBats, []);
 
   for (const handedness of ["right", "left"]) {
     const supported = await initialize({

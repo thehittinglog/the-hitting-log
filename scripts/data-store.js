@@ -285,6 +285,9 @@
         if (savedProfile.dateOfBirth || savedProfile.guardianPermissionConfirmedAt) {
           const schemaError = new Error("Date of birth cannot be saved until the profile database update is applied.");
           schemaError.code = "PROFILE_DATE_OF_BIRTH_SCHEMA_MISSING";
+          schemaError.supabaseCode = result.error?.code || null;
+          schemaError.httpStatus = result.error?.status || null;
+          schemaError.table = profilesTable;
           throw schemaError;
         }
 
@@ -469,18 +472,30 @@
       return { games: getSavedGames(), profile: profileCache, user: authenticatedUser };
     }
 
-    const client = await getClient();
+    let stage = "supabase_client";
+    let client = null;
     try {
+      client = await getClient();
+      stage = "authenticated_user";
       authenticatedUser = await getVerifiedUser(client);
       logOperation("authenticated user load succeeded");
+      stage = "cloud_reads";
       await Promise.all([loadGamesFromCloud(client), loadProfileFromCloud(client)]);
+      stage = "profile_initialization";
       await migrateLegacyProfile(client);
+      stage = "legacy_games_migration";
       await migrateLegacyGames(client);
       localStorage.removeItem(currentUserKey);
       initialized = true;
       return { games: getSavedGames(), profile: profileCache, user: authenticatedUser };
     } catch (error) {
-      logFailure("initialization", error);
+      logFailure("initialization", error, {
+        stage,
+        errorCode: error?.code || null,
+        supabaseCode: error?.supabaseCode || null,
+        httpStatus: error?.httpStatus || error?.status || null,
+        table: error?.table || null,
+      });
       throw error;
     }
   }
@@ -560,18 +575,28 @@
     const user = requireUser();
     logOperation("game delete started", { gameId });
     try {
-      const { data, error } = await client
+      const { error } = await client
         .from(gamesTable)
         .delete()
         .eq("user_id", user.id)
-        .eq("game_id", gameId)
-        .select("user_id, game_id");
+        .eq("game_id", gameId);
       if (error) {
         throw error;
       }
-      if (!Array.isArray(data) || data.length !== 1 || data[0].user_id !== user.id) {
+
+      const { data: remainingRows, error: verificationError } = await client
+        .from(gamesTable)
+        .select("game_id")
+        .eq("user_id", user.id)
+        .eq("game_id", gameId)
+        .limit(1);
+      if (verificationError) {
+        throw verificationError;
+      }
+      if (!Array.isArray(remainingRows) || remainingRows.length > 0) {
         throw new Error("Supabase did not confirm the deleted game.");
       }
+
       gamesCache = gamesCache.filter((game) => getGameIdentity(game) !== gameId);
       logOperation("game delete succeeded", { gameId });
     } catch (error) {

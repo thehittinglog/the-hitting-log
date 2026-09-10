@@ -2919,6 +2919,31 @@ body.has-game-modal {
   gap: 12px;
 }
 
+.review-at-bat-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.saved-at-bat-delete-link {
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  box-shadow: none;
+  font-size: 0.86rem;
+}
+
+.saved-at-bat-delete-link:hover,
+.saved-at-bat-delete-link:focus-visible {
+  background: transparent;
+  box-shadow: none;
+}
+
 .review-at-bat-heading .secondary-button {
   padding: 9px 12px;
   border-radius: 12px;
@@ -2931,6 +2956,48 @@ body.has-game-modal {
   margin-top: 6px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.review-at-bat-delete-confirmation {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+  background: rgba(169, 31, 36, 0.05);
+}
+
+.review-at-bat-delete-confirmation p {
+  margin: 0;
+}
+
+.review-at-bat-delete-actions {
+  grid-template-columns: repeat(2, max-content);
+  align-items: center;
+}
+
+.review-at-bat-delete-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .review-at-bat-heading {
+    align-items: flex-start;
+  }
+
+  .review-at-bat-heading-actions {
+    gap: 8px;
+  }
+
+  .review-at-bat-delete-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-at-bat-delete-actions button {
+    width: 100%;
+  }
 }
 
 .edit-field-grid {
