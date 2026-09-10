@@ -59,7 +59,7 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
     card.tagName = "ARTICLE";
     const label = createElement();
     label.hidden = true;
-    const action = plan === "free" ? null : createElement({ dataset: { planAction: plan } });
+    const action = createElement({ dataset: { planAction: plan } });
     card.querySelector = (selector) => {
       if (selector === "[data-current-plan-label]") return label;
       if (selector === "[data-plan-action]") return action;
@@ -69,6 +69,7 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
     card.planAction = action;
     return card;
   });
+  const freeButton = cards[0].planAction;
   const proButton = cards[1].planAction;
   const proPlusButton = cards[2].planAction;
   const elements = {
@@ -89,7 +90,7 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
       getElementById(id) { return elements[id] || null; },
       querySelectorAll(selector) {
         if (selector === "[data-membership-card]") return cards;
-        if (selector === "[data-plan-action]") return [proButton, proPlusButton];
+        if (selector === "[data-plan-action]") return [freeButton, proButton, proPlusButton];
         return [];
       },
     },
@@ -116,7 +117,7 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
   vm.runInNewContext(source, context, { filename: "scripts/stripe-checkout.js" });
   domReadyListeners.forEach((listener) => listener());
   await flush();
-  return { billingButton, proButton, proPlusButton, billingMessage, cards, requests, window: context.window };
+  return { billingButton, freeButton, proButton, proPlusButton, billingMessage, cards, requests, window: context.window };
 }
 
 const freeState = { plan: "free", status: "inactive", subscription: null, displayName: "Free" };
@@ -140,7 +141,9 @@ const trialingState = { plan: "pro", status: "trialing", subscription: { hasStri
   assert.equal(scenario.proButton.disabled, false);
   assert.equal(scenario.proPlusButton.disabled, false);
   assert.equal(scenario.cards[0].classList.contains("is-current"), true);
-  assert.equal(scenario.cards[0].querySelector("[data-plan-action]"), null, "Free must not be an immediate downgrade action");
+  assert.equal(scenario.freeButton.disabled, true);
+  assert.equal(scenario.freeButton.hidden, true);
+  assert.equal(scenario.cards[0].classList.contains("is-selectable"), false);
   assert.equal(scenario.cards[1].classList.contains("is-selectable"), true);
   assert.equal(scenario.cards[2].classList.contains("is-selectable"), true);
   assert.equal(scenario.proButton.tagName, "BUTTON", "selectable cards must use a native keyboard control");
@@ -183,6 +186,24 @@ const trialingState = { plan: "pro", status: "trialing", subscription: { hasStri
     posts = scenario.requests.filter((request) => request.options.method === "POST");
     assert.equal(posts[0].url, "/api/create-portal-session");
   }
+
+  scenario = await renderScenario(proState);
+  assert.equal(scenario.freeButton.disabled, false);
+  assert.equal(scenario.cards[0].classList.contains("is-selectable"), true);
+  scenario.freeButton.click();
+  await flush();
+  posts = scenario.requests.filter((request) => request.options.method === "POST");
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].url, "/api/create-portal-session", "Pro to Free must use Stripe Portal");
+  assert.deepEqual(JSON.parse(posts[0].options.body), {});
+
+  scenario = await renderScenario(proPlusState);
+  assert.equal(scenario.freeButton.disabled, false);
+  scenario.freeButton.click();
+  await flush();
+  posts = scenario.requests.filter((request) => request.options.method === "POST");
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].url, "/api/create-portal-session", "Pro Plus to Free must use Stripe Portal");
 
   scenario = await renderScenario(proState);
   assert.equal(scenario.proButton.disabled, true);

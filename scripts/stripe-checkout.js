@@ -24,7 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const subscriptionStatusEndpoint = "/api/subscription-status";
 
   function getPlanLabel(plan) {
-    return plan === "pro_plus" ? "Pro Plus" : "Pro";
+    return plan === "pro_plus" ? "Pro Plus" : plan === "pro" ? "Pro" : "Free";
+  }
+
+  function getPlanActionLabel(plan) {
+    if (plan === "free") {
+      return "Manage subscription in Stripe to switch to Free plan";
+    }
+
+    return planChangesUsePortal
+      ? `Change to ${getPlanLabel(plan)} through Stripe subscription management`
+      : `Choose ${getPlanLabel(plan)} plan`;
   }
 
   function renderBillingActions() {
@@ -46,12 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (action) {
         action.hidden = isCurrent;
         action.disabled = !isSelectable;
-        action.setAttribute(
-          "aria-label",
-          planChangesUsePortal
-            ? `Change to ${getPlanLabel(cardPlan)} through Stripe subscription management`
-            : `Choose ${getPlanLabel(cardPlan)} plan`
-        );
+        action.setAttribute("aria-label", getPlanActionLabel(cardPlan));
       }
     });
 
@@ -277,11 +282,11 @@ document.addEventListener("DOMContentLoaded", () => {
       billingRequestPending = true;
       pendingPlanAction = targetPlan;
       renderBillingActions();
-      const usesPortal = planChangesUsePortal || (!targetPlan && hasStripeCustomer);
+      const usesPortal = targetPlan === "free" || planChangesUsePortal || (!targetPlan && hasStripeCustomer);
       const checkoutPlan = targetPlan || "pro";
-      setMessage(targetPlan
-        ? `Opening Stripe for ${getPlanLabel(targetPlan)}...`
-        : "Opening Stripe billing...");
+      setMessage(usesPortal
+        ? "Opening Stripe subscription management..."
+        : `Opening Stripe checkout for ${getPlanLabel(checkoutPlan)}...`);
 
       const session = await getAuthenticatedSession();
 
