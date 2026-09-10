@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const billingButton = document.getElementById("upgrade-button");
   const planCards = Array.from(document.querySelectorAll("[data-membership-card]"));
+  const planActionButtons = Array.from(document.querySelectorAll("[data-plan-action]"));
   const planValue = document.getElementById("account-plan-value");
   const gameAccessValue = document.getElementById("account-game-access-value");
   const subscriptionValue = document.getElementById("account-subscription-value");
@@ -16,7 +17,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentPlan = "free";
   let planChangesUsePortal = false;
+  let hasStripeCustomer = false;
+  let billingStateVerified = false;
+  let billingRequestPending = false;
   const subscriptionStatusEndpoint = "/api/subscription-status";
+
+  function getPlanLabel(plan) {
+    return plan === "pro_plus" ? "Pro Plus" : "Pro";
+  }
+
+  function renderBillingActions() {
+    planActionButtons.forEach((button) => {
+      const targetPlan = button.dataset.planAction;
+      const isCurrent = targetPlan === currentPlan;
+      button.disabled = !billingStateVerified || billingRequestPending || isCurrent;
+      button.textContent = isCurrent
+        ? "Current Plan"
+        : planChangesUsePortal
+          ? `Change to ${getPlanLabel(targetPlan)}`
+          : `Choose ${getPlanLabel(targetPlan)}`;
+    });
+
+    billingButton.hidden = false;
+    billingButton.disabled = !billingStateVerified || billingRequestPending;
+    billingButton.textContent = billingRequestPending ? "Opening billing..." : "Manage Subscription";
+  }
 
   function setMessage(message, isError = false) {
     if (!billingMessage) {
@@ -101,11 +126,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function renderBillingState(billingState) {
+  function renderBillingState(billingState, { interactive = true } = {}) {
     const normalizedState = window.hittingLogMembership?.normalizeState(billingState) || billingState;
     currentPlan = normalizedState?.plan || "free";
     const isPaid = currentPlan === "pro" || currentPlan === "pro_plus";
-    const hasStripeCustomer = normalizedState?.subscription?.hasStripeCustomer === true;
+    hasStripeCustomer = normalizedState?.subscription?.hasStripeCustomer === true;
+    billingStateVerified = interactive;
     planChangesUsePortal = isPaid || new Set(["past_due", "unpaid", "paused", "incomplete"]).has(normalizedState?.status);
     const planLabel = typeof normalizedState?.displayName === "string"
       ? normalizedState.displayName
@@ -147,9 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (label) label.hidden = !isCurrent;
     });
 
-    billingButton.hidden = !hasStripeCustomer;
-    billingButton.textContent = "Manage Subscription";
-    billingButton.disabled = !hasStripeCustomer;
+    renderBillingActions();
   }
 
   async function loadBillingState(attempt = 0) {
@@ -228,17 +252,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error("Unable to load subscription status:", error);
-      renderBillingState({ plan: "free", status: "inactive", subscription: null });
+      renderBillingState({ plan: "free", status: "inactive", subscription: null }, { interactive: false });
       setMessage("Your subscription status could not be verified. Please try again.", true);
     }
   }
 
   async function openBilling(button, targetPlan = null) {
-    const originalText = button.textContent;
+    if (!billingStateVerified || billingRequestPending) {
+      return;
+    }
 
     try {
-      button.disabled = true;
-      const usesPortal = planChangesUsePortal || !targetPlan;
+      billingRequestPending = true;
+      renderBillingActions();
+      const usesPortal = planChangesUsePortal || (!targetPlan && hasStripeCustomer);
+      const checkoutPlan = targetPlan || "pro";
       button.textContent = usesPortal ? "Opening billing..." : "Opening checkout...";
       setMessage("");
 
@@ -255,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(targetPlan ? { plan: targetPlan } : {}),
+        body: JSON.stringify(usesPortal ? {} : { plan: checkoutPlan }),
       });
 
       const result = await readApiResult(response);
@@ -272,12 +300,15 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Unable to open Stripe billing:", error);
       setMessage(error.message || "Something went wrong while opening Stripe billing.", true);
-      button.disabled = false;
-      button.textContent = originalText;
+      billingRequestPending = false;
+      renderBillingActions();
     }
   }
 
   billingButton.addEventListener("click", () => openBilling(billingButton));
+  planActionButtons.forEach((button) => {
+    button.addEventListener("click", () => openBilling(button, button.dataset.planAction));
+  });
 
   loadBillingState();
 });

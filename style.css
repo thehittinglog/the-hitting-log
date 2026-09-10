@@ -2481,10 +2481,17 @@ body.has-account-modal {
 }
 
 .membership-current-label {
-  margin-top: auto;
+  margin: auto 0 10px;
   color: var(--navy);
   font-weight: 800;
   text-align: center;
+}
+
+.membership-plan-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  box-shadow: none;
 }
 
 .membership-manage-button {
