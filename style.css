@@ -2426,6 +2426,7 @@ body.has-account-modal {
 }
 
 .membership-plan-card {
+  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -2433,6 +2434,7 @@ body.has-account-modal {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--panel-solid);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .membership-plan-card--plus {
@@ -2475,23 +2477,70 @@ body.has-account-modal {
   padding-left: 20px;
 }
 
-.membership-plan-card button,
 .membership-manage-button {
   width: 100%;
 }
 
 .membership-current-label {
-  margin: auto 0 10px;
+  margin-top: auto;
   color: var(--navy);
   font-weight: 800;
   text-align: center;
 }
 
-.membership-plan-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
+.membership-plan-card.is-selectable {
+  cursor: pointer;
+}
+
+.membership-plan-card-action {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
   transform: none;
   box-shadow: none;
+}
+
+.membership-plan-card-action[hidden] {
+  display: none;
+}
+
+.membership-plan-card-action:disabled {
+  cursor: inherit;
+}
+
+.membership-plan-card-action:hover,
+.membership-plan-card-action:focus,
+.membership-plan-card-action:focus-visible {
+  outline: none;
+  transform: none;
+  box-shadow: none;
+}
+
+.membership-plan-card:focus-within {
+  outline: 3px solid rgba(169, 31, 36, 0.32);
+  outline-offset: 3px;
+}
+
+.membership-plan-card.is-loading {
+  cursor: wait;
+  opacity: 0.88;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .membership-plan-card.is-selectable:hover {
+    border-color: rgba(7, 50, 79, 0.38);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 14px 30px rgba(7, 50, 79, 0.1);
+  }
 }
 
 .membership-manage-button {
@@ -2511,7 +2560,6 @@ body.has-account-modal {
     grid-column: 1 / -1;
   }
 
-  body[data-page="account"] .membership-plan-card button,
   body[data-page="account"] .membership-manage-button {
     white-space: nowrap;
   }

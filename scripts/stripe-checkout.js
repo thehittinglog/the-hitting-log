@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const billingButton = document.getElementById("upgrade-button");
   const planCards = Array.from(document.querySelectorAll("[data-membership-card]"));
-  const planActionButtons = Array.from(document.querySelectorAll("[data-plan-action]"));
+  const planActionControls = Array.from(document.querySelectorAll("[data-plan-action]"));
   const planValue = document.getElementById("account-plan-value");
   const gameAccessValue = document.getElementById("account-game-access-value");
   const subscriptionValue = document.getElementById("account-subscription-value");
@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let hasStripeCustomer = false;
   let billingStateVerified = false;
   let billingRequestPending = false;
+  let pendingPlanAction = null;
   const subscriptionStatusEndpoint = "/api/subscription-status";
 
   function getPlanLabel(plan) {
@@ -27,20 +28,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderBillingActions() {
-    planActionButtons.forEach((button) => {
-      const targetPlan = button.dataset.planAction;
-      const isCurrent = targetPlan === currentPlan;
-      button.disabled = !billingStateVerified || billingRequestPending || isCurrent;
-      button.textContent = isCurrent
-        ? "Current Plan"
-        : planChangesUsePortal
-          ? `Change to ${getPlanLabel(targetPlan)}`
-          : `Choose ${getPlanLabel(targetPlan)}`;
+    planCards.forEach((card) => {
+      const cardPlan = card.dataset.membershipCard;
+      const isCurrent = cardPlan === currentPlan;
+      const action = card.querySelector("[data-plan-action]");
+      const isSelectable = Boolean(action) && billingStateVerified && !billingRequestPending && !isCurrent;
+
+      card.classList.toggle("is-current", isCurrent);
+      card.classList.toggle("is-selectable", isSelectable);
+      card.classList.toggle("is-loading", billingRequestPending && pendingPlanAction === cardPlan);
+      card.setAttribute("aria-current", isCurrent ? "true" : "false");
+      card.setAttribute("aria-busy", billingRequestPending && pendingPlanAction === cardPlan ? "true" : "false");
+
+      const label = card.querySelector("[data-current-plan-label]");
+      if (label) label.hidden = !isCurrent;
+
+      if (action) {
+        action.hidden = isCurrent;
+        action.disabled = !isSelectable;
+        action.setAttribute(
+          "aria-label",
+          planChangesUsePortal
+            ? `Change to ${getPlanLabel(cardPlan)} through Stripe subscription management`
+            : `Choose ${getPlanLabel(cardPlan)} plan`
+        );
+      }
     });
 
     billingButton.hidden = false;
     billingButton.disabled = !billingStateVerified || billingRequestPending;
-    billingButton.textContent = billingRequestPending ? "Opening billing..." : "Manage Subscription";
+    billingButton.textContent = billingRequestPending && !pendingPlanAction
+      ? "Opening billing..."
+      : "Manage Subscription";
   }
 
   function setMessage(message, isError = false) {
@@ -165,14 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    planCards.forEach((card) => {
-      const cardPlan = card.dataset.membershipCard;
-      const isCurrent = cardPlan === currentPlan;
-      card.classList.toggle("is-current", isCurrent);
-      const label = card.querySelector("[data-current-plan-label]");
-      if (label) label.hidden = !isCurrent;
-    });
-
     renderBillingActions();
   }
 
@@ -257,18 +268,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function openBilling(button, targetPlan = null) {
+  async function openBilling(targetPlan = null) {
     if (!billingStateVerified || billingRequestPending) {
       return;
     }
 
     try {
       billingRequestPending = true;
+      pendingPlanAction = targetPlan;
       renderBillingActions();
       const usesPortal = planChangesUsePortal || (!targetPlan && hasStripeCustomer);
       const checkoutPlan = targetPlan || "pro";
-      button.textContent = usesPortal ? "Opening billing..." : "Opening checkout...";
-      setMessage("");
+      setMessage(targetPlan
+        ? `Opening Stripe for ${getPlanLabel(targetPlan)}...`
+        : "Opening Stripe billing...");
 
       const session = await getAuthenticatedSession();
 
@@ -301,13 +314,14 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Unable to open Stripe billing:", error);
       setMessage(error.message || "Something went wrong while opening Stripe billing.", true);
       billingRequestPending = false;
+      pendingPlanAction = null;
       renderBillingActions();
     }
   }
 
-  billingButton.addEventListener("click", () => openBilling(billingButton));
-  planActionButtons.forEach((button) => {
-    button.addEventListener("click", () => openBilling(button, button.dataset.planAction));
+  billingButton.addEventListener("click", () => openBilling());
+  planActionControls.forEach((control) => {
+    control.addEventListener("click", () => openBilling(control.dataset.planAction));
   });
 
   loadBillingState();

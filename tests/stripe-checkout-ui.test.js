@@ -5,11 +5,14 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(require.resolve("../scripts/stripe-checkout.js"), "utf8");
+const accountSource = fs.readFileSync(require.resolve("../account.html"), "utf8");
 
 function createElement({ dataset = {} } = {}) {
   const listeners = new Map();
   const classes = new Set();
+  const attributes = new Map();
   return {
+    tagName: "BUTTON",
     dataset,
     textContent: "",
     hidden: false,
@@ -18,8 +21,10 @@ function createElement({ dataset = {} } = {}) {
       toggle(name, force) { if (force) classes.add(name); else classes.delete(name); },
       contains(name) { return classes.has(name); },
     },
+    setAttribute(name, value) { attributes.set(name, String(value)); },
+    getAttribute(name) { return attributes.get(name) || null; },
     addEventListener(type, listener) { listeners.set(type, listener); },
-    click() { listeners.get("click")?.({ target: this }); },
+    click() { if (!this.disabled && !this.hidden) listeners.get("click")?.({ target: this }); },
     querySelector() { return null; },
   };
 }
@@ -43,8 +48,6 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
   billingButton.hidden = true;
   billingButton.disabled = true;
   billingButton.textContent = "Manage Subscription";
-  const proButton = createElement({ dataset: { planAction: "pro" } });
-  const proPlusButton = createElement({ dataset: { planAction: "pro_plus" } });
   const billingMessage = createElement();
   const billingCopy = createElement();
   const planValue = createElement();
@@ -53,12 +56,21 @@ async function renderScenario(billingState, postResponse = { status: 200, body: 
   const billingValue = createElement();
   const cards = ["free", "pro", "pro_plus"].map((plan) => {
     const card = createElement({ dataset: { membershipCard: plan } });
+    card.tagName = "ARTICLE";
     const label = createElement();
     label.hidden = true;
-    card.querySelector = () => label;
+    const action = plan === "free" ? null : createElement({ dataset: { planAction: plan } });
+    card.querySelector = (selector) => {
+      if (selector === "[data-current-plan-label]") return label;
+      if (selector === "[data-plan-action]") return action;
+      return null;
+    };
     card.currentLabel = label;
+    card.planAction = action;
     return card;
   });
+  const proButton = cards[1].planAction;
+  const proPlusButton = cards[2].planAction;
   const elements = {
     "upgrade-button": billingButton,
     "account-plan-value": planValue,
@@ -119,14 +131,23 @@ const proPlusState = { plan: "pro_plus", status: "active", subscription: { hasSt
 const trialingState = { plan: "pro", status: "trialing", subscription: { hasStripeCustomer: true }, displayName: "Pro" };
 
 (async () => {
+  assert.equal(accountSource.includes("membership-plan-action"), false, "old visible plan buttons must be removed");
+  assert.equal(accountSource.includes("class=\"membership-plan-card-action\""), true, "cards must use native button controls");
+
   let scenario = await renderScenario(freeState);
   assert.equal(scenario.billingButton.hidden, false);
   assert.equal(scenario.billingButton.disabled, false);
   assert.equal(scenario.proButton.disabled, false);
   assert.equal(scenario.proPlusButton.disabled, false);
   assert.equal(scenario.cards[0].classList.contains("is-current"), true);
+  assert.equal(scenario.cards[0].querySelector("[data-plan-action]"), null, "Free must not be an immediate downgrade action");
+  assert.equal(scenario.cards[1].classList.contains("is-selectable"), true);
+  assert.equal(scenario.cards[2].classList.contains("is-selectable"), true);
+  assert.equal(scenario.proButton.tagName, "BUTTON", "selectable cards must use a native keyboard control");
 
   scenario.proButton.click();
+  assert.equal(scenario.cards[1].classList.contains("is-loading"), true);
+  assert.equal(scenario.proPlusButton.disabled, true, "all plan actions must lock while Stripe opens");
   scenario.proButton.click();
   await flush();
   let posts = scenario.requests.filter((request) => request.options.method === "POST");
@@ -165,6 +186,12 @@ const trialingState = { plan: "pro", status: "trialing", subscription: { hasStri
 
   scenario = await renderScenario(proState);
   assert.equal(scenario.proButton.disabled, true);
+  assert.equal(scenario.proButton.hidden, true);
+  assert.equal(scenario.cards[1].getAttribute("aria-current"), "true");
+  assert.equal(scenario.cards[1].currentLabel.hidden, false);
+  scenario.proButton.click();
+  await flush();
+  assert.equal(scenario.requests.filter((request) => request.options.method === "POST").length, 0);
   assert.equal(scenario.proPlusButton.disabled, false);
   scenario.proPlusButton.click();
   await flush();
@@ -181,7 +208,9 @@ const trialingState = { plan: "pro", status: "trialing", subscription: { hasStri
   scenario.proButton.click();
   await flush();
   assert.equal(scenario.proButton.disabled, false);
+  assert.equal(scenario.proPlusButton.disabled, false);
   assert.equal(scenario.billingButton.disabled, false);
+  assert.equal(scenario.cards[1].classList.contains("is-loading"), false);
   assert.equal(scenario.billingMessage.textContent, "Stripe is unavailable.");
 
   console.log("Stripe Account UI tests passed");
