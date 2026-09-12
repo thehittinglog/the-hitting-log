@@ -1,4 +1,5 @@
 let currentSupabaseUser = null;
+const nonProprietaryStats = window.hittingLogStats;
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
 const authPages = new Set(["login", "signup"]);
@@ -27,50 +28,8 @@ const PITCH_TYPES_BY_SPORT = {
     { label: "Unknown", filterLabel: "Unknown", value: "Unknown" },
   ],
 };
-const outcomeFields = [
-  "single",
-  "double",
-  "triple",
-  "home_run",
-  "walk",
-  "hit_by_pitch",
-  "strikeout",
-  "sac_bunt",
-  "drag_bunt",
-  "sac_fly",
-  "reached_on_error",
-  "fielders_choice",
-  "ground_out",
-  "line_out",
-  "fly_out",
-  "productive_out",
-];
+const outcomeFields = nonProprietaryStats.OUTCOME_FIELDS;
 const legacyOutcomeFields = ["sacrifice_fly", "out", "error"];
-const productiveOutOutcomeFields = new Set(["sac_fly", "sac_bunt"]);
-const outOutcomeFields = new Set([
-  "strikeout",
-  "sac_bunt",
-  "sac_fly",
-  "fielders_choice",
-  "ground_out",
-  "line_out",
-  "fly_out",
-]);
-const ballInPlayOutcomeFields = new Set([
-  "single",
-  "double",
-  "triple",
-  "home_run",
-  "reached_on_error",
-  "fielders_choice",
-  "ground_out",
-  "line_out",
-  "fly_out",
-  "sac_fly",
-  "sac_bunt",
-  "drag_bunt",
-]);
-const hardHitIneligibleOutcomeFields = new Set(["sac_bunt", "drag_bunt"]);
 const timingOptions = [
   { label: "On Time", value: "on_time" },
   { label: "Early", value: "early" },
@@ -539,142 +498,29 @@ function normalizeSavedBattedBallOutcome(outcome) {
 }
 
 function createStatsBucket() {
-  return {
-    single: 0,
-    double: 0,
-    triple: 0,
-    home_run: 0,
-    walk: 0,
-    hit_by_pitch: 0,
-    strikeout: 0,
-    sac_bunt: 0,
-    drag_bunt: 0,
-    sac_fly: 0,
-    reached_on_error: 0,
-    fielders_choice: 0,
-    ground_out: 0,
-    line_out: 0,
-    fly_out: 0,
-    productive_out: 0,
-  };
+  return nonProprietaryStats.createStatsBucket();
 }
 
 function normalizeLegacyOutcome(outcome, battedBallType) {
-  if (outcome === "Out") {
-    outcome = "out";
-  }
-
-  const legacyOutcomeMap = {
-    sacrifice_fly: "sac_fly",
-    error: "reached_on_error",
-    hit_by_pitch: "hit_by_pitch",
-    Single: "single",
-    Double: "double",
-    Triple: "triple",
-    "Home Run": "home_run",
-    "Fielder's Choice": "fielders_choice",
-    ROE: "reached_on_error",
-    "Sac Fly": "sac_fly",
-    "Sac Bunt": "sac_bunt",
-    "Drag Bunt": "drag_bunt",
-    "Left Field Line": "left_field_line",
-    "Right Field Line": "right_field_line",
-  };
-
-  if (legacyOutcomeMap[outcome]) {
-    return legacyOutcomeMap[outcome];
-  }
-
-  if (outcome === "out") {
-    if (battedBallType === "line_drive") {
-      return "line_out";
-    }
-
-    if (battedBallType === "fly_ball" || battedBallType === "popup") {
-      return "fly_out";
-    }
-
-    return "ground_out";
-  }
-
-  return outcome;
+  return nonProprietaryStats.normalizeOutcome(outcome, { battedBallType });
 }
 
 function isHardHitEligible(atBat) {
-  if (!atBat || typeof atBat !== "object") {
-    return false;
-  }
-
-  const pitches = Array.isArray(atBat.pitches) ? atBat.pitches : [];
-  const battedBallPitch = pitches.slice().reverse().find((pitch) => {
-    return (
-      pitch?.result === "batted_ball" ||
-      pitch?.primaryResult === "batted_ball" ||
-      pitch?.battedBallOutcome ||
-      pitch?.batted_ball_outcome
-    );
-  });
-  const rawOutcome =
-    atBat.finalOutcome ||
-    atBat.outcome ||
-    battedBallPitch?.battedBallOutcome ||
-    battedBallPitch?.batted_ball_outcome ||
-    battedBallPitch?.outcome ||
-    "";
-  const battedBallType =
-    atBat.battedBallType ||
-    atBat.batted_ball_type ||
-    battedBallPitch?.battedBallType ||
-    battedBallPitch?.batted_ball_type ||
-    "";
-  const normalizedOutcome = normalizeLegacyOutcome(rawOutcome, battedBallType);
-
-  if (normalizedOutcome) {
-    return (
-      ballInPlayOutcomeFields.has(normalizedOutcome) &&
-      !hardHitIneligibleOutcomeFields.has(normalizedOutcome)
-    );
-  }
-
-  return hasBallInPlay(atBat);
+  return nonProprietaryStats.isHardHitEligible(atBat);
 }
 
 window.isHardHitEligible = isHardHitEligible;
 
-function addOutcomeToStats(stats, outcome) {
-  if (outcome && Object.prototype.hasOwnProperty.call(stats, outcome)) {
-    stats[outcome] += 1;
-  }
-}
-
 function isOutOutcome(outcome) {
-  return outOutcomeFields.has(outcome);
+  return nonProprietaryStats.OUT_OUTCOMES.has(outcome);
 }
 
 function isAutomaticallyProductiveOut(outcome) {
-  return productiveOutOutcomeFields.has(outcome);
+  return nonProprietaryStats.AUTOMATIC_PRODUCTIVE_OUTCOMES.has(outcome);
 }
 
 function normalizeTiming(value) {
-  const timing = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_")
-    .replace(/\s+/g, "_");
-
-  if (timing === "on_time" || timing === "ontime") {
-    return "on_time";
-  }
-
-  if (timing === "early") {
-    return "early";
-  }
-
-  if (timing === "late") {
-    return "late";
-  }
-
-  return "";
+  return nonProprietaryStats.normalizeTiming(value);
 }
 
 function getTimingLabel(value) {
@@ -685,77 +531,11 @@ function getTimingLabel(value) {
 }
 
 function createCalculatedStats(stats) {
-  const hits = stats.single + stats.double + stats.triple + stats.home_run;
-  const atBats =
-    stats.single +
-    stats.double +
-    stats.triple +
-    stats.home_run +
-    stats.strikeout +
-    stats.reached_on_error +
-    stats.fielders_choice +
-    stats.ground_out +
-    stats.line_out +
-    stats.fly_out;
-  const totalBases =
-    stats.single +
-    (stats.double * 2) +
-    (stats.triple * 3) +
-    (stats.home_run * 4);
-  const totalOuts =
-    stats.strikeout +
-    stats.sac_bunt +
-    stats.sac_fly +
-    stats.fielders_choice +
-    stats.ground_out +
-    stats.line_out +
-    stats.fly_out;
-  const productiveOuts = stats.productive_out + stats.sac_bunt + stats.sac_fly;
-  const plateAppearances =
-    atBats + stats.walk + stats.hit_by_pitch + stats.sac_bunt + stats.drag_bunt + stats.sac_fly;
-
-  // BA = H / AB
-  const battingAverage = atBats === 0 ? 0 : hits / atBats;
-
-  // OBP = (H + BB + HBP) / (AB + BB + HBP + SF)
-  const onBasePercentage =
-    plateAppearances === 0 ? 0 : (hits + stats.walk + stats.hit_by_pitch) / plateAppearances;
-
-  // SLG = TB / AB
-  // TB = 1B + (2 x 2B) + (3 x 3B) + (4 x HR)
-  const sluggingPercentage = atBats === 0 ? 0 : totalBases / atBats;
-
-  // OPS = OBP + SLG
-  const ops = onBasePercentage + sluggingPercentage;
-
-  return {
-    ...stats,
-    hits,
-    atBats,
-    totalBases,
-    totalOuts,
-    productiveOuts,
-    productiveOutPercent: totalOuts === 0 ? null : productiveOuts / totalOuts,
-    plateAppearances,
-    battingAverage,
-    onBasePercentage,
-    sluggingPercentage,
-    ops,
-  };
+  return nonProprietaryStats.createCalculatedStats(stats);
 }
 
 function calculateStatsFromAtBats(atBats) {
-  const stats = createStatsBucket();
-
-  atBats.forEach((atBat) => {
-    addOutcomeToStats(stats, atBat.outcome);
-
-    if (atBat.productiveOut === true && !isAutomaticallyProductiveOut(atBat.outcome)) {
-      stats.productive_out += 1;
-    }
-  });
-
-  return createCalculatedStats(stats);
+  return nonProprietaryStats.calculateStatsFromAtBats(atBats);
 }
 
 function normalizeHardHitBallValue(value) {
@@ -812,27 +592,7 @@ function normalizeAtBat(atBat) {
     lastPitch.battedBallOutcome = normalizeSavedBattedBallOutcome(rawOutcome);
     lastPitch.outcome = lastPitch.battedBallOutcome;
   }
-  const calculatedCount = pitches.reduce(
-    (count, pitch) => {
-      if (pitch.result === "ball") {
-        count.balls += 1;
-      }
-
-      if (
-        pitch.result === "called_strike" ||
-        pitch.result === "swinging_strike"
-      ) {
-        count.strikes += 1;
-      }
-
-      if (pitch.result === "foul_ball" && count.strikes < 2) {
-        count.strikes += 1;
-      }
-
-      return count;
-    },
-    { balls: 0, strikes: 0 }
-  );
+  const calculatedCount = nonProprietaryStats.calculatePitchCount(pitches);
 
   return {
     id: typeof atBat.id === "string" ? atBat.id : createId("at-bat"),
@@ -1088,10 +848,6 @@ function formatPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function calculateRateMetric(numerator, denominator) {
-  return denominator > 0 ? numerator / denominator : null;
-}
-
 function getGameStats(game) {
   return normalizeGame(game);
 }
@@ -1112,48 +868,8 @@ function getGameAtBatCount(gameStats) {
   return Math.max(0, Number(gameStats?.atBats) || 0);
 }
 
-function getTotals(games) {
-  return games.reduce(
-    (summary, game) => {
-      const gameStats = getGameStats(game);
-
-      outcomeFields.forEach((field) => {
-        summary[field] += gameStats[field];
-      });
-
-      summary.atBats += getGameAtBatCount(gameStats);
-      summary.hits += gameStats.hits;
-      summary.totalBases += gameStats.totalBases;
-      summary.plateAppearances += gameStats.plateAppearances;
-      return summary;
-    },
-    {
-      single: 0,
-      double: 0,
-      triple: 0,
-      home_run: 0,
-      walk: 0,
-      hit_by_pitch: 0,
-      strikeout: 0,
-      sac_bunt: 0,
-      drag_bunt: 0,
-      sac_fly: 0,
-      reached_on_error: 0,
-      fielders_choice: 0,
-      ground_out: 0,
-      line_out: 0,
-      fly_out: 0,
-      productive_out: 0,
-      atBats: 0,
-      hits: 0,
-      totalBases: 0,
-      plateAppearances: 0,
-    }
-  );
-}
-
 function getRateStats(games) {
-  return createCalculatedStats(getTotals(games));
+  return nonProprietaryStats.aggregateGameStats(games, getGameStats);
 }
 
 function updateSummaryCards(games) {
@@ -2150,6 +1866,7 @@ function initGamesPage(games, membershipState = null) {
     stepHistory: [],
     step: "at_bat_details",
     activePitchCompleted: false,
+    atBatSaving: false,
   };
   let lastDeleteGameModalFocus = null;
   const gameLimit = Number.isInteger(membershipState?.entitlements?.gameLimit)
@@ -4535,11 +4252,14 @@ function initGamesPage(games, membershipState = null) {
     const endAtBat = document.createElement("button");
     endAtBat.type = "button";
     endAtBat.textContent =
-      state.step === "end_at_bat"
+      state.atBatSaving
+        ? "Saving..."
+        : state.step === "end_at_bat"
         ? Number.isInteger(state.workflowEditAtBatIndex)
           ? "Save Changes"
           : "Save At-Bat"
         : "Finish At-Bat";
+    endAtBat.disabled = state.atBatSaving;
     endAtBat.addEventListener("click", endAtBatFlow);
     actions.appendChild(endAtBat);
 
@@ -4566,6 +4286,29 @@ function initGamesPage(games, membershipState = null) {
     }
 
     state.activePitchCompleted = true;
+  }
+
+  function completeAutomaticPlateAppearance() {
+    if (!state.activeAtBat || isEditingWorkflowPitch() || state.atBatSaving) {
+      return false;
+    }
+
+    const outcome = nonProprietaryStats.getAutomaticPitchOutcome(state.activeAtBat.pitches);
+
+    if (!outcome) {
+      return false;
+    }
+
+    state.activeAtBat.finalOutcome = outcome;
+    state.activeAtBat.productiveOut = false;
+    state.activeAtBat.hardHitBall = null;
+    state.activeAtBat.timing = "";
+    state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
+    state.step = "end_at_bat";
+    renderAtBats();
+    void endAtBatFlow();
+    return true;
   }
 
   function handlePitchType(pitchType) {
@@ -4640,7 +4383,9 @@ function initGamesPage(games, membershipState = null) {
     }
 
     completeCurrentPitch();
-    goToStep("pitch_actions");
+    if (!completeAutomaticPlateAppearance()) {
+      goToStep("pitch_actions");
+    }
   }
 
   function handleFoulDirection(direction) {
@@ -4655,7 +4400,9 @@ function initGamesPage(games, membershipState = null) {
     state.activePitch.pitch_result = strikeType;
     state.activePitch.swing_result = strikeType;
     completeCurrentPitch();
-    goToStep("pitch_actions");
+    if (!completeAutomaticPlateAppearance()) {
+      goToStep("pitch_actions");
+    }
   }
 
   function handleBattedBallType(battedBallType) {
@@ -4773,9 +4520,11 @@ function initGamesPage(games, membershipState = null) {
   }
 
   async function endAtBatFlow() {
-    if (!state.activeAtBat) {
+    if (!state.activeAtBat || state.atBatSaving) {
       return;
     }
+
+    state.atBatSaving = true;
 
     completeCurrentPitch();
 
@@ -4795,6 +4544,7 @@ function initGamesPage(games, membershipState = null) {
     if (!isHardHitEligible(state.activeAtBat)) {
       state.activeAtBat.hardHitBall = null;
     } else if (typeof state.activeAtBat.hardHitBall !== "boolean") {
+      state.atBatSaving = false;
       state.step = "hard_hit_ball";
       setMessage("Select whether this was a hard-hit ball before saving this at-bat.");
       renderAtBats();
@@ -4802,6 +4552,7 @@ function initGamesPage(games, membershipState = null) {
     }
 
     if (hasBallInPlay(state.activeAtBat) && !normalizeTiming(state.activeAtBat.timing)) {
+      state.atBatSaving = false;
       state.step = "timing";
       setMessage("Select your timing before saving this at-bat.");
       renderAtBats();
@@ -4824,6 +4575,7 @@ function initGamesPage(games, membershipState = null) {
         renderGamesHome();
       } catch (error) {
         state.draftGame.atBats = previousAtBats;
+        state.atBatSaving = false;
         console.error("Unable to save at-bat:", error);
         setMessage("We couldn't save this at-bat. Please try again.");
         return;
@@ -4834,6 +4586,7 @@ function initGamesPage(games, membershipState = null) {
     state.activePitch = null;
     state.activePitchIndex = null;
     state.activePitchCompleted = false;
+    state.atBatSaving = false;
     state.pendingProductiveOutOutcome = "";
     resetWorkflowEditState();
     resetStepHistory();
@@ -5329,9 +5082,7 @@ function initAllGamesPage(games) {
 function initAdvancedPage(games) {
   const totals = getRateStats(games);
   const allAtBats = games.flatMap((game) => (Array.isArray(game.atBats) ? game.atBats : []));
-  const hardHitMetrics = getHardHitMetrics(allAtBats);
-  const advancedPercentMetrics = getAdvancedPercentMetrics(allAtBats, totals);
-  const timingMetrics = getTimingMetrics(allAtBats);
+  const advancedMetrics = nonProprietaryStats.calculateMetrics(allAtBats);
   const performanceScore = getOverallHlpScore();
   const gameCount = games.length;
   const hitGames = games.filter((game) => getGameStats(game).hits > 0);
@@ -5351,20 +5102,20 @@ function initAdvancedPage(games) {
   }, null);
 
   setText("hitting-log-performance-score", performanceScore);
-  setText("hard-hit-percent", formatPercent(hardHitMetrics.hardHitPercent));
-  setText("two-strike-percent", formatPercent(hardHitMetrics.twoStrikePercent));
-  setText("hard-hit-two-strike-percent", formatPercent(hardHitMetrics.hardHitTwoStrikePercent));
+  setText("hard-hit-percent", formatPercent(advancedMetrics.hardHitPercent));
+  setText("two-strike-percent", formatPercent(advancedMetrics.twoStrikePercent));
+  setText("hard-hit-two-strike-percent", formatPercent(advancedMetrics.hardHitTwoStrikePercent));
   setText("productive-out-percent", formatPercent(totals.productiveOutPercent));
-  setText("line-drive-percent", formatPercent(advancedPercentMetrics.lineDrivePercent));
-  setText("ground-ball-percent", formatPercent(advancedPercentMetrics.groundBallPercent));
-  setText("fly-ball-percent", formatPercent(advancedPercentMetrics.flyBallPercent));
-  setText("extra-base-hit-percent", formatPercent(advancedPercentMetrics.extraBaseHitPercent));
-  setText("chase-rate", formatPercent(advancedPercentMetrics.chaseRate));
-  setText("contact-rate", formatPercent(advancedPercentMetrics.contactRate));
-  setText("quality-at-bat-percent", formatPercent(advancedPercentMetrics.qualityAtBatPercent));
-  setText("on-time-percent", formatPercent(timingMetrics.onTimePercent));
-  setText("early-percent", formatPercent(timingMetrics.earlyPercent));
-  setText("late-percent", formatPercent(timingMetrics.latePercent));
+  setText("line-drive-percent", formatPercent(advancedMetrics.lineDrivePercent));
+  setText("ground-ball-percent", formatPercent(advancedMetrics.groundBallPercent));
+  setText("fly-ball-percent", formatPercent(advancedMetrics.flyBallPercent));
+  setText("extra-base-hit-percent", formatPercent(advancedMetrics.extraBaseHitPercent));
+  setText("chase-rate", formatPercent(advancedMetrics.chaseRate));
+  setText("contact-rate", formatPercent(advancedMetrics.contactRate));
+  setText("quality-at-bat-percent", formatPercent(advancedMetrics.qualityAtBatPercent));
+  setText("on-time-percent", formatPercent(advancedMetrics.onTimePercent));
+  setText("early-percent", formatPercent(advancedMetrics.earlyPercent));
+  setText("late-percent", formatPercent(advancedMetrics.latePercent));
   setText("advanced-average", formatRate(totals.battingAverage));
   setText("advanced-obp", formatRate(totals.onBasePercentage));
   setText("advanced-slg", formatRate(totals.sluggingPercentage));
@@ -5381,184 +5132,6 @@ function initAdvancedPage(games) {
     "advanced-last-game",
     sortedGames[0] ? `${sortedGames[0].date} vs ${sortedGames[0].opponent}` : "No games yet"
   );
-}
-
-function getAdvancedPercentMetrics(atBats, totals) {
-  const metrics = atBats.reduce(
-    (summary, atBat) => {
-      const battedBallType = getAtBatBattedBallType(atBat);
-      const isBallInPlay = hasBallInPlay(atBat);
-      const isQualityAtBat = getIsQualityAtBat(atBat);
-      const isOut = isOutOutcome(atBat.outcome);
-
-      summary.plateAppearances += 1;
-
-      if (isBallInPlay) {
-        summary.ballsInPlay += 1;
-      }
-
-      if (battedBallType === "line_drive") {
-        summary.lineDrives += 1;
-      } else if (battedBallType === "ground_ball") {
-        summary.groundBalls += 1;
-      } else if (battedBallType === "fly_ball") {
-        summary.flyBalls += 1;
-      }
-
-      if (isQualityAtBat) {
-        summary.qualityAtBats += 1;
-      }
-
-      if (isOut) {
-        summary.totalOuts += 1;
-
-        if (atBat.productiveOut === true || isAutomaticallyProductiveOut(atBat.outcome)) {
-          summary.productiveOuts += 1;
-        }
-      }
-
-      if (Array.isArray(atBat.pitches)) {
-        atBat.pitches.forEach((pitch) => {
-          const isSwing = getIsSwing(pitch);
-          const zoneStatus = getPitchZoneStatus(pitch);
-
-          if (zoneStatus === false) {
-            summary.outOfZonePitches += 1;
-
-            if (isSwing) {
-              summary.outOfZoneSwings += 1;
-            }
-          }
-
-          if (isSwing) {
-            summary.swings += 1;
-
-            if (getIsContact(pitch)) {
-              summary.contactSwings += 1;
-            }
-          }
-        });
-      }
-
-      return summary;
-    },
-    {
-      plateAppearances: 0,
-      ballsInPlay: 0,
-      lineDrives: 0,
-      groundBalls: 0,
-      flyBalls: 0,
-      qualityAtBats: 0,
-      totalOuts: 0,
-      productiveOuts: 0,
-      outOfZonePitches: 0,
-      outOfZoneSwings: 0,
-      swings: 0,
-      contactSwings: 0,
-    }
-  );
-  const extraBaseHits = totals.double + totals.triple + totals.home_run;
-
-  return {
-    lineDrivePercent: calculateRateMetric(metrics.lineDrives, metrics.ballsInPlay) ?? 0,
-    groundBallPercent: calculateRateMetric(metrics.groundBalls, metrics.ballsInPlay) ?? 0,
-    flyBallPercent: calculateRateMetric(metrics.flyBalls, metrics.ballsInPlay) ?? 0,
-    extraBaseHitPercent: calculateRateMetric(extraBaseHits, totals.hits),
-    chaseRate: calculateRateMetric(metrics.outOfZoneSwings, metrics.outOfZonePitches),
-    contactRate: calculateRateMetric(metrics.contactSwings, metrics.swings),
-    qualityAtBatPercent: calculateRateMetric(metrics.qualityAtBats, metrics.plateAppearances),
-    productiveOutPercent: calculateRateMetric(metrics.productiveOuts, metrics.totalOuts),
-  };
-}
-
-function getHardHitMetrics(atBats) {
-  const metrics = atBats.reduce(
-    (summary, atBat) => {
-      const isEligibleBattedBall = isHardHitEligible(atBat);
-      const isTwoStrikeAtBat = reachedTwoStrikes(atBat);
-      const isHardHit = isEligibleBattedBall && atBat.hardHitBall === true;
-
-      summary.plateAppearances += 1;
-
-      if (isEligibleBattedBall) {
-        summary.ballsInPlay += 1;
-
-        if (isHardHit) {
-          summary.hardHitBalls += 1;
-        }
-      }
-
-      if (isTwoStrikeAtBat) {
-        summary.twoStrikeAtBats += 1;
-
-        if (isEligibleBattedBall) {
-          summary.twoStrikeBallsInPlay += 1;
-
-          if (isHardHit) {
-            summary.twoStrikeHardHits += 1;
-          }
-        }
-      }
-
-      return summary;
-    },
-    {
-      plateAppearances: 0,
-      ballsInPlay: 0,
-      hardHitBalls: 0,
-      twoStrikeAtBats: 0,
-      twoStrikeBallsInPlay: 0,
-      twoStrikeHardHits: 0,
-    }
-  );
-
-  return {
-    hardHitPercent: calculateRateMetric(metrics.hardHitBalls, metrics.ballsInPlay),
-    twoStrikePercent: calculateRateMetric(metrics.twoStrikeAtBats, metrics.plateAppearances),
-    hardHitTwoStrikePercent: calculateRateMetric(
-      metrics.twoStrikeHardHits,
-      metrics.twoStrikeBallsInPlay
-    ),
-    twoStrikeAtBats: metrics.twoStrikeAtBats,
-    twoStrikeBallsInPlay: metrics.twoStrikeBallsInPlay,
-    twoStrikeHardHits: metrics.twoStrikeHardHits,
-  };
-}
-
-function getTimingMetrics(atBats) {
-  const metrics = atBats.reduce(
-    (summary, atBat) => {
-      const timing = normalizeTiming(atBat.timing);
-
-      if (!timing) {
-        return summary;
-      }
-
-      summary.total += 1;
-
-      if (timing === "on_time") {
-        summary.onTime += 1;
-      } else if (timing === "early") {
-        summary.early += 1;
-      } else if (timing === "late") {
-        summary.late += 1;
-      }
-
-      return summary;
-    },
-    {
-      total: 0,
-      onTime: 0,
-      early: 0,
-      late: 0,
-    }
-  );
-
-  return {
-    onTimePercent: calculateRateMetric(metrics.onTime, metrics.total),
-    earlyPercent: calculateRateMetric(metrics.early, metrics.total),
-    latePercent: calculateRateMetric(metrics.late, metrics.total),
-  };
 }
 
 const performanceScoreClasses = [
@@ -5632,119 +5205,31 @@ function applyPerformanceScoreStatus(element, score) {
 }
 
 function hasBallInPlay(atBat) {
-  if (ballInPlayOutcomeFields.has(atBat.outcome)) {
-    return true;
-  }
-
-  return Array.isArray(atBat.pitches) && atBat.pitches.some((pitch) => {
-    return pitch.result === "batted_ball" || Boolean(pitch.battedBallType || pitch.battedBallOutcome);
-  });
+  return nonProprietaryStats.hasBallInPlay(atBat);
 }
 
 function getAtBatBattedBallType(atBat) {
-  if (typeof atBat.battedBallType === "string" && atBat.battedBallType) {
-    return atBat.battedBallType;
-  }
-
-  if (!Array.isArray(atBat.pitches)) {
-    return "";
-  }
-
-  const battedBallPitch = atBat.pitches.find((pitch) => typeof pitch.battedBallType === "string" && pitch.battedBallType);
-  return battedBallPitch ? battedBallPitch.battedBallType : "";
+  return nonProprietaryStats.getBattedBallType(atBat);
 }
 
 function getIsSwing(pitch) {
-  const result = pitch.result || "";
-  const strikeType = pitch.strikeType || pitch.strikeDetail || "";
-
-  return (
-    result === "swinging_strike" ||
-    result === "foul_ball" ||
-    result === "batted_ball" ||
-    strikeType === "swinging_strike" ||
-    Boolean(pitch.battedBallType || pitch.battedBallOutcome)
-  );
+  return nonProprietaryStats.isSwing(pitch);
 }
 
 function getIsContact(pitch) {
-  const result = pitch.result || "";
-
-  return result === "foul_ball" || result === "batted_ball" || Boolean(pitch.battedBallType || pitch.battedBallOutcome);
+  return nonProprietaryStats.isContact(pitch);
 }
 
 function getPitchZoneStatus(pitch) {
-  const location = pitch.location && typeof pitch.location === "object" ? pitch.location : null;
-  const locationId =
-    (location && typeof location.id === "string" ? location.id : "") ||
-    (typeof pitch.locationId === "string" ? pitch.locationId : "") ||
-    (typeof pitch.location === "string" ? pitch.location : "");
-  const locationLabel =
-    (location && typeof location.label === "string" ? location.label : "") ||
-    (typeof pitch.locationLabel === "string" ? pitch.locationLabel : "");
-
-  if (location && typeof location.isZone === "boolean") {
-    return location.isZone;
-  }
-
-  if (/^zone-[1-9]$/.test(locationId) || /^Zone [1-9]$/.test(locationLabel)) {
-    return true;
-  }
-
-  if (locationId || locationLabel) {
-    return false;
-  }
-
-  return null;
+  return nonProprietaryStats.getPitchZoneStatus(pitch);
 }
 
 function getIsQualityAtBat(atBat) {
-  const qualityOutcomes = new Set([
-    "single",
-    "double",
-    "triple",
-    "home_run",
-    "walk",
-    "hit_by_pitch",
-    "sac_fly",
-    "sac_bunt",
-    "drag_bunt",
-  ]);
-
-  return (
-    qualityOutcomes.has(atBat.outcome) ||
-    (isHardHitEligible(atBat) && atBat.hardHitBall === true) ||
-    (Array.isArray(atBat.pitches) && atBat.pitches.length >= 6)
-  );
+  return nonProprietaryStats.isQualityAtBat(atBat);
 }
 
 function reachedTwoStrikes(atBat) {
-  if (!Array.isArray(atBat.pitches)) {
-    return false;
-  }
-
-  let strikes = 0;
-
-  return atBat.pitches.some((pitch) => {
-    const result = pitch.result || "";
-    const strikeType = pitch.strikeType || pitch.strikeDetail || "";
-
-    if (
-      result === "strike" ||
-      result === "called_strike" ||
-      result === "swinging_strike" ||
-      strikeType === "called_strike" ||
-      strikeType === "swinging_strike"
-    ) {
-      strikes += 1;
-    }
-
-    if (result === "foul_ball" && strikes < 2) {
-      strikes += 1;
-    }
-
-    return strikes >= 2;
-  });
+  return nonProprietaryStats.reachedTwoStrikes(atBat);
 }
 
 function createChartBar(widthClass, percentageText) {
