@@ -2981,6 +2981,158 @@ body.has-game-modal {
   gap: 10px;
 }
 
+.review-at-bat-summary {
+  min-width: 0;
+}
+
+.review-at-bat-outcome {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.saved-at-bat-view-link {
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--navy);
+  box-shadow: none;
+  font-size: 0.86rem;
+}
+
+.saved-at-bat-view-link:hover,
+.saved-at-bat-view-link:focus-visible {
+  background: transparent;
+  box-shadow: none;
+}
+
+.at-bat-view-dialog {
+  width: min(100%, 680px);
+}
+
+.at-bat-view-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.at-bat-view-heading h2,
+.at-bat-view-pitches h3 {
+  margin: 0;
+}
+
+.at-bat-view-heading > button {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.at-bat-view-outcome {
+  margin: 5px 0 0;
+  color: var(--muted);
+}
+
+.at-bat-view-visualization {
+  width: 100%;
+  min-width: 0;
+  margin-top: 18px;
+}
+
+.at-bat-view-grid {
+  width: min(100%, 560px);
+  margin-top: 0;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.at-bat-view-grid .zone-cell {
+  cursor: default;
+}
+
+.at-bat-view-grid .zone-cell:hover,
+.at-bat-view-grid .zone-cell:focus-visible {
+  transform: none;
+  box-shadow: none;
+}
+
+.at-bat-view-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.at-bat-view-arrows {
+  z-index: 3;
+  overflow: visible;
+}
+
+.at-bat-view-arrow {
+  fill: none;
+  stroke: rgba(7, 50, 79, 0.7);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.at-bat-view-arrows marker path {
+  fill: var(--navy);
+}
+
+.at-bat-view-markers {
+  z-index: 4;
+}
+
+.at-bat-view-marker {
+  position: absolute;
+  display: grid;
+  width: clamp(19px, 4.2vw, 27px);
+  height: clamp(19px, 4.2vw, 27px);
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(7, 50, 79, 0.25);
+  font-size: clamp(0.65rem, 2vw, 0.78rem);
+  font-weight: 800;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.at-bat-view-marker.is-final {
+  background: var(--accent);
+}
+
+.at-bat-view-marker.is-dense {
+  width: clamp(13px, 3vw, 18px);
+  height: clamp(13px, 3vw, 18px);
+  border-width: 1px;
+  font-size: clamp(0.5rem, 1.6vw, 0.64rem);
+}
+
+.at-bat-view-marker.is-very-dense {
+  width: 10px;
+  height: 10px;
+  font-size: 0.42rem;
+}
+
+.at-bat-view-pitches {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.at-bat-view-back {
+  width: 100%;
+  margin-top: 18px;
+}
+
 .saved-at-bat-delete-link {
   width: auto;
   min-width: 0;
@@ -3043,7 +3195,19 @@ body.has-game-modal {
   }
 
   .review-at-bat-heading-actions {
+    flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .at-bat-view-modal {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .at-bat-view-dialog {
+    max-height: calc(100dvh - 20px);
+    padding: 18px;
+    border-radius: 20px;
   }
 
   .review-at-bat-delete-actions {

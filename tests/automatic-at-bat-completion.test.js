@@ -46,11 +46,15 @@ const walkPitches = [...threeBalls, ball()];
 const strikeoutPitches = [calledStrike(), foul(), swingingStrike()];
 const completedWalk = { finalOutcome: "walk", pitches: walkPitches };
 const completedStrikeout = { finalOutcome: "strikeout", pitches: strikeoutPitches };
+const recoveredStrikeout = { finalOutcome: "swinging_strike", pitches: strikeoutPitches };
 
 assert.equal(walkPitches.at(-1).result, "ball", "ball four must remain in pitch history");
 assert.equal(strikeoutPitches.at(-1).strikeType, "swinging_strike", "strike three detail must remain in pitch history");
 assert.equal(stats.isCompletedPlateAppearance(completedWalk), true);
 assert.equal(stats.isCompletedPlateAppearance(completedStrikeout), true);
+assert.equal(stats.getOutcome(recoveredStrikeout), "strikeout", "a saved three-strike sequence must recover its completed outcome");
+assert.equal(stats.calculateStatsFromAtBats([recoveredStrikeout]).atBats, 1, "a recovered strikeout must count as an official at-bat");
+assert.equal(stats.calculateStatsFromAtBats([recoveredStrikeout]).hits, 0, "a recovered strikeout must not count as a hit");
 
 const totals = stats.calculateStatsFromAtBats([completedWalk, completedStrikeout]);
 assert.equal(totals.plateAppearances, 2);

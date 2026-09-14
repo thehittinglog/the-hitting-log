@@ -1720,6 +1720,13 @@ function initGamesPage(games, membershipState = null) {
   const reviewBackButton = document.getElementById("review-back-button");
   const reviewMessage = document.getElementById("review-message");
   const reviewAtBatList = document.getElementById("review-at-bat-list");
+  const viewAtBatModal = document.getElementById("view-at-bat-modal");
+  const viewAtBatTitle = document.getElementById("view-at-bat-title");
+  const viewAtBatOutcome = document.getElementById("view-at-bat-outcome");
+  const viewAtBatGrid = document.getElementById("view-at-bat-grid");
+  const viewAtBatPitchList = document.getElementById("view-at-bat-pitch-list");
+  const closeViewAtBatButton = document.getElementById("close-view-at-bat-button");
+  const viewAtBatBackButton = document.getElementById("view-at-bat-back-button");
   const deleteGameButton = document.getElementById("delete-game-button");
   const deleteGameModal = document.getElementById("delete-game-modal");
   const confirmDeleteGameButton = document.getElementById("confirm-delete-game-button");
@@ -1785,6 +1792,13 @@ function initGamesPage(games, membershipState = null) {
     !reviewBackButton ||
     !reviewMessage ||
     !reviewAtBatList ||
+    !viewAtBatModal ||
+    !viewAtBatTitle ||
+    !viewAtBatOutcome ||
+    !viewAtBatGrid ||
+    !viewAtBatPitchList ||
+    !closeViewAtBatButton ||
+    !viewAtBatBackButton ||
     !deleteGameButton ||
     !deleteGameModal ||
     !confirmDeleteGameButton ||
@@ -1841,6 +1855,7 @@ function initGamesPage(games, membershipState = null) {
     selectedTournamentId: "",
     reviewReturnView: "home",
     reviewGameId: "",
+    viewingAtBatIndex: null,
     editingAtBatIndex: null,
     editingAtBatDraft: null,
     editingPitchAtBatIndex: null,
@@ -1869,6 +1884,9 @@ function initGamesPage(games, membershipState = null) {
     atBatSaving: false,
   };
   let lastDeleteGameModalFocus = null;
+  let lastViewAtBatModalFocus = null;
+  let viewAtBatResizeObserver = null;
+  let viewAtBatRenderToken = 0;
   const gameLimit = Number.isInteger(membershipState?.entitlements?.gameLimit)
     ? membershipState.entitlements.gameLimit
     : 10;
@@ -3882,6 +3900,164 @@ function initGamesPage(games, membershipState = null) {
     return confirmation;
   }
 
+  function getRepeatedPitchOffset(index, total) {
+    const fixedLayouts = {
+      1: [[0, 0]],
+      2: [[-0.25, 0], [0.25, 0]],
+      3: [[0, -0.25], [-0.25, 0.22], [0.25, 0.22]],
+      4: [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]],
+    };
+
+    if (fixedLayouts[total]) {
+      return fixedLayouts[total][index];
+    }
+
+    const columns = Math.ceil(Math.sqrt(total));
+    const rows = Math.ceil(total / columns);
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const itemsInRow = Math.min(columns, total - (row * columns));
+    const x = itemsInRow === 1 ? 0 : -0.32 + ((0.64 * column) / (itemsInRow - 1));
+    const y = rows === 1 ? 0 : -0.32 + ((0.64 * row) / (rows - 1));
+    return [x, y];
+  }
+
+  function renderAtBatPitchPlot(atBat) {
+    viewAtBatGrid.querySelectorAll(".at-bat-view-overlay").forEach((overlay) => overlay.remove());
+    const pitches = Array.isArray(atBat?.pitches) ? atBat.pitches : [];
+    const plottedPitches = pitches.map((pitch, pitchIndex) => ({
+      pitchIndex,
+      position: window.hittingLogPitchGrid?.getPitchLocationGridPosition(pitch) || null,
+    })).filter((item) => item.position);
+
+    if (!plottedPitches.length || !viewAtBatGrid.clientWidth || !viewAtBatGrid.clientHeight) {
+      return;
+    }
+
+    const groups = new Map();
+    plottedPitches.forEach((item) => {
+      const key = `${item.position.row}:${item.position.column}`;
+      const group = groups.get(key) || [];
+      group.push(item);
+      groups.set(key, group);
+    });
+
+    const gridRect = viewAtBatGrid.getBoundingClientRect();
+    const cells = viewAtBatGrid.querySelectorAll(".zone-cell");
+    const points = new Map();
+    groups.forEach((group) => {
+      group.forEach((item, groupIndex) => {
+        const cell = cells[(item.position.row * window.hittingLogPitchGrid.columnCount) + item.position.column];
+        if (!cell) return;
+        const cellRect = cell.getBoundingClientRect();
+        const [offsetX, offsetY] = getRepeatedPitchOffset(groupIndex, group.length);
+        points.set(item.pitchIndex, {
+          x: (cellRect.left - gridRect.left) + (cellRect.width * (0.5 + offsetX)),
+          y: (cellRect.top - gridRect.top) + (cellRect.height * (0.5 + offsetY)),
+          groupSize: group.length,
+        });
+      });
+    });
+
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const arrows = document.createElementNS(svgNamespace, "svg");
+    arrows.classList.add("at-bat-view-overlay", "at-bat-view-arrows");
+    arrows.setAttribute("viewBox", `0 0 ${gridRect.width} ${gridRect.height}`);
+    arrows.setAttribute("aria-hidden", "true");
+    const defs = document.createElementNS(svgNamespace, "defs");
+    const arrowMarker = document.createElementNS(svgNamespace, "marker");
+    arrowMarker.setAttribute("id", "pitch-sequence-arrowhead");
+    arrowMarker.setAttribute("markerWidth", "8");
+    arrowMarker.setAttribute("markerHeight", "8");
+    arrowMarker.setAttribute("refX", "6");
+    arrowMarker.setAttribute("refY", "3");
+    arrowMarker.setAttribute("orient", "auto");
+    arrowMarker.setAttribute("markerUnits", "strokeWidth");
+    const arrowShape = document.createElementNS(svgNamespace, "path");
+    arrowShape.setAttribute("d", "M0,0 L0,6 L7,3 z");
+    arrowMarker.appendChild(arrowShape);
+    defs.appendChild(arrowMarker);
+    arrows.appendChild(defs);
+
+    for (let pitchIndex = 0; pitchIndex < pitches.length - 1; pitchIndex += 1) {
+      const start = points.get(pitchIndex);
+      const end = points.get(pitchIndex + 1);
+      if (!start || !end) continue;
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const distance = Math.hypot(dx, dy);
+      const markerRadius = Math.min(13, Math.max(9, gridRect.width / 48));
+      const path = document.createElementNS(svgNamespace, "path");
+      path.classList.add("at-bat-view-arrow");
+
+      if (distance < markerRadius * 2.6) {
+        path.setAttribute("d", `M ${start.x} ${start.y - markerRadius} C ${start.x + markerRadius * 2} ${start.y - markerRadius * 2.4}, ${end.x + markerRadius * 2} ${end.y - markerRadius * 2.4}, ${end.x + markerRadius * 0.55} ${end.y - markerRadius * 0.8}`);
+      } else {
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+        path.setAttribute("d", `M ${start.x + (unitX * markerRadius)} ${start.y + (unitY * markerRadius)} L ${end.x - (unitX * markerRadius * 1.45)} ${end.y - (unitY * markerRadius * 1.45)}`);
+      }
+      path.setAttribute("marker-end", "url(#pitch-sequence-arrowhead)");
+      arrows.appendChild(path);
+    }
+
+    const markers = document.createElement("div");
+    markers.className = "at-bat-view-overlay at-bat-view-markers";
+    plottedPitches.forEach(({ pitchIndex }) => {
+      const point = points.get(pitchIndex);
+      if (!point) return;
+      const marker = document.createElement("span");
+      marker.className = "at-bat-view-marker";
+      if (point.groupSize >= 5) marker.classList.add("is-dense");
+      if (point.groupSize >= 10) marker.classList.add("is-very-dense");
+      if (pitchIndex === pitches.length - 1) marker.classList.add("is-final");
+      marker.textContent = String(pitchIndex + 1);
+      marker.style.left = `${point.x}px`;
+      marker.style.top = `${point.y}px`;
+      marker.setAttribute("aria-hidden", "true");
+      markers.appendChild(marker);
+    });
+
+    viewAtBatGrid.append(arrows, markers);
+  }
+
+  function closeViewAtBatModal({ restoreFocus = true } = {}) {
+    viewAtBatRenderToken += 1;
+    viewAtBatResizeObserver?.disconnect();
+    viewAtBatResizeObserver = null;
+    viewAtBatModal.hidden = true;
+    viewAtBatGrid.innerHTML = "";
+    viewAtBatPitchList.innerHTML = "";
+    state.viewingAtBatIndex = null;
+    document.body.classList.remove("has-game-modal");
+    if (restoreFocus) lastViewAtBatModalFocus?.focus();
+  }
+
+  function openViewAtBatModal(atBat, atBatIndex) {
+    viewAtBatRenderToken += 1;
+    const renderToken = viewAtBatRenderToken;
+    lastViewAtBatModalFocus = document.activeElement;
+    state.viewingAtBatIndex = atBatIndex;
+    viewAtBatTitle.textContent = `At-Bat ${atBatIndex + 1}`;
+    viewAtBatOutcome.textContent = `Outcome: ${getOutcomeLabel(nonProprietaryStats.getOutcome(atBat) || "Complete")}`;
+    renderStrikeZoneLayout(viewAtBatGrid);
+    renderPitchSequence(viewAtBatPitchList, atBat);
+    viewAtBatModal.hidden = false;
+    document.body.classList.add("has-game-modal");
+
+    window.requestAnimationFrame(() => {
+      if (renderToken !== viewAtBatRenderToken || viewAtBatModal.hidden) return;
+      renderAtBatPitchPlot(atBat);
+      if (typeof ResizeObserver === "function") {
+        viewAtBatResizeObserver = new ResizeObserver(() => {
+          if (renderToken === viewAtBatRenderToken && !viewAtBatModal.hidden) renderAtBatPitchPlot(atBat);
+        });
+        viewAtBatResizeObserver.observe(viewAtBatGrid);
+      }
+      closeViewAtBatButton.focus();
+    });
+  }
+
   function renderReviewGame() {
     const game = getReviewGame();
 
@@ -3912,17 +4088,27 @@ function initGamesPage(games, membershipState = null) {
     gameStats.atBats.forEach((atBat, index) => {
       const card = document.createElement("article");
       const heading = document.createElement("div");
+      const summary = document.createElement("div");
       const title = document.createElement("strong");
+      const outcome = document.createElement("p");
       const headingActions = document.createElement("div");
+      const viewButton = document.createElement("button");
       const editButton = document.createElement("button");
       const deleteButton = document.createElement("button");
-      const sequence = document.createElement("div");
 
       card.className = "saved-at-bat review-at-bat-card";
       heading.className = "review-at-bat-heading";
+      summary.className = "review-at-bat-summary";
       title.className = "saved-at-bat-title";
-      title.textContent = `At-Bat ${index + 1} • ${getOutcomeLabel(atBat.finalOutcome || atBat.outcome || "Complete")}`;
+      title.textContent = `At-Bat ${index + 1}`;
+      outcome.className = "review-at-bat-outcome";
+      outcome.textContent = `Outcome: ${getOutcomeLabel(nonProprietaryStats.getOutcome(atBat) || "Complete")}`;
       headingActions.className = "review-at-bat-heading-actions";
+      viewButton.type = "button";
+      viewButton.className = "saved-at-bat-view-link";
+      viewButton.textContent = "View";
+      viewButton.setAttribute("aria-label", `View At-Bat ${index + 1}`);
+      viewButton.addEventListener("click", () => openViewAtBatModal(atBat, index));
       editButton.type = "button";
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
@@ -3948,21 +4134,22 @@ function initGamesPage(games, membershipState = null) {
         reviewMessage.classList.remove("is-success", "is-error");
         renderReviewGame();
       });
-      headingActions.append(editButton, deleteButton);
-      heading.appendChild(title);
+      headingActions.append(viewButton, editButton, deleteButton);
+      summary.append(title, outcome);
+      heading.appendChild(summary);
       heading.appendChild(headingActions);
 
-      sequence.className = "pitch-sequence";
-      renderEditablePitchSequence(sequence, atBat, index);
-
       card.appendChild(heading);
-      card.appendChild(sequence);
 
       if (state.deletingAtBatIndex === index) {
         card.appendChild(renderAtBatDeleteConfirmation(index));
       }
 
       if (state.editingAtBatIndex === index && state.editingAtBatDraft) {
+        const sequence = document.createElement("div");
+        sequence.className = "pitch-sequence";
+        renderEditablePitchSequence(sequence, atBat, index);
+        card.appendChild(sequence);
         card.appendChild(renderEditAtBatForm(atBat, index));
       }
 
@@ -4695,6 +4882,11 @@ function initGamesPage(games, membershipState = null) {
   });
 
   deleteGameButton.addEventListener("click", openDeleteGameModal);
+  closeViewAtBatButton.addEventListener("click", closeViewAtBatModal);
+  viewAtBatBackButton.addEventListener("click", closeViewAtBatModal);
+  viewAtBatModal.addEventListener("click", (event) => {
+    if (event.target === viewAtBatModal) closeViewAtBatModal();
+  });
   cancelDeleteGameButton.addEventListener("click", () => {
     if (!state.gameDeleting) {
       closeDeleteGameModal();
@@ -4706,6 +4898,28 @@ function initGamesPage(games, membershipState = null) {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if (!viewAtBatModal.hidden) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeViewAtBatModal();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusableElements = Array.from(viewAtBatModal.querySelectorAll("button:not([disabled])"));
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+        if (event.shiftKey && document.activeElement === firstFocusable) {
+          event.preventDefault();
+          lastFocusable?.focus();
+        } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+          event.preventDefault();
+          firstFocusable?.focus();
+        }
+      }
+      return;
+    }
+
     if (deleteGameModal.hidden) {
       return;
     }

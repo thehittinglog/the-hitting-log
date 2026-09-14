@@ -84,7 +84,10 @@
     ));
     const value = atBat?.finalOutcome || atBat?.outcome || battedBallPitch?.battedBallOutcome ||
       battedBallPitch?.batted_ball_outcome || battedBallPitch?.outcome || "";
-    return normalizeOutcome(value, atBat);
+    const normalized = normalizeOutcome(value, atBat);
+    return COMPLETED_PLATE_APPEARANCE_OUTCOMES.has(normalized)
+      ? normalized
+      : getAutomaticPitchOutcome(pitches) || normalized;
   }
 
   function isCompletedPlateAppearance(atBat) {
