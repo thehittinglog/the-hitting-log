@@ -1544,7 +1544,7 @@ function renderStrikeZoneLayout(
   });
 }
 
-function renderPitchSequence(sequenceElement, atBat, { onEditPitch, editingPitchId = "", disabled = false } = {}) {
+function renderPitchSequence(sequenceElement, atBat, { onEditPitch, editingPitchId = "", disabled = false, showHitLocation = true } = {}) {
   sequenceElement.innerHTML = "";
 
   if (!atBat || atBat.pitches.length === 0) {
@@ -1579,7 +1579,7 @@ function renderPitchSequence(sequenceElement, atBat, { onEditPitch, editingPitch
       details.push(getBattedBallTypeLabel(pitch.battedBallType));
     }
 
-    if (pitch.hitLocation || pitch.hit_location) {
+    if (showHitLocation && (pitch.hitLocation || pitch.hit_location)) {
       details.push(getHitLocationLabel(pitch.hitLocation || pitch.hit_location));
     }
 
@@ -4060,7 +4060,7 @@ function initGamesPage(games, membershipState = null) {
     viewAtBatTitle.textContent = `At-Bat ${atBatIndex + 1}`;
     viewAtBatOutcome.textContent = `Outcome: ${getOutcomeLabel(nonProprietaryStats.getOutcome(atBat) || "Complete")}`;
     renderStrikeZoneLayout(viewAtBatGrid);
-    renderPitchSequence(viewAtBatPitchList, atBat);
+    renderPitchSequence(viewAtBatPitchList, atBat, { showHitLocation: false });
     reviewView.hidden = true;
     atBatView.hidden = false;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
