@@ -1720,12 +1720,12 @@ function initGamesPage(games, membershipState = null) {
   const reviewBackButton = document.getElementById("review-back-button");
   const reviewMessage = document.getElementById("review-message");
   const reviewAtBatList = document.getElementById("review-at-bat-list");
-  const viewAtBatModal = document.getElementById("view-at-bat-modal");
+  const atBatView = document.getElementById("at-bat-view");
   const viewAtBatTitle = document.getElementById("view-at-bat-title");
   const viewAtBatOutcome = document.getElementById("view-at-bat-outcome");
   const viewAtBatGrid = document.getElementById("view-at-bat-grid");
   const viewAtBatPitchList = document.getElementById("view-at-bat-pitch-list");
-  const closeViewAtBatButton = document.getElementById("close-view-at-bat-button");
+  const atBatViewTopBackButton = document.getElementById("at-bat-view-top-back-button");
   const viewAtBatBackButton = document.getElementById("view-at-bat-back-button");
   const deleteGameButton = document.getElementById("delete-game-button");
   const deleteGameModal = document.getElementById("delete-game-modal");
@@ -1792,12 +1792,12 @@ function initGamesPage(games, membershipState = null) {
     !reviewBackButton ||
     !reviewMessage ||
     !reviewAtBatList ||
-    !viewAtBatModal ||
+    !atBatView ||
     !viewAtBatTitle ||
     !viewAtBatOutcome ||
     !viewAtBatGrid ||
     !viewAtBatPitchList ||
-    !closeViewAtBatButton ||
+    !atBatViewTopBackButton ||
     !viewAtBatBackButton ||
     !deleteGameButton ||
     !deleteGameModal ||
@@ -1884,9 +1884,10 @@ function initGamesPage(games, membershipState = null) {
     atBatSaving: false,
   };
   let lastDeleteGameModalFocus = null;
-  let lastViewAtBatModalFocus = null;
   let viewAtBatResizeObserver = null;
   let viewAtBatRenderToken = 0;
+  let gameReviewScrollY = 0;
+  let lastAtBatViewTrigger = null;
   const gameLimit = Number.isInteger(membershipState?.entitlements?.gameLimit)
     ? membershipState.entitlements.gameLimit
     : 10;
@@ -2090,6 +2091,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showTournamentDetails(tournamentId) {
+    resetAtBatViewState();
     state.selectedTournamentId = tournamentId;
     homeView.hidden = true;
     reviewListView.hidden = true;
@@ -2209,6 +2211,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showHomeView() {
+    resetAtBatViewState();
     homeView.hidden = false;
     reviewListView.hidden = true;
     reviewView.hidden = true;
@@ -2231,6 +2234,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showReviewListView() {
+    resetAtBatViewState();
     homeView.hidden = true;
     reviewListView.hidden = false;
     reviewView.hidden = true;
@@ -2253,6 +2257,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showChoiceView() {
+    resetAtBatViewState();
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = true;
@@ -2263,6 +2268,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showTournamentNameView() {
+    resetAtBatViewState();
     homeView.hidden = true;
     reviewListView.hidden = true;
     reviewView.hidden = true;
@@ -2304,6 +2310,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showNewGameView(tournament = null) {
+    resetAtBatViewState();
     state.activeTournament = tournament;
     homeView.hidden = true;
     reviewListView.hidden = true;
@@ -4021,40 +4028,53 @@ function initGamesPage(games, membershipState = null) {
     viewAtBatGrid.append(arrows, markers);
   }
 
-  function closeViewAtBatModal({ restoreFocus = true } = {}) {
+  function resetAtBatViewState() {
     viewAtBatRenderToken += 1;
     viewAtBatResizeObserver?.disconnect();
     viewAtBatResizeObserver = null;
-    viewAtBatModal.hidden = true;
+    atBatView.hidden = true;
     viewAtBatGrid.innerHTML = "";
     viewAtBatPitchList.innerHTML = "";
     state.viewingAtBatIndex = null;
-    document.body.classList.remove("has-game-modal");
-    if (restoreFocus) lastViewAtBatModalFocus?.focus();
+    lastAtBatViewTrigger = null;
   }
 
-  function openViewAtBatModal(atBat, atBatIndex) {
+  function returnFromAtBatView() {
+    const trigger = lastAtBatViewTrigger;
+    resetAtBatViewState();
+    reviewView.hidden = false;
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: gameReviewScrollY, left: 0, behavior: "auto" });
+      trigger?.focus({ preventScroll: true });
+    });
+  }
+
+  function showAtBatView(atBat, atBatIndex) {
     viewAtBatRenderToken += 1;
     const renderToken = viewAtBatRenderToken;
-    lastViewAtBatModalFocus = document.activeElement;
+    viewAtBatResizeObserver?.disconnect();
+    viewAtBatResizeObserver = null;
+    lastAtBatViewTrigger = document.activeElement;
+    gameReviewScrollY = window.scrollY;
     state.viewingAtBatIndex = atBatIndex;
     viewAtBatTitle.textContent = `At-Bat ${atBatIndex + 1}`;
     viewAtBatOutcome.textContent = `Outcome: ${getOutcomeLabel(nonProprietaryStats.getOutcome(atBat) || "Complete")}`;
     renderStrikeZoneLayout(viewAtBatGrid);
     renderPitchSequence(viewAtBatPitchList, atBat);
-    viewAtBatModal.hidden = false;
-    document.body.classList.add("has-game-modal");
+    reviewView.hidden = true;
+    atBatView.hidden = false;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 
     window.requestAnimationFrame(() => {
-      if (renderToken !== viewAtBatRenderToken || viewAtBatModal.hidden) return;
+      if (renderToken !== viewAtBatRenderToken || atBatView.hidden) return;
       renderAtBatPitchPlot(atBat);
       if (typeof ResizeObserver === "function") {
         viewAtBatResizeObserver = new ResizeObserver(() => {
-          if (renderToken === viewAtBatRenderToken && !viewAtBatModal.hidden) renderAtBatPitchPlot(atBat);
+          if (renderToken === viewAtBatRenderToken && !atBatView.hidden) renderAtBatPitchPlot(atBat);
         });
         viewAtBatResizeObserver.observe(viewAtBatGrid);
       }
-      closeViewAtBatButton.focus();
+      atBatViewTopBackButton.focus({ preventScroll: true });
     });
   }
 
@@ -4108,7 +4128,7 @@ function initGamesPage(games, membershipState = null) {
       viewButton.className = "saved-at-bat-view-link";
       viewButton.textContent = "View";
       viewButton.setAttribute("aria-label", `View At-Bat ${index + 1}`);
-      viewButton.addEventListener("click", () => openViewAtBatModal(atBat, index));
+      viewButton.addEventListener("click", () => showAtBatView(atBat, index));
       editButton.type = "button";
       editButton.className = "saved-at-bat-edit-link";
       editButton.textContent = "Edit";
@@ -4158,6 +4178,7 @@ function initGamesPage(games, membershipState = null) {
   }
 
   function showGameReview(gameId, returnView = "review-list") {
+    resetAtBatViewState();
     state.reviewGameId = gameId;
     state.reviewReturnView = returnView;
     state.gameDetailsEditing = false;
@@ -4882,11 +4903,8 @@ function initGamesPage(games, membershipState = null) {
   });
 
   deleteGameButton.addEventListener("click", openDeleteGameModal);
-  closeViewAtBatButton.addEventListener("click", closeViewAtBatModal);
-  viewAtBatBackButton.addEventListener("click", closeViewAtBatModal);
-  viewAtBatModal.addEventListener("click", (event) => {
-    if (event.target === viewAtBatModal) closeViewAtBatModal();
-  });
+  atBatViewTopBackButton.addEventListener("click", returnFromAtBatView);
+  viewAtBatBackButton.addEventListener("click", returnFromAtBatView);
   cancelDeleteGameButton.addEventListener("click", () => {
     if (!state.gameDeleting) {
       closeDeleteGameModal();
@@ -4898,28 +4916,6 @@ function initGamesPage(games, membershipState = null) {
     }
   });
   document.addEventListener("keydown", (event) => {
-    if (!viewAtBatModal.hidden) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeViewAtBatModal();
-        return;
-      }
-
-      if (event.key === "Tab") {
-        const focusableElements = Array.from(viewAtBatModal.querySelectorAll("button:not([disabled])"));
-        const firstFocusable = focusableElements[0];
-        const lastFocusable = focusableElements[focusableElements.length - 1];
-        if (event.shiftKey && document.activeElement === firstFocusable) {
-          event.preventDefault();
-          lastFocusable?.focus();
-        } else if (!event.shiftKey && document.activeElement === lastFocusable) {
-          event.preventDefault();
-          firstFocusable?.focus();
-        }
-      }
-      return;
-    }
-
     if (deleteGameModal.hidden) {
       return;
     }
