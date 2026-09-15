@@ -1724,6 +1724,8 @@ function initGamesPage(games, membershipState = null) {
   const viewAtBatTitle = document.getElementById("view-at-bat-title");
   const viewAtBatOutcome = document.getElementById("view-at-bat-outcome");
   const viewAtBatGrid = document.getElementById("view-at-bat-grid");
+  const viewAtBatHitLocation = document.getElementById("view-at-bat-hit-location");
+  const viewAtBatHitLocationMarker = document.getElementById("view-at-bat-hit-location-marker");
   const viewAtBatPitchList = document.getElementById("view-at-bat-pitch-list");
   const atBatViewTopBackButton = document.getElementById("at-bat-view-top-back-button");
   const viewAtBatBackButton = document.getElementById("view-at-bat-back-button");
@@ -4028,12 +4030,35 @@ function initGamesPage(games, membershipState = null) {
     viewAtBatGrid.append(arrows, markers);
   }
 
+  function renderAtBatHitLocation(atBat) {
+    const outcome = nonProprietaryStats.getOutcome(atBat);
+    const battedBallPitch = nonProprietaryStats.BALL_IN_PLAY_OUTCOMES.has(outcome)
+      ? atBat.pitches.slice().reverse().find((pitch) => {
+          const x = Number(pitch.hitLocationX ?? pitch.hit_location_x);
+          const y = Number(pitch.hitLocationY ?? pitch.hit_location_y);
+          return Number.isFinite(x) && Number.isFinite(y);
+        })
+      : null;
+
+    if (!battedBallPitch) {
+      viewAtBatHitLocation.hidden = true;
+      return;
+    }
+
+    const x = Math.min(1, Math.max(0, Number(battedBallPitch.hitLocationX ?? battedBallPitch.hit_location_x)));
+    const y = Math.min(1, Math.max(0, Number(battedBallPitch.hitLocationY ?? battedBallPitch.hit_location_y)));
+    viewAtBatHitLocationMarker.style.left = `${x * 100}%`;
+    viewAtBatHitLocationMarker.style.top = `${y * 100}%`;
+    viewAtBatHitLocation.hidden = false;
+  }
+
   function resetAtBatViewState() {
     viewAtBatRenderToken += 1;
     viewAtBatResizeObserver?.disconnect();
     viewAtBatResizeObserver = null;
     atBatView.hidden = true;
     viewAtBatGrid.innerHTML = "";
+    viewAtBatHitLocation.hidden = true;
     viewAtBatPitchList.innerHTML = "";
     state.viewingAtBatIndex = null;
     lastAtBatViewTrigger = null;
@@ -4060,6 +4085,7 @@ function initGamesPage(games, membershipState = null) {
     viewAtBatTitle.textContent = `At-Bat ${atBatIndex + 1}`;
     viewAtBatOutcome.textContent = `Outcome: ${getOutcomeLabel(nonProprietaryStats.getOutcome(atBat) || "Complete")}`;
     renderStrikeZoneLayout(viewAtBatGrid);
+    renderAtBatHitLocation(atBat);
     renderPitchSequence(viewAtBatPitchList, atBat, { showHitLocation: false });
     reviewView.hidden = true;
     atBatView.hidden = false;

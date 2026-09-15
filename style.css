@@ -3079,6 +3079,16 @@ body.has-game-modal {
   box-shadow: none;
 }
 
+.hit-location-image-button.at-bat-view-hit-location {
+  margin: 18px auto 0;
+  cursor: default;
+  pointer-events: none;
+}
+
+.at-bat-view-hit-location[hidden] {
+  display: none;
+}
+
 .at-bat-view-overlay {
   position: absolute;
   inset: 0;
