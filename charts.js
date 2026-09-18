@@ -1,6 +1,7 @@
 const HIDDEN_CHART_FILTER_OPTIONS = new Set([
   "Left Field Line",
   "Right Field Line",
+  "Straight Back",
   "Fielder's Choice",
   "ROE",
   "Sac Bunt",

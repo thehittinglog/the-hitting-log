@@ -43,6 +43,7 @@ const chartFilterOptions = [
   { id: "Foul Ball", label: "Foul Ball", type: "count" },
   { id: "Left Field Line", label: "Left Field Line", type: "count" },
   { id: "Right Field Line", label: "Right Field Line", type: "count" },
+  { id: "Straight Back", label: "Straight Back", type: "count" },
   { id: "Ground Ball", label: "Ground Ball", type: "count" },
   { id: "Line Drive", label: "Line Drive", type: "count" },
   { id: "Fly Ball", label: "Fly Ball", type: "count" },
@@ -492,6 +493,7 @@ function normalizeSavedBattedBallOutcome(outcome) {
     drag_bunt: "Drag Bunt",
     left_field_line: "Left Field Line",
     right_field_line: "Right Field Line",
+    straight_back: "Straight Back",
   };
 
   return outcomeMap[outcome] || outcome;
@@ -1463,6 +1465,7 @@ function getFoulDirectionLabel(direction) {
   const labelMap = {
     left_field_line: "Left Field Line",
     right_field_line: "Right Field Line",
+    straight_back: "Straight Back",
   };
 
   return labelMap[direction] || direction;
@@ -1488,6 +1491,7 @@ function getOutcomeLabel(outcome) {
     fly_out: "Fly Out",
     left_field_line: "Left Field Line",
     right_field_line: "Right Field Line",
+    straight_back: "Straight Back",
   };
 
   return labelMap[outcome] || outcome;
@@ -1967,6 +1971,7 @@ function initGamesPage(games, membershipState = null) {
   const foulDirectionOptions = [
     { label: "Left Field Line", value: "Left Field Line" },
     { label: "Right Field Line", value: "Right Field Line" },
+    { label: "Straight Back", value: "Straight Back" },
   ];
 
   function getDefaultDate() {
@@ -3223,6 +3228,7 @@ function initGamesPage(games, membershipState = null) {
     return {
       locationId: location?.id || "",
       result: getEditablePitchResult(pitch),
+      foulDirection: getFoulDirectionLabel(pitch?.foulDirection || ""),
       error: "",
     };
   }
@@ -3253,7 +3259,13 @@ function initGamesPage(games, membershipState = null) {
       editedPitch.strikeDetail = selectedResult;
     }
 
-    if (selectedResult !== "foul_ball") {
+    if (selectedResult === "foul_ball") {
+      editedPitch.foulDirection = draft.foulDirection;
+      editedPitch.chartResult = draft.foulDirection;
+    } else {
+      if (editedPitch.chartResult === editedPitch.foulDirection) {
+        delete editedPitch.chartResult;
+      }
       delete editedPitch.foulDirection;
     }
 
@@ -3271,8 +3283,10 @@ function initGamesPage(games, membershipState = null) {
         "battedBallOutcome",
         "batted_ball_outcome",
         "outcome",
-        "chartResult",
       ].forEach((field) => delete editedPitch[field]);
+      if (selectedResult !== "foul_ball") {
+        delete editedPitch.chartResult;
+      }
     }
 
     if (selectedResult === "hit_by_pitch") {
@@ -3383,6 +3397,9 @@ function initGamesPage(games, membershipState = null) {
     const resultLabel = document.createElement("label");
     const resultText = document.createElement("span");
     const resultSelect = document.createElement("select");
+    const foulDirectionLabel = document.createElement("label");
+    const foulDirectionText = document.createElement("span");
+    const foulDirectionSelect = document.createElement("select");
     const error = document.createElement("p");
     const actions = document.createElement("div");
     const updateButton = document.createElement("button");
@@ -3418,9 +3435,30 @@ function initGamesPage(games, membershipState = null) {
     resultSelect.addEventListener("change", () => {
       draft.result = resultSelect.value;
       draft.error = "";
+      foulDirectionLabel.style.display = draft.result === "foul_ball" ? "" : "none";
     });
     resultLabel.appendChild(resultText);
     resultLabel.appendChild(resultSelect);
+
+    foulDirectionText.textContent = "Foul Direction";
+    const directionPlaceholder = document.createElement("option");
+    directionPlaceholder.value = "";
+    directionPlaceholder.textContent = "Select Foul Direction";
+    foulDirectionSelect.appendChild(directionPlaceholder);
+    foulDirectionOptions.forEach((option) => {
+      const optionElement = document.createElement("option");
+      optionElement.value = option.value;
+      optionElement.textContent = option.label;
+      foulDirectionSelect.appendChild(optionElement);
+    });
+    foulDirectionSelect.value = draft.foulDirection;
+    foulDirectionSelect.addEventListener("change", () => {
+      draft.foulDirection = foulDirectionSelect.value;
+      draft.error = "";
+    });
+    foulDirectionLabel.appendChild(foulDirectionText);
+    foulDirectionLabel.appendChild(foulDirectionSelect);
+    foulDirectionLabel.style.display = draft.result === "foul_ball" ? "" : "none";
 
     error.className = "form-message is-error review-pitch-error";
     error.setAttribute("aria-live", "polite");
@@ -3442,6 +3480,11 @@ function initGamesPage(games, membershipState = null) {
 
       if (!draft.result) {
         showPitchEditError("Select a pitch result before updating the pitch.");
+        return;
+      }
+
+      if (draft.result === "foul_ball" && !foulDirectionOptions.some((option) => option.value === draft.foulDirection)) {
+        showPitchEditError("Select a foul direction before updating the pitch.");
         return;
       }
 
@@ -3498,6 +3541,7 @@ function initGamesPage(games, membershipState = null) {
     editor.appendChild(zone);
     editor.appendChild(helper);
     editor.appendChild(resultLabel);
+    editor.appendChild(foulDirectionLabel);
     editor.appendChild(error);
     editor.appendChild(actions);
     return editor;
@@ -4397,7 +4441,7 @@ function initGamesPage(games, membershipState = null) {
     }
 
     if (state.step === "foul_direction") {
-      card.appendChild(renderOptionGroup("Foul Direction", foulDirectionOptions, handleFoulDirection, state.activePitch?.foulDirection || ""));
+      card.appendChild(renderOptionGroup("Foul Direction", foulDirectionOptions, handleFoulDirection, getFoulDirectionLabel(state.activePitch?.foulDirection || "")));
     }
 
     if (state.step === "batted_ball_type") {
