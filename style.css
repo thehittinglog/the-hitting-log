@@ -4033,6 +4033,74 @@ button:focus-visible {
   margin: 16px 0 0;
 }
 
+.signup-confirmation[hidden] {
+  display: none;
+}
+
+.signup-confirmation {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  padding: clamp(12px, 3vw, 24px) 8px;
+  text-align: center;
+  outline: none;
+}
+
+.signup-confirmation-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border: 1px solid rgba(47, 111, 62, 0.28);
+  border-radius: 50%;
+  color: var(--performance-exceptional);
+  background: rgba(47, 111, 62, 0.1);
+}
+
+.signup-confirmation-icon svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.signup-confirmation .eyebrow {
+  margin-bottom: 8px;
+}
+
+.signup-confirmation h2 {
+  margin-bottom: 14px;
+  font-size: clamp(1.75rem, 5vw, 2.35rem);
+}
+
+.signup-confirmation-copy {
+  max-width: 30rem;
+  margin: 0 auto;
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.signup-confirmation-copy strong {
+  overflow-wrap: anywhere;
+  color: var(--accent);
+}
+
+.signup-confirmation-note {
+  max-width: 28rem;
+  margin: 14px auto 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.signup-confirmation-action {
+  width: min(100%, 280px);
+}
+
 .auth-field-link {
   margin: -6px 0 0;
   font-size: 0.92rem;

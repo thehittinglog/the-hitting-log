@@ -6538,12 +6538,18 @@ function initSignupPage() {
   const guardianPermissionInput = document.getElementById("signup-guardian-permission");
   const guardianCopy = document.getElementById("signup-guardian-copy");
   const signupMessage = document.getElementById("signup-message");
+  const signupFormState = document.getElementById("signup-form-state");
+  const signupConfirmation = document.getElementById("signup-confirmation");
+  const signupConfirmationEmail = document.getElementById("signup-confirmation-email");
   const passwordError = document.getElementById("signup-password-error");
   const submitButton = signupForm?.querySelector("button[type='submit']");
 
   if (
     !signupForm ||
     !signupMessage ||
+    !signupFormState ||
+    !signupConfirmation ||
+    !signupConfirmationEmail ||
     !emailInput ||
     !passwordInput ||
     !confirmPasswordInput ||
@@ -6761,8 +6767,12 @@ function initSignupPage() {
       }
 
       console.info("[Signup][Stage 4: Redirect] Waiting for email confirmation; no active session returned");
-      signupMessage.textContent = "Account created! Check your email to confirm your account, then log in.";
       signupForm.reset();
+      signupConfirmationEmail.textContent = email;
+      signupFormState.hidden = true;
+      signupConfirmation.hidden = false;
+      signupConfirmation.focus({ preventScroll: true });
+      signupConfirmation.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       console.error("[Signup][Stage 1: Auth] Failed", {
         message: getErrorMessage(error),
