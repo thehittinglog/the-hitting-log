@@ -77,9 +77,16 @@ const locationGames = [{
 const rightResult = hittingAIStats.analyzeQuestion({ message: "Where are my hits?", games: locationGames, handedness: "right" });
 const leftResult = hittingAIStats.analyzeQuestion({ message: "Where are my hits?", games: locationGames, handedness: "left" });
 const unknownResult = hittingAIStats.analyzeQuestion({ message: "Where are my hits?", games: locationGames });
+assert.equal(rightResult.type, "location");
+assert.equal(leftResult.type, "location");
+assert.equal(unknownResult.type, "location");
 assert.equal(rightResult.facts[0].label, "high and inside");
 assert.equal(leftResult.facts[0].label, "high and outside");
 assert.equal(unknownResult.facts[0].label, "high and left");
+const hitCountResult = hittingAIStats.analyzeQuestion({ message: "How many hits do I have?", games: locationGames, handedness: "right" });
+assert.equal(hitCountResult.type, "stat_lookup");
+assert.equal(hitCountResult.metricKey, "hits");
+assert.equal(hitCountResult.rawValue, 1);
 
 const performanceResult = hittingAIStats.analyzeQuestion({
   message: "What should I work on?",

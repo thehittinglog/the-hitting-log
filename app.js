@@ -91,6 +91,36 @@ function getErrorMessage(error, fallbackMessage = "Something went wrong. Please 
   return fallbackMessage;
 }
 
+function reportLoginFailure(error, requestStartedAt) {
+  const fallbackCode = typeof error?.code === "string" && /^[a-z0-9_]{1,80}$/i.test(error.code)
+    ? error.code.toLowerCase()
+    : null;
+  const fallbackStatus = Number.isInteger(Number(error?.status))
+    && Number(error.status) >= 100
+    && Number(error.status) <= 599
+    ? Number(error.status)
+    : null;
+  const classification = window.hittingLogAuth?.classifyLoginError?.(error) || {
+    category: "service",
+    message: "Sign-in is temporarily unavailable. Please try again in a few minutes.",
+  };
+  const diagnostic = window.hittingLogAuth?.createLoginFailureDiagnostic?.(
+    error,
+    requestStartedAt,
+  ) || {
+    category: classification.category,
+    code: fallbackCode,
+    httpStatus: fallbackStatus,
+    timestamp: new Date().toISOString(),
+    requestDurationMs: Number.isFinite(requestStartedAt)
+      ? Math.max(0, Date.now() - requestStartedAt)
+      : null,
+  };
+
+  console.warn("[Auth][Login] Sign-in failed", diagnostic);
+  return classification.message;
+}
+
 function getSignupErrorMessage(error) {
   const message = getErrorMessage(error, "");
 
@@ -6484,8 +6514,14 @@ function initLoginPage() {
     return;
   }
 
+  let isSubmitting = false;
+
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     const email = normalizeEmail(emailInput.value);
     const password = passwordInput.value;
@@ -6493,11 +6529,16 @@ function initLoginPage() {
     loginMessage.classList.remove("is-success");
 
     if (!window.hittingLogAuth) {
-      loginMessage.textContent = "Login is temporarily unavailable. Please try again.";
+      loginMessage.textContent = reportLoginFailure(
+        { code: "auth_helper_unavailable", status: 503 },
+        Date.now(),
+      );
       return;
     }
 
     const submitButton = loginForm.querySelector("button[type='submit']");
+    const requestStartedAt = Date.now();
+    isSubmitting = true;
 
     if (submitButton) {
       submitButton.disabled = true;
@@ -6508,7 +6549,8 @@ function initLoginPage() {
       const { data, error } = await window.hittingLogAuth.logIn({ email, password });
 
       if (error || !data?.user?.email) {
-        loginMessage.textContent = "Incorrect email or password.";
+        const loginError = error || { code: "missing_auth_user", status: 502 };
+        loginMessage.textContent = reportLoginFailure(loginError, requestStartedAt);
         return;
       }
 
@@ -6517,8 +6559,9 @@ function initLoginPage() {
       loginMessage.classList.add("is-success");
       redirectTo("dashboard.html");
     } catch (error) {
-      loginMessage.textContent = "Incorrect email or password.";
+      loginMessage.textContent = reportLoginFailure(error, requestStartedAt);
     } finally {
+      isSubmitting = false;
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = "Sign In";
