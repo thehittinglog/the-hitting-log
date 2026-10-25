@@ -1,5 +1,31 @@
 let currentSupabaseUser = null;
 const nonProprietaryStats = window.hittingLogStats;
+const gameLifecycle = window.hittingLogGameLifecycle || {
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  normalizeStatus: (status) => status === "in_progress" ? "in_progress" : "completed",
+  isInProgress: (game) => game?.status === "in_progress",
+  appendUniqueAtBat: (atBats, atBat) => {
+    const savedAtBats = Array.isArray(atBats) ? atBats : [];
+    return atBat?.id && !savedAtBats.some((savedAtBat) => savedAtBat?.id === atBat.id)
+      ? savedAtBats.concat(atBat)
+      : savedAtBats.slice();
+  },
+  withDraftState: (game, pendingAtBat, recordingStep = "at_bat_details") => ({
+    ...game,
+    pendingAtBat: pendingAtBat || null,
+    recordingStep: pendingAtBat ? recordingStep : "at_bat_details",
+  }),
+  commitAtBat(game, atBat) {
+    return this.withDraftState({
+      ...game,
+      atBats: this.appendUniqueAtBat(game?.atBats, atBat),
+    }, null);
+  },
+  completeGame(game) {
+    return this.withDraftState({ ...game, status: "completed" }, null);
+  },
+};
 const page = document.body.dataset.page;
 const protectedPages = new Set(["dashboard", "games", "all-games", "advanced", "charts", "account"]);
 const authPages = new Set(["login", "signup"]);
@@ -665,6 +691,11 @@ function normalizeGame(game) {
     tournamentName: typeof game.tournamentName === "string" && game.tournamentName ? game.tournamentName : null,
     tournamentGameNumber: Number.isFinite(tournamentGameNumber) && tournamentGameNumber > 0 ? tournamentGameNumber : null,
     tournamentCompleted: game.tournamentCompleted === true,
+    status: gameLifecycle.normalizeStatus(game.status),
+    pendingAtBat: game.pendingAtBat && typeof game.pendingAtBat === "object"
+      ? normalizeAtBat(game.pendingAtBat)
+      : null,
+    recordingStep: typeof game.recordingStep === "string" ? game.recordingStep : "at_bat_details",
   };
 
   if (Array.isArray(game.atBats)) {
@@ -982,8 +1013,11 @@ function appendGameCells(row, gameStats, options = {}) {
 
     actionButton.type = "button";
     actionButton.className = "table-action-button";
-    actionButton.textContent = "View / Edit Game";
+    actionButton.textContent = gameLifecycle.isInProgress(gameStats) ? "Resume Game" : "View / Edit Game";
     actionButton.dataset.gameId = gameStats.id;
+    if (gameLifecycle.isInProgress(gameStats)) {
+      actionButton.dataset.resumeGameId = gameStats.id;
+    }
     actionCell.appendChild(actionButton);
     row.appendChild(actionCell);
   }
@@ -1081,6 +1115,12 @@ function appendRecentGameRow(tableBody, gameStats) {
   date.textContent = formatCompactGameDate(gameStats.date);
   opponent.className = "recent-game-opponent";
   opponent.textContent = gameStats.opponent || "Opponent";
+  if (gameLifecycle.isInProgress(gameStats)) {
+    const status = document.createElement("span");
+    status.className = "game-status-badge";
+    status.textContent = "In Progress";
+    opponent.appendChild(status);
+  }
   average.className = "recent-game-average";
   average.textContent = formatRate(gameStats.battingAverage);
   performanceScore.className = "recent-game-hlp";
@@ -1309,6 +1349,12 @@ function renderGameSummaryRow(tableBody, game, options = {}) {
 
   dateCell.textContent = formatDisplayDate(gameStats.date);
   opponentCell.textContent = gameStats.opponent || "Opponent";
+  if (gameLifecycle.isInProgress(gameStats)) {
+    const status = document.createElement("span");
+    status.className = "game-status-badge";
+    status.textContent = "In Progress";
+    opponentCell.appendChild(status);
+  }
   averageCell.textContent = formatRate(gameStats.battingAverage);
   scoreCell.textContent = score === null || score === undefined ? "N/A" : String(score);
 
@@ -1746,6 +1792,8 @@ function initGamesPage(games, membershipState = null) {
   const reviewOpponent = document.getElementById("review-game-opponent");
   const reviewMeta = document.getElementById("review-game-meta");
   const editGameDetailsButton = document.getElementById("edit-game-details-button");
+  const addReviewAtBatButton = document.getElementById("add-review-at-bat-button");
+  const resumeGameButton = document.getElementById("resume-game-button");
   const gameDetailsForm = document.getElementById("review-game-details-form");
   const gameDateInput = document.getElementById("review-game-date-input");
   const gameOpponentInput = document.getElementById("review-game-opponent-input");
@@ -1820,6 +1868,8 @@ function initGamesPage(games, membershipState = null) {
     !reviewOpponent ||
     !reviewMeta ||
     !editGameDetailsButton ||
+    !addReviewAtBatButton ||
+    !resumeGameButton ||
     !gameDetailsForm ||
     !gameDateInput ||
     !gameOpponentInput ||
@@ -1918,6 +1968,9 @@ function initGamesPage(games, membershipState = null) {
     step: "at_bat_details",
     activePitchCompleted: false,
     atBatSaving: false,
+    draftAutosaveTimer: null,
+    draftAutosavePromise: Promise.resolve(),
+    draftAutosaveRevision: 0,
   };
   let lastDeleteGameModalFocus = null;
   let viewAtBatResizeObserver = null;
@@ -2148,6 +2201,7 @@ function initGamesPage(games, membershipState = null) {
         games[index] = normalizeGame({
           ...game,
           tournamentCompleted: completed,
+          status: completed ? gameLifecycle.COMPLETED : game.status,
         });
         updatedGames.push(games[index]);
       }
@@ -2180,6 +2234,9 @@ function initGamesPage(games, membershipState = null) {
       tournamentName: tournament ? tournament.name : null,
       tournamentGameNumber: tournament ? getNextTournamentGameNumber(tournament.id) : null,
       tournamentCompleted: tournament ? tournament.completed === true : false,
+      status: gameLifecycle.IN_PROGRESS,
+      pendingAtBat: null,
+      recordingStep: "at_bat_details",
     };
   }
 
@@ -2369,6 +2426,117 @@ function initGamesPage(games, membershipState = null) {
     setMessage("", false);
     updateTournamentContext();
     renderAtBats();
+  }
+
+  async function cancelNewAtBat() {
+    if (!state.activeAtBat || state.atBatSaving || Number.isInteger(state.workflowEditAtBatIndex)) {
+      return;
+    }
+
+    state.activeAtBat = null;
+    state.activePitch = null;
+    state.activePitchIndex = null;
+    state.activePitchCompleted = false;
+    state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
+    state.step = "at_bat_details";
+    state.draftGame.pendingAtBat = null;
+    state.draftGame.recordingStep = "at_bat_details";
+    if (await queueDraftAutosave({ immediate: true })) {
+      setMessage("At-bat canceled. No game data was changed.", true);
+    }
+    renderAtBats();
+  }
+
+  function showExistingGameRecording(game, { startNewAtBat = false } = {}) {
+    if (!game || !currentUserOwnsLoadedGames()) {
+      return;
+    }
+
+    resetAtBatViewState();
+    const normalizedGame = normalizeGame(game);
+    state.activeTournament = normalizedGame.tournamentId
+      ? {
+          id: normalizedGame.tournamentId,
+          name: normalizedGame.tournamentName || "Tournament",
+          completed: normalizedGame.tournamentCompleted === true,
+        }
+      : null;
+    state.draftGame = normalizedGame;
+    dateInput.value = normalizedGame.date || getDefaultDate();
+    opponentInput.value = normalizedGame.opponent || "";
+    state.activeAtBat = startNewAtBat
+      ? normalizedGame.pendingAtBat
+        ? cloneAtBatForWorkflow(normalizedGame.pendingAtBat)
+        : createDraftAtBat()
+      : normalizedGame.pendingAtBat
+        ? cloneAtBatForWorkflow(normalizedGame.pendingAtBat)
+        : null;
+    state.activePitch = null;
+    state.activePitchIndex = null;
+    state.activePitchCompleted = false;
+    resetWorkflowEditState();
+    state.pendingProductiveOutOutcome = "";
+    resetStepHistory();
+    state.step = state.activeAtBat ? normalizedGame.recordingStep || "at_bat_details" : "at_bat_details";
+    homeView.hidden = true;
+    reviewListView.hidden = true;
+    reviewView.hidden = true;
+    tournamentDetailsView.hidden = true;
+    choiceView.hidden = true;
+    tournamentNameView.hidden = true;
+    newGameView.hidden = false;
+    setMessage(gameLifecycle.isInProgress(normalizedGame) ? "Game resumed." : "Add an at-bat to this completed game.", true);
+    updateTournamentContext();
+    renderAtBats();
+  }
+
+  function getPersistableDraft() {
+    syncDraftFields();
+    return normalizeGame(gameLifecycle.withDraftState(
+      state.draftGame,
+      state.activeAtBat ? cloneAtBatForWorkflow(state.activeAtBat) : null,
+      state.step,
+    ));
+  }
+
+  function queueDraftAutosave({ immediate = false } = {}) {
+    if (!state.draftGame || !dateInput.value || !opponentInput.value.trim()) {
+      return Promise.resolve(false);
+    }
+
+    window.clearTimeout(state.draftAutosaveTimer);
+    const revision = ++state.draftAutosaveRevision;
+    const save = async () => {
+      const snapshot = getPersistableDraft();
+      state.draftAutosavePromise = state.draftAutosavePromise
+        .catch(() => undefined)
+        .then(async () => {
+          const savedGame = await upsertSavedGame(games, snapshot);
+          if (revision === state.draftAutosaveRevision && state.draftGame?.id === savedGame.id) {
+            state.draftGame = savedGame;
+          }
+          return savedGame;
+        });
+
+      try {
+        await state.draftAutosavePromise;
+        renderGamesHome();
+        return true;
+      } catch (error) {
+        console.error("Unable to autosave game:", error);
+        setMessage("Your latest changes are not saved yet. Check your connection and try again.");
+        return false;
+      }
+    };
+
+    if (immediate) {
+      return save();
+    }
+
+    return new Promise((resolve) => {
+      state.draftAutosaveTimer = window.setTimeout(() => void save().then(resolve), 350);
+    });
   }
 
   function syncDraftFields() {
@@ -4191,6 +4359,11 @@ function initGamesPage(games, membershipState = null) {
     reviewDate.textContent = formatDisplayDate(gameStats.date);
     reviewOpponent.textContent = gameStats.opponent || "Opponent";
     reviewMeta.textContent = `${getGameAtBatCount(gameStats)} at-bats | ${gameStats.hits} hits`;
+    if (gameLifecycle.isInProgress(gameStats)) {
+      reviewMeta.textContent += " | In Progress";
+    }
+    resumeGameButton.hidden = !gameLifecycle.isInProgress(gameStats);
+    addReviewAtBatButton.textContent = gameStats.pendingAtBat ? "Continue Add At-Bat" : "Add At-Bat";
     reviewDetails.hidden = state.gameDetailsEditing;
     gameDetailsForm.hidden = !state.gameDetailsEditing;
     editGameDetailsButton.hidden = state.gameDetailsEditing;
@@ -4379,6 +4552,14 @@ function initGamesPage(games, membershipState = null) {
       cancelEditButton.textContent = "Cancel Edit";
       cancelEditButton.addEventListener("click", cancelWorkflowEditAtBat);
       heading.appendChild(cancelEditButton);
+    } else {
+      const cancelAtBatButton = document.createElement("button");
+      cancelAtBatButton.type = "button";
+      cancelAtBatButton.className = "secondary-button saved-at-bat-edit-button";
+      cancelAtBatButton.textContent = "Cancel At-Bat";
+      cancelAtBatButton.disabled = state.atBatSaving;
+      cancelAtBatButton.addEventListener("click", cancelNewAtBat);
+      heading.appendChild(cancelAtBatButton);
     }
 
     card.appendChild(heading);
@@ -4594,6 +4775,7 @@ function initGamesPage(games, membershipState = null) {
     }
 
     state.activePitchCompleted = true;
+    void queueDraftAutosave();
   }
 
   function completeAutomaticPlateAppearance() {
@@ -4835,6 +5017,8 @@ function initGamesPage(games, membershipState = null) {
     state.atBatSaving = true;
 
     completeCurrentPitch();
+    window.clearTimeout(state.draftAutosaveTimer);
+    await state.draftAutosavePromise.catch(() => undefined);
 
     if (
       Number.isInteger(state.workflowEditAtBatIndex) &&
@@ -4873,10 +5057,12 @@ function initGamesPage(games, membershipState = null) {
     if (wasEditingWorkflow) {
       state.draftGame.atBats[state.workflowEditAtBatIndex] = normalizeAtBat(state.activeAtBat);
     } else {
-      state.draftGame.atBats.push(normalizeAtBat(state.activeAtBat));
+      state.draftGame = gameLifecycle.commitAtBat(state.draftGame, normalizeAtBat(state.activeAtBat));
     }
 
     syncDraftFields();
+    state.draftGame.pendingAtBat = null;
+    state.draftGame.recordingStep = "at_bat_details";
     if (state.draftGame.date && state.draftGame.opponent) {
       try {
         state.draftGame = await upsertSavedGame(games, state.draftGame);
@@ -4907,6 +5093,21 @@ function initGamesPage(games, membershipState = null) {
     reviewMessage.textContent = "";
     reviewMessage.classList.remove("is-success", "is-error");
     setGameDetailsEditing(true);
+  });
+
+  addReviewAtBatButton.addEventListener("click", () => {
+    const game = getReviewGame();
+    if (game) {
+      showExistingGameRecording(game, { startNewAtBat: true });
+      void queueDraftAutosave();
+    }
+  });
+
+  resumeGameButton.addEventListener("click", () => {
+    const game = getReviewGame();
+    if (game) {
+      showExistingGameRecording(game);
+    }
   });
 
   cancelGameDetailsButton.addEventListener("click", () => {
@@ -5107,13 +5308,22 @@ function initGamesPage(games, membershipState = null) {
     const row = event.target.closest(".clickable-game-row");
     const gameId = actionButton?.dataset.gameId || row?.dataset.gameId || "";
 
-    if (gameId) {
+    if (actionButton?.dataset.resumeGameId) {
+      showExistingGameRecording(games.find((game) => game.id === gameId));
+    } else if (gameId) {
       showGameReview(gameId, "review-list");
     }
   });
 
   reviewGamesTableBody.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    const resumeButton = event.target.closest("[data-resume-game-id]");
+    if (resumeButton?.dataset.resumeGameId) {
+      event.preventDefault();
+      showExistingGameRecording(games.find((game) => game.id === resumeButton.dataset.resumeGameId));
       return;
     }
 
@@ -5175,7 +5385,12 @@ function initGamesPage(games, membershipState = null) {
       showNewGameView(null);
     }
   });
-  backButton.addEventListener("click", showHomeView);
+  backButton.addEventListener("click", async () => {
+    if (state.draftGame && dateInput.value && opponentInput.value.trim()) {
+      await queueDraftAutosave({ immediate: true });
+    }
+    showHomeView();
+  });
   tournamentDetailsBack.addEventListener("click", showHomeView);
   tournamentDetailsAddGame.addEventListener("click", () => {
     const tournament = getTournamentById(state.selectedTournamentId);
@@ -5196,7 +5411,7 @@ function initGamesPage(games, membershipState = null) {
     showNewGameView(createTournament(tournamentName));
   });
 
-  addTournamentGameButton.addEventListener("click", () => {
+  addTournamentGameButton.addEventListener("click", async () => {
     if (!state.activeTournament) {
       return;
     }
@@ -5210,7 +5425,13 @@ function initGamesPage(games, membershipState = null) {
       return;
     }
 
-    showNewGameView(state.activeTournament);
+    const previousStatus = state.draftGame.status;
+    state.draftGame.status = gameLifecycle.COMPLETED;
+    if (await saveDraftGame("Tournament game finished.")) {
+      showNewGameView(state.activeTournament);
+    } else {
+      state.draftGame.status = previousStatus;
+    }
   });
 
   finishTournamentButton.addEventListener("click", async () => {
@@ -5243,6 +5464,8 @@ function initGamesPage(games, membershipState = null) {
     }
 
     try {
+      window.clearTimeout(state.draftAutosaveTimer);
+      await state.draftAutosavePromise.catch(() => undefined);
       state.draftGame = await upsertSavedGame(games, state.draftGame);
       renderGamesHome();
       setMessage(message, true);
@@ -5262,7 +5485,10 @@ function initGamesPage(games, membershipState = null) {
     event.preventDefault();
   });
 
-  addAtBatButton.addEventListener("click", () => {
+  dateInput.addEventListener("change", () => void queueDraftAutosave());
+  opponentInput.addEventListener("change", () => void queueDraftAutosave());
+
+  addAtBatButton.addEventListener("click", async () => {
     syncDraftFields();
     if (!state.draftGame.date || !state.draftGame.opponent) {
       setMessage("Enter a date and opponent before adding an at-bat.");
@@ -5271,6 +5497,12 @@ function initGamesPage(games, membershipState = null) {
 
     if (state.activeAtBat) {
       setMessage("Finish the current at-bat before adding another one.");
+      return;
+    }
+
+    addAtBatButton.disabled = true;
+    if (!(await queueDraftAutosave({ immediate: true }))) {
+      addAtBatButton.disabled = false;
       return;
     }
 
@@ -5284,6 +5516,8 @@ function initGamesPage(games, membershipState = null) {
     state.step = "at_bat_details";
     setMessage("", false);
     renderAtBats();
+    addAtBatButton.disabled = false;
+    void queueDraftAutosave();
   });
 
   saveGameButton.addEventListener("click", async () => {
@@ -5298,8 +5532,28 @@ function initGamesPage(games, membershipState = null) {
       return;
     }
 
+    const previousStatus = state.draftGame.status;
+    state.draftGame = gameLifecycle.completeGame(state.draftGame);
     if (await saveDraftGame("Game finished.")) {
       showHomeView();
+    } else {
+      state.draftGame.status = previousStatus;
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && !newGameView.hidden) {
+      void queueDraftAutosave({ immediate: true });
+    }
+  });
+  window.addEventListener("pagehide", () => {
+    if (!newGameView.hidden) {
+      void queueDraftAutosave({ immediate: true });
+    }
+  });
+  window.addEventListener("online", () => {
+    if (!newGameView.hidden) {
+      void queueDraftAutosave({ immediate: true });
     }
   });
 

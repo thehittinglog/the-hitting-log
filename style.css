@@ -2858,6 +2858,20 @@ body.has-account-modal {
   white-space: nowrap;
 }
 
+.game-status-badge {
+  display: block;
+  width: max-content;
+  margin-top: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(181, 118, 20, 0.14);
+  color: #82540c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .game-review-view {
   margin-top: 20px;
 }
